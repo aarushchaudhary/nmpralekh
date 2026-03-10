@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Django — sensitive config files
+server/config/settings.py
+server/config/wsgi.py
+
+# Django — general
+*.log
+db.sqlite3
+media/
+staticfiles/
+
+# Environment Variables — never commit
+.env
+.env.*
+server/.env
+client/.env
+client/.env.local
+
+# MariaDB dumps
+*.sql.bak
+*.dump
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# React / Node
+client/node_modules/
+client/dist/
+
+# Coverage & Testing
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Pycache everywhere
+**/__pycache__/
