@@ -29,7 +29,7 @@ export default function Layout({ children }) {
                         </svg>
                     </button>
                     <span className="ml-3 text-sm font-semibold text-gray-800">
-                        MIS Portal
+                        NMPralekh
                     </span>
                 </header>
 

@@ -40,7 +40,7 @@ export default function LoginPage() {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">MIS Portal</h1>
+          <h1 className="text-3xl font-bold text-gray-900">NMPralekh</h1>
           <p className="text-gray-500 mt-2 text-sm">
             Sign in to your account
           </p>
@@ -103,7 +103,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          NMPralekh — MIS Dashboard Portal
+          MIS Portal — NMPralekh Dashboard Portal
         </p>
 
       </div>
