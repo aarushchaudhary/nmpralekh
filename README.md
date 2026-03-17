@@ -1,4 +1,4 @@
-# MIS Portal — NMPralekh Dashboard Portal
+# NMPralekh — MIS Portal
 
 A full-stack Management Information System (MIS) portal for colleges and schools. Built with React + Vite on the frontend and Django REST Framework on the backend, using MariaDB as the database.
 
