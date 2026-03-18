@@ -3,21 +3,66 @@ from apps.records.models import (
     ExamsConducted, SchoolActivity, SchoolActivityCollaboration,
     StudentActivity, StudentActivityCollaboration,
     FacultyFDPWorkshopGL, FacultyPublication,
-    Patent, Certification, PlacementActivity
+    Patent, Certification, PlacementActivity, StudentMarks
 )
 
 
 class ExamsConductedSerializer(serializers.ModelSerializer):
-    school_name = serializers.CharField(source='school.name', read_only=True)
+    school_name      = serializers.CharField(source='school.name',           read_only=True)
+    exam_group_name  = serializers.CharField(source='exam_group.name',       read_only=True)
+    subject_name     = serializers.CharField(source='subject.name',          read_only=True)
+    subject_code     = serializers.CharField(source='subject.code',          read_only=True)
+    class_group_name = serializers.CharField(source='class_group.name',      read_only=True)
+    faculty_name     = serializers.CharField(source='faculty.full_name',     read_only=True)
+    semester_number  = serializers.SerializerMethodField()
+    course_name      = serializers.SerializerMethodField()
 
     class Meta:
         model  = ExamsConducted
         fields = [
-            'id', 'school', 'school_name', 'course', 'examination',
-            'date', 'expected_graduation_year',
+            'id', 'school', 'school_name',
+            'exam_group', 'exam_group_name',
+            'subject', 'subject_name', 'subject_code',
+            'class_group', 'class_group_name',
+            'faculty', 'faculty_name',
+            'semester_number', 'course_name',
+            'date', 'created_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_by', 'created_at', 'updated_at']
+
+    def get_semester_number(self, obj):
+        if obj.subject and obj.subject.semester:
+            return obj.subject.semester.semester_number
+        return None
+
+    def get_course_name(self, obj):
+        if obj.subject and obj.subject.semester and obj.subject.semester.academic_year:
+            return obj.subject.semester.academic_year.course.name
+        return None
+
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class StudentMarksSerializer(serializers.ModelSerializer):
+    exam_detail = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = StudentMarks
+        fields = [
+            'id', 'exam', 'exam_detail', 'student_name', 'roll_number',
+            'marks_obtained', 'max_marks', 'is_absent',
             'created_by', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
+
+    def get_exam_detail(self, obj):
+        return {
+            'exam_group':  obj.exam.exam_group.name  if obj.exam.exam_group  else None,
+            'subject':     obj.exam.subject.name     if obj.exam.subject     else None,
+            'class_group': obj.exam.class_group.name if obj.exam.class_group else None,
+        }
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
@@ -66,15 +111,16 @@ class StudentActivityCollaborationSerializer(serializers.ModelSerializer):
 
 
 class StudentActivitySerializer(serializers.ModelSerializer):
-    school_name    = serializers.CharField(source='school.name', read_only=True)
-    collaborations = StudentActivityCollaborationSerializer(many=True, read_only=True)
+    school_name    = serializers.CharField(source='school.name',       read_only=True)
+    club_name      = serializers.CharField(source='club.name',         read_only=True)
+    collaborations = StudentActivityCollaborationSerializer(many=True,  read_only=True)
 
     class Meta:
         model  = StudentActivity
         fields = [
             'id', 'school', 'school_name', 'name', 'date', 'details',
-            'conducted_by', 'activity_type', 'collaborations',
-            'created_by', 'created_at', 'updated_at'
+            'club', 'club_name', 'conducted_by', 'activity_type',
+            'collaborations', 'created_by', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -156,13 +202,14 @@ class CertificationSerializer(serializers.ModelSerializer):
 
 
 class PlacementActivitySerializer(serializers.ModelSerializer):
-    school_name = serializers.CharField(source='school.name', read_only=True)
+    school_name   = serializers.CharField(source='school.name',        read_only=True)
+    placecom_name = serializers.CharField(source='placecom.name',      read_only=True)
 
     class Meta:
         model  = PlacementActivity
         fields = [
             'id', 'school', 'school_name', 'name', 'date',
-            'details', 'company_name',
+            'details', 'company_name', 'placecom', 'placecom_name',
             'created_by', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']

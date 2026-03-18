@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useRecords from '../../hooks/useRecords'
 import useSchools from '../../hooks/useSchools'
-import { useAuth } from '../../context/AuthContext'
 import useExport from '../../hooks/useExport'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
@@ -9,18 +8,18 @@ import Table from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axios'
 
-const empty = {
-    school: '', name: '', date: '', details: '', company_name: ''
-}
+const empty = { school: '', name: '', date: '', details: '', company_name: '', placecom: '' }
 
 export default function PlacementsPage({ readOnly = false }) {
     const { user } = useAuth()
-    const { exportFile, exporting } = useExport('/export/placements/', 'placements.xlsx')
     const { data, loading, create, fetch } = useRecords('/records/placements/')
     const { schoolOptions } = useSchools()
+    const { exportFile, exporting } = useExport('/export/placements/', 'placements.xlsx')
 
+    const [placecomOptions, setPlacecomOptions] = useState([])
     const [showForm, setShowForm] = useState(false)
     const [showEditConfirm, setShowEditConfirm] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -29,14 +28,25 @@ export default function PlacementsPage({ readOnly = false }) {
     const [saving, setSaving] = useState(false)
     const [errors, setErrors] = useState({})
 
-    const set = field => e => setForm(f => ({ ...f, [field]: e.target.value }))
+    const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
+
+    useEffect(() => {
+        api.get('/academics/clubs/?type=placecom&is_active=true').then(res => {
+            const data = res.data?.results ?? res.data
+            setPlacecomOptions(data.map(c => ({ value: c.id, label: c.name })))
+        })
+    }, [])
 
     const openCreate = () => { setSelected(null); setForm(empty); setErrors({}); setShowForm(true) }
     const openEdit = row => {
         setSelected(row)
         setForm({
-            school: row.school, name: row.name, date: row.date,
-            details: row.details, company_name: row.company_name || ''
+            school: row.school,
+            name: row.name,
+            date: row.date,
+            details: row.details,
+            company_name: row.company_name || '',
+            placecom: row.placecom || '',
         })
         setErrors({}); setShowForm(true)
     }
@@ -54,10 +64,12 @@ export default function PlacementsPage({ readOnly = false }) {
         if (!validate()) return
         setSaving(true)
         try {
+            const payload = { ...form }
+            if (!payload.placecom) payload.placecom = null
             if (selected) {
-                await api.put(`/records/placements/${selected.id}/`, form)
+                await api.put(`/records/placements/${selected.id}/`, payload)
                 setShowEditConfirm(false)
-            } else { await create(form) }
+            } else { await create(payload) }
             setShowForm(false); fetch()
         } catch (err) {
             if (err.response?.data) setErrors(err.response.data)
@@ -76,6 +88,7 @@ export default function PlacementsPage({ readOnly = false }) {
         { key: 'school_name', label: 'School' },
         { key: 'name', label: 'Activity' },
         { key: 'date', label: 'Date' },
+        { key: 'placecom_name', label: 'PlaceCom', render: row => row.placecom_name || '—' },
         { key: 'company_name', label: 'Company', render: row => row.company_name || '—' },
         {
             key: 'actions', label: '', sortable: false,
@@ -91,18 +104,22 @@ export default function PlacementsPage({ readOnly = false }) {
 
     return (
         <div>
-            <PageHeader title="Placement Activities" subtitle="Placement and recruitment activity records"
+            <PageHeader title="Placement Activities"
+                subtitle="Placement and recruitment activity records"
                 action={
                     <div className="flex gap-2">
                         {['super_admin', 'admin', 'user'].includes(user?.role) && (
                             <button onClick={() => exportFile()} disabled={exporting}
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white
+                           text-sm font-medium rounded-lg transition-colors
+                           disabled:opacity-50 flex items-center gap-2">
                                 {exporting ? 'Exporting...' : '⬇ Export'}
                             </button>
                         )}
                         {!readOnly && <Button onClick={openCreate}>+ Add Activity</Button>}
                     </div>
-                } />
+                }
+            />
 
             <Table columns={columns} data={data} loading={loading} />
 
@@ -110,11 +127,14 @@ export default function PlacementsPage({ readOnly = false }) {
                 title={selected ? 'Edit Placement Activity' : 'Add Placement Activity'}>
                 <div className="space-y-4">
                     <FormInput label="School" type="select" value={form.school}
-                        onChange={set('school')} options={schoolOptions} required error={errors.school} />
+                        onChange={set('school')} options={schoolOptions}
+                        required error={errors.school} />
                     <FormInput label="Activity Name" value={form.name} onChange={set('name')}
                         required error={errors.name} />
                     <FormInput label="Date" type="date" value={form.date}
                         onChange={set('date')} required error={errors.date} />
+                    <FormInput label="PlaceCom" type="select" value={form.placecom}
+                        onChange={set('placecom')} options={placecomOptions} />
                     <FormInput label="Company Name (optional)" value={form.company_name}
                         onChange={set('company_name')} placeholder="e.g. TCS, Infosys" />
                     <FormInput label="Details" type="textarea" value={form.details}
@@ -122,7 +142,9 @@ export default function PlacementsPage({ readOnly = false }) {
                     <div className="flex justify-end gap-3 pt-2">
                         <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
                         <Button loading={saving}
-                            onClick={selected ? () => { setShowForm(false); setShowEditConfirm(true) } : handleSubmit}>
+                            onClick={selected
+                                ? () => { setShowForm(false); setShowEditConfirm(true) }
+                                : handleSubmit}>
                             {selected ? 'Request Update' : 'Save Record'}
                         </Button>
                     </div>

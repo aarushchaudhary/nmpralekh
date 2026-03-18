@@ -37,7 +37,8 @@ export default function DashboardHome() {
     const { user } = useAuth()
     const [counts, setCounts] = useState({})
     const [schools, setSchools] = useState([])
-    const { exportFile, exporting } = useExport('/export/all/', 'MIS_Dashboard.xlsx')
+    const { exportFile: exportRecords,   exporting: exportingRecords }   = useExport('/export/all/',           'MIS_Dashboard.xlsx')
+    const { exportFile: exportAcademics, exporting: exportingAcademics } = useExport('/export/academics/all/', 'Academics_All.xlsx')
 
     useEffect(() => {
         // fetch school names
@@ -58,26 +59,28 @@ export default function DashboardHome() {
                 title={`Welcome, ${user?.full_name}`}
                 subtitle={schools.map(s => s.name).join(', ') || 'Loading schools...'}
                 action={
-                    <button
-                        onClick={() => exportFile()}
-                        disabled={exporting}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700
-                                   text-white text-sm font-medium rounded-lg
-                                   transition-colors disabled:opacity-50
-                                   disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                        {exporting ? (
-                            <>
-                                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10"
-                                        stroke="currentColor" strokeWidth="4" />
-                                    <path className="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 018-8v8H4z" />
-                                </svg>
-                                Exporting...
-                            </>
-                        ) : '⬇ Export All'}
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => exportAcademics()}
+                            disabled={!!exportingAcademics}
+                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700
+                                       text-white text-sm font-medium rounded-lg
+                                       transition-colors disabled:opacity-50
+                                       disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            {exportingAcademics ? 'Exporting...' : '⬇ Academics'}
+                        </button>
+                        <button
+                            onClick={() => exportRecords()}
+                            disabled={!!exportingRecords}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700
+                                       text-white text-sm font-medium rounded-lg
+                                       transition-colors disabled:opacity-50
+                                       disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            {exportingRecords ? 'Exporting...' : '⬇ Records'}
+                        </button>
+                    </div>
                 }
             />
 

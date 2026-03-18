@@ -33,4 +33,8 @@ urlpatterns = [
     # Placements
     path('placements/',                     views.PlacementListCreateView.as_view(),         name='placement_list_create'),
     path('placements/<int:pk>/',             views.PlacementDetailView.as_view(),             name='placement_detail'),
+
+    # Student Marks
+    path('marks/',          views.StudentMarksListCreateView.as_view(),  name='marks_list_create'),
+    path('marks/<int:pk>/', views.StudentMarksDetailView.as_view(),       name='marks_detail'),
 ]

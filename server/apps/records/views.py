@@ -9,13 +9,14 @@ from apps.records.models import (
     ExamsConducted, SchoolActivity, SchoolActivityCollaboration,
     StudentActivity, StudentActivityCollaboration,
     FacultyFDPWorkshopGL, FacultyPublication,
-    Patent, Certification, PlacementActivity
+    Patent, Certification, PlacementActivity, StudentMarks
 )
 from apps.records.serializers import (
     ExamsConductedSerializer, SchoolActivitySerializer,
     StudentActivitySerializer, FacultyFDPWorkshopGLSerializer,
     FacultyPublicationSerializer, PatentSerializer,
-    CertificationSerializer, PlacementActivitySerializer
+    CertificationSerializer, PlacementActivitySerializer,
+    StudentMarksSerializer
 )
 import json
 
@@ -476,3 +477,38 @@ class PlacementDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIVi
             'detail': 'Delete request submitted and pending approval',
             'audit_id': audit.id
         }, status=status.HTTP_202_ACCEPTED)
+
+
+# ─────────────────────────────────────────────
+# STUDENT MARKS
+# ─────────────────────────────────────────────
+class StudentMarksListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
+    serializer_class   = StudentMarksSerializer
+    permission_classes = [IsAdminOrUser]
+
+    def get_queryset(self):
+        school_ids = get_user_school_ids(self.request.user)
+        qs         = StudentMarks.objects.filter(
+                         exam__school_id__in=school_ids
+                     ).select_related(
+                         'exam',
+                         'exam__exam_group',
+                         'exam__subject',
+                         'exam__class_group',
+                         'created_by'
+                     )
+        exam_id = self.request.query_params.get('exam_id')
+        if exam_id:
+            qs = qs.filter(exam_id=exam_id)
+        return qs
+
+
+class StudentMarksDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
+    serializer_class   = StudentMarksSerializer
+    permission_classes = [IsAdminOrUser]
+
+    def get_queryset(self):
+        school_ids = get_user_school_ids(self.request.user)
+        return StudentMarks.objects.filter(
+            exam__school_id__in=school_ids
+        )

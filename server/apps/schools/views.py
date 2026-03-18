@@ -3,6 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
+from apps.accounts.permissions import IsAdminOrUser
+
 from apps.schools.models import School, UserSchoolMapping
 from apps.schools.serializers import (
     SchoolSerializer, SchoolCreateSerializer,
@@ -67,3 +69,21 @@ class MySchoolsView(APIView):
         school_ids = get_user_school_ids(request.user)
         schools = School.objects.filter(id__in=school_ids, is_active=True)
         return Response(SchoolSerializer(schools, many=True).data)
+
+
+class SchoolFacultyView(APIView):
+    permission_classes = [IsAdminOrUser]
+
+    def get(self, request):
+        school_ids   = get_user_school_ids(request.user)
+        faculty_ids  = UserSchoolMapping.objects.filter(
+                           school_id__in=school_ids
+                       ).values_list('user_id', flat=True)
+        from apps.accounts.models import User
+        from apps.accounts.serializers import UserSerializer
+        faculty      = User.objects.filter(
+                           id__in=faculty_ids,
+                           role='user',
+                           is_active=True
+                       )
+        return Response(UserSerializer(faculty, many=True).data)

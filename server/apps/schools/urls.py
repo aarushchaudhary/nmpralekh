@@ -7,4 +7,5 @@ urlpatterns = [
     path('assign/',            views.UserSchoolMappingListCreateView.as_view(), name='assign_list_create'),
     path('assign/<int:pk>/',   views.UserSchoolMappingDetailView.as_view(),     name='assign_detail'),
     path('my-schools/',        views.MySchoolsView.as_view(),                  name='my_schools'),
+    path('faculty/',            views.SchoolFacultyView.as_view(),              name='school_faculty'),
 ]

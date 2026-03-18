@@ -4,23 +4,43 @@ from apps.schools.models import School
 
 
 class ExamsConducted(models.Model):
-    school                   = models.ForeignKey(School, on_delete=models.RESTRICT, related_name='exams')
-    course                   = models.CharField(max_length=500)
-    examination              = models.CharField(max_length=255)
-    date                     = models.DateField()
-    expected_graduation_year = models.PositiveSmallIntegerField()
-    created_by               = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='exams_created')
-    created_at               = models.DateTimeField(auto_now_add=True)
-    updated_at               = models.DateTimeField(auto_now=True)
-    is_deleted               = models.BooleanField(default=False)
-    pending_audit            = models.ForeignKey('audit.AuditRequest', null=True, blank=True, on_delete=models.SET_NULL, related_name='exams_pending')
+    school          = models.ForeignKey(School, on_delete=models.RESTRICT,
+                                        related_name='exams')
+    exam_group      = models.ForeignKey('academics.ExamGroup',
+                                        on_delete=models.RESTRICT,
+                                        related_name='exams',
+                                        null=True, blank=True)
+    subject         = models.ForeignKey('academics.Subject',
+                                        on_delete=models.RESTRICT,
+                                        related_name='exams',
+                                        null=True, blank=True)
+    class_group     = models.ForeignKey('academics.ClassGroup',
+                                        on_delete=models.RESTRICT,
+                                        related_name='exams',
+                                        null=True, blank=True)
+    faculty         = models.ForeignKey(User, on_delete=models.RESTRICT,
+                                        related_name='exams_conducted',
+                                        null=True, blank=True)
+    date            = models.DateField()
+    created_by      = models.ForeignKey(User, on_delete=models.RESTRICT,
+                                        related_name='exams_created')
+    created_at      = models.DateTimeField(auto_now_add=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+    is_deleted      = models.BooleanField(default=False)
+    pending_audit   = models.ForeignKey('audit.AuditRequest', null=True,
+                                        blank=True, on_delete=models.SET_NULL,
+                                        related_name='exams_pending')
 
     class Meta:
         db_table = 'exams_conducted'
         ordering = ['-date']
 
     def __str__(self):
-        return f'{self.examination} - {self.course}'
+        return (
+            f'{self.exam_group.name if self.exam_group else "No Group"} — '
+            f'{self.subject.name if self.subject else "No Subject"} — '
+            f'{self.class_group.name if self.class_group else "No Class"}'
+        )
 
 
 class SchoolActivity(models.Model):
@@ -63,24 +83,33 @@ class StudentActivity(models.Model):
         ('other',     'Other'),
     ]
 
-    school         = models.ForeignKey(School, on_delete=models.RESTRICT, related_name='student_activities')
-    name           = models.CharField(max_length=500)
-    date           = models.DateField()
-    details        = models.TextField()
-    conducted_by   = models.CharField(max_length=255)
-    activity_type  = models.CharField(max_length=20, choices=TYPE_CHOICES, default='club')
-    created_by     = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='student_activities_created')
-    created_at     = models.DateTimeField(auto_now_add=True)
-    updated_at     = models.DateTimeField(auto_now=True)
-    is_deleted     = models.BooleanField(default=False)
-    pending_audit  = models.ForeignKey('audit.AuditRequest', null=True, blank=True, on_delete=models.SET_NULL, related_name='student_activities_pending')
+    school          = models.ForeignKey(School, on_delete=models.RESTRICT,
+                                        related_name='student_activities')
+    name            = models.CharField(max_length=500)
+    date            = models.DateField()
+    details         = models.TextField()
+    club            = models.ForeignKey('academics.Club', null=True, blank=True,
+                                        on_delete=models.SET_NULL,
+                                        related_name='student_activities')
+    conducted_by    = models.CharField(max_length=255, null=True, blank=True,
+                                       help_text='Free text if club not in list')
+    activity_type   = models.CharField(max_length=20, choices=TYPE_CHOICES,
+                                       default='club')
+    created_by      = models.ForeignKey(User, on_delete=models.RESTRICT,
+                                        related_name='student_activities_created')
+    created_at      = models.DateTimeField(auto_now_add=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+    is_deleted      = models.BooleanField(default=False)
+    pending_audit   = models.ForeignKey('audit.AuditRequest', null=True,
+                                        blank=True, on_delete=models.SET_NULL,
+                                        related_name='student_activities_pending')
 
     class Meta:
         db_table = 'student_activities'
         ordering = ['-date']
 
     def __str__(self):
-        return f'{self.name} by {self.conducted_by}'
+        return f'{self.name} by {self.club or self.conducted_by}'
 
 
 class StudentActivityCollaboration(models.Model):
@@ -216,16 +245,24 @@ class Certification(models.Model):
 
 
 class PlacementActivity(models.Model):
-    school        = models.ForeignKey(School, on_delete=models.RESTRICT, related_name='placements')
-    name          = models.CharField(max_length=500)
-    date          = models.DateField()
-    details       = models.TextField()
-    company_name  = models.CharField(max_length=255, null=True, blank=True)
-    created_by    = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='placements_created')
-    created_at    = models.DateTimeField(auto_now_add=True)
-    updated_at    = models.DateTimeField(auto_now=True)
-    is_deleted    = models.BooleanField(default=False)
-    pending_audit = models.ForeignKey('audit.AuditRequest', null=True, blank=True, on_delete=models.SET_NULL, related_name='placements_pending')
+    school          = models.ForeignKey(School, on_delete=models.RESTRICT,
+                                        related_name='placements')
+    name            = models.CharField(max_length=500)
+    date            = models.DateField()
+    details         = models.TextField()
+    company_name    = models.CharField(max_length=255, null=True, blank=True)
+    placecom        = models.ForeignKey('academics.Club', null=True, blank=True,
+                                        on_delete=models.SET_NULL,
+                                        related_name='placement_activities',
+                                        limit_choices_to={'type': 'placecom'})
+    created_by      = models.ForeignKey(User, on_delete=models.RESTRICT,
+                                        related_name='placements_created')
+    created_at      = models.DateTimeField(auto_now_add=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+    is_deleted      = models.BooleanField(default=False)
+    pending_audit   = models.ForeignKey('audit.AuditRequest', null=True,
+                                        blank=True, on_delete=models.SET_NULL,
+                                        related_name='placements_pending')
 
     class Meta:
         db_table = 'placement_activities'
@@ -233,3 +270,27 @@ class PlacementActivity(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.school.name})'
+
+class StudentMarks(models.Model):
+    exam            = models.ForeignKey(ExamsConducted, on_delete=models.CASCADE,
+                                        related_name='marks')
+    student_name    = models.CharField(max_length=255)
+    roll_number     = models.CharField(max_length=50)
+    marks_obtained  = models.DecimalField(max_digits=6, decimal_places=2)
+    max_marks       = models.DecimalField(max_digits=6, decimal_places=2)
+    is_absent       = models.BooleanField(default=False)
+    created_by      = models.ForeignKey(User, on_delete=models.RESTRICT,
+                                        related_name='marks_entered')
+    created_at      = models.DateTimeField(auto_now_add=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table        = 'student_marks'
+        unique_together = ('exam', 'roll_number')
+        ordering        = ['roll_number']
+
+    def __str__(self):
+        return (
+            f'{self.student_name} ({self.roll_number}) — '
+            f'{self.marks_obtained}/{self.max_marks}'
+        )
