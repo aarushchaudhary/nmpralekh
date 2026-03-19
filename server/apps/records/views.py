@@ -8,13 +8,14 @@ from apps.audit.models import AuditRequest
 from apps.records.models import (
     ExamsConducted, SchoolActivity, SchoolActivityCollaboration,
     StudentActivity, StudentActivityCollaboration,
-    FacultyFDPWorkshopGL, FacultyPublication,
-    Patent, Certification, PlacementActivity, StudentMarks
+    FacultyFDPWorkshopGL, FacultyPublication, PublicationAuthor,
+    Patent, PatentApplicant, Certification, PlacementActivity, StudentMarks
 )
 from apps.records.serializers import (
     ExamsConductedSerializer, SchoolActivitySerializer,
     StudentActivitySerializer, FacultyFDPWorkshopGLSerializer,
-    FacultyPublicationSerializer, PatentSerializer,
+    FacultyPublicationSerializer, PublicationAuthorSerializer,
+    PatentSerializer, PatentApplicantSerializer,
     CertificationSerializer, PlacementActivitySerializer,
     StudentMarksSerializer
 )
@@ -270,24 +271,52 @@ class FDPDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
 # ─────────────────────────────────────────────
 # FACULTY PUBLICATIONS
 # ─────────────────────────────────────────────
+class PublicationAuthorListCreateView(generics.ListCreateAPIView):
+    serializer_class   = PublicationAuthorSerializer
+    permission_classes = [IsAdminOrUser]
+
+    def get_queryset(self):
+        publication_id = self.kwargs['publication_id']
+        return PublicationAuthor.objects.filter(
+            publication_id=publication_id
+        )
+
+    def perform_create(self, serializer):
+        publication_id = self.kwargs['publication_id']
+        serializer.save(publication_id=publication_id)
+
+
+class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class   = PublicationAuthorSerializer
+    permission_classes = [IsAdminOrUser]
+    queryset           = PublicationAuthor.objects.all()
+
+
 class PublicationListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = FacultyPublicationSerializer
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
-        qs          = self.get_base_queryset(FacultyPublication)
-        school_id   = self.request.query_params.get('school_id')
+        user       = self.request.user
+        school_ids = get_user_school_ids(user)
+        qs         = FacultyPublication.objects.filter(
+                         school_id__in=school_ids,
+                         is_deleted=False
+                     ).prefetch_related('authors')
+
+        # faculty only sees their own publications
+        if user.role == 'user':
+            qs = qs.filter(created_by=user)
+
         author_type = self.request.query_params.get('author_type')
         date_from   = self.request.query_params.get('date_from')
         date_to     = self.request.query_params.get('date_to')
-        if school_id:
-            qs = qs.filter(school_id=school_id)
-        if author_type:
-            qs = qs.filter(author_type=author_type)
-        if date_from:
-            qs = qs.filter(date__gte=date_from)
-        if date_to:
-            qs = qs.filter(date__lte=date_to)
+        school_id   = self.request.query_params.get('school_id')
+
+        if author_type: qs = qs.filter(author_type=author_type)
+        if date_from:   qs = qs.filter(date__gte=date_from)
+        if date_to:     qs = qs.filter(date__lte=date_to)
+        if school_id:   qs = qs.filter(school_id=school_id)
         return qs
 
     def get_permissions(self):
@@ -323,21 +352,48 @@ class PublicationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPI
 # ─────────────────────────────────────────────
 # PATENTS
 # ─────────────────────────────────────────────
+class PatentApplicantListCreateView(generics.ListCreateAPIView):
+    serializer_class   = PatentApplicantSerializer
+    permission_classes = [IsAdminOrUser]
+
+    def get_queryset(self):
+        patent_id = self.kwargs['patent_id']
+        return PatentApplicant.objects.filter(patent_id=patent_id)
+
+    def perform_create(self, serializer):
+        patent_id = self.kwargs['patent_id']
+        serializer.save(patent_id=patent_id)
+
+
+class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class   = PatentApplicantSerializer
+    permission_classes = [IsAdminOrUser]
+    queryset           = PatentApplicant.objects.all()
+
+
 class PatentListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = PatentSerializer
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
-        qs             = self.get_base_queryset(Patent)
-        school_id      = self.request.query_params.get('school_id')
+        user       = self.request.user
+        school_ids = get_user_school_ids(user)
+        qs         = Patent.objects.filter(
+                         school_id__in=school_ids,
+                         is_deleted=False
+                     ).prefetch_related('applicants')
+
+        # faculty only sees their own patents
+        if user.role == 'user':
+            qs = qs.filter(created_by=user)
+
         patent_status  = self.request.query_params.get('status')
         applicant_type = self.request.query_params.get('applicant_type')
-        if school_id:
-            qs = qs.filter(school_id=school_id)
-        if patent_status:
-            qs = qs.filter(patent_status=patent_status)
-        if applicant_type:
-            qs = qs.filter(applicant_type=applicant_type)
+        school_id      = self.request.query_params.get('school_id')
+
+        if patent_status:  qs = qs.filter(patent_status=patent_status)
+        if applicant_type: qs = qs.filter(applicant_type=applicant_type)
+        if school_id:      qs = qs.filter(school_id=school_id)
         return qs
 
     def get_permissions(self):
@@ -378,22 +434,28 @@ class CertificationListCreateView(SchoolScopedMixin, generics.ListCreateAPIView)
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
-        qs          = self.get_base_queryset(Certification)
-        school_id   = self.request.query_params.get('school_id')
+        user       = self.request.user
+        school_ids = get_user_school_ids(user)
+        qs         = Certification.objects.filter(
+                         school_id__in=school_ids,
+                         is_deleted=False
+                     )
+
+        # faculty only sees their own certifications
+        if user.role == 'user':
+            qs = qs.filter(created_by=user)
+
         person_type = self.request.query_params.get('person_type')
         agency      = self.request.query_params.get('agency')
         date_from   = self.request.query_params.get('date_from')
         date_to     = self.request.query_params.get('date_to')
-        if school_id:
-            qs = qs.filter(school_id=school_id)
-        if person_type:
-            qs = qs.filter(person_type=person_type)
-        if agency:
-            qs = qs.filter(agency__icontains=agency)
-        if date_from:
-            qs = qs.filter(date__gte=date_from)
-        if date_to:
-            qs = qs.filter(date__lte=date_to)
+        school_id   = self.request.query_params.get('school_id')
+
+        if person_type: qs = qs.filter(person_type=person_type)
+        if agency:      qs = qs.filter(agency__icontains=agency)
+        if date_from:   qs = qs.filter(date__gte=date_from)
+        if date_to:     qs = qs.filter(date__lte=date_to)
+        if school_id:   qs = qs.filter(school_id=school_id)
         return qs
 
     def get_permissions(self):

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useRecords from '../../hooks/useRecords'
 import useSchools from '../../hooks/useSchools'
 import { useAuth } from '../../context/AuthContext'
@@ -22,7 +22,7 @@ const empty = {
     details: '', agency: '', credly_or_proof_link: '', person_type: 'faculty'
 }
 
-export default function CertificationsPage({ readOnly = false }) {
+export default function CertificationsPage({ readOnly = false, selfOnly = false }) {
     const { user } = useAuth()
     const { exportFile, exporting } = useExport('/export/certifications/', 'certifications.xlsx')
     const { data, loading, create, fetch } = useRecords('/records/certifications/')
@@ -38,7 +38,23 @@ export default function CertificationsPage({ readOnly = false }) {
 
     const set = field => e => setForm(f => ({ ...f, [field]: e.target.value }))
 
-    const openCreate = () => { setSelected(null); setForm(empty); setErrors({}); setShowForm(true) }
+    const isEdit = !!selected
+
+    useEffect(() => {
+        if (selfOnly && !isEdit) {
+            setForm(f => ({ ...f, name: user?.full_name || '' }))
+        }
+    }, [selfOnly, user, showForm])
+
+    const openCreate = () => {
+        setSelected(null)
+        setForm({
+            ...empty,
+            name: selfOnly ? (user?.full_name || '') : '',
+        })
+        setErrors({})
+        setShowForm(true)
+    }
     const openEdit = row => {
         setSelected(row)
         setForm({
@@ -82,6 +98,11 @@ export default function CertificationsPage({ readOnly = false }) {
         } finally { setSaving(false) }
     }
 
+    const canEdit = row => {
+        if (selfOnly) return row.created_by === user?.id
+        return !readOnly
+    }
+
     const columns = [
         { key: 'school_name', label: 'School' },
         { key: 'name', label: 'Name' },
@@ -102,7 +123,7 @@ export default function CertificationsPage({ readOnly = false }) {
         },
         {
             key: 'actions', label: '', sortable: false,
-            render: row => !readOnly && (
+            render: row => canEdit(row) && (
                 <div className="flex gap-2">
                     <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>Edit</Button>
                     <Button size="sm" variant="danger"
@@ -123,7 +144,7 @@ export default function CertificationsPage({ readOnly = false }) {
                                 {exporting ? 'Exporting...' : '⬇ Export'}
                             </button>
                         )}
-                        {!readOnly && <Button onClick={openCreate}>+ Add Certification</Button>}
+                        {(selfOnly || !readOnly) && <Button onClick={openCreate}>+ Add Certification</Button>}
                     </div>
                 } />
 
@@ -138,6 +159,7 @@ export default function CertificationsPage({ readOnly = false }) {
                         onChange={set('date')} required error={errors.date} />
                     <FormInput label="Name (Faculty/Student)" value={form.name}
                         onChange={set('name')} placeholder="e.g. Dr. Naresh Vurukonda"
+                        disabled={selfOnly}
                         required error={errors.name} />
                     <FormInput label="Person Type" type="select" value={form.person_type}
                         onChange={set('person_type')} options={personTypeOptions} />

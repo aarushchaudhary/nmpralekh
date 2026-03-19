@@ -173,6 +173,7 @@ class FacultyPublication(models.Model):
     updated_at                  = models.DateTimeField(auto_now=True)
     is_deleted                  = models.BooleanField(default=False)
     pending_audit               = models.ForeignKey('audit.AuditRequest', null=True, blank=True, on_delete=models.SET_NULL, related_name='publications_pending')
+    is_own_work                 = models.BooleanField(default=True, help_text='Faculty marking this as their own publication')
 
     class Meta:
         db_table = 'faculty_publications'
@@ -207,6 +208,7 @@ class Patent(models.Model):
     updated_at           = models.DateTimeField(auto_now=True)
     is_deleted           = models.BooleanField(default=False)
     pending_audit        = models.ForeignKey('audit.AuditRequest', null=True, blank=True, on_delete=models.SET_NULL, related_name='patents_pending')
+    is_own_work          = models.BooleanField(default=True, help_text='Faculty marking this as their own patent')
 
     class Meta:
         db_table = 'patents'
@@ -294,3 +296,52 @@ class StudentMarks(models.Model):
             f'{self.student_name} ({self.roll_number}) — '
             f'{self.marks_obtained}/{self.max_marks}'
         )
+
+
+class PublicationAuthor(models.Model):
+    """Links multiple faculty/students to a single publication"""
+    publication = models.ForeignKey(
+                      'FacultyPublication',
+                      on_delete=models.CASCADE,
+                      related_name='authors'
+                  )
+    name        = models.CharField(max_length=255)
+    author_type = models.CharField(
+                      max_length=10,
+                      choices=[('faculty', 'Faculty'), ('student', 'Student')],
+                      default='faculty'
+                  )
+    is_primary  = models.BooleanField(default=False,
+                      help_text='Primary/corresponding author')
+    order       = models.PositiveSmallIntegerField(default=1,
+                      help_text='Author order in publication')
+
+    class Meta:
+        db_table = 'publication_authors'
+        ordering = ['order']
+
+    def __str__(self):
+        return f'{self.name} → {self.publication.title_of_paper[:50]}'
+
+
+class PatentApplicant(models.Model):
+    """Links multiple faculty/students to a single patent"""
+    patent          = models.ForeignKey(
+                          'Patent',
+                          on_delete=models.CASCADE,
+                          related_name='applicants'
+                      )
+    name            = models.CharField(max_length=255)
+    applicant_type  = models.CharField(
+                          max_length=10,
+                          choices=[('faculty', 'Faculty'), ('student', 'Student')],
+                          default='faculty'
+                      )
+    is_primary      = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'patent_applicants'
+        ordering = ['id']
+
+    def __str__(self):
+        return f'{self.name} → {self.patent.title_of_patent[:50]}'

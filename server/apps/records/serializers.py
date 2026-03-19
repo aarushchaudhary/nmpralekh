@@ -3,7 +3,8 @@ from apps.records.models import (
     ExamsConducted, SchoolActivity, SchoolActivityCollaboration,
     StudentActivity, StudentActivityCollaboration,
     FacultyFDPWorkshopGL, FacultyPublication,
-    Patent, Certification, PlacementActivity, StudentMarks
+    Patent, Certification, PlacementActivity, StudentMarks,
+    PublicationAuthor, PatentApplicant
 )
 
 
@@ -147,16 +148,28 @@ class FacultyFDPWorkshopGLSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class PublicationAuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = PublicationAuthor
+        fields = ['id', 'name', 'author_type', 'is_primary', 'order']
+
+
 class FacultyPublicationSerializer(serializers.ModelSerializer):
     school_name = serializers.CharField(source='school.name', read_only=True)
+    authors     = PublicationAuthorSerializer(many=True, read_only=True)
+    created_by_name = serializers.CharField(
+                          source='created_by.full_name', read_only=True
+                      )
 
     class Meta:
         model  = FacultyPublication
         fields = [
-            'id', 'school', 'school_name', 'author_name', 'author_type',
+            'id', 'school', 'school_name',
+            'author_name', 'author_type',
             'title_of_paper', 'journal_or_conference_name',
             'date', 'venue', 'publication', 'doi_or_link',
-            'created_by', 'created_at', 'updated_at'
+            'is_own_work', 'authors',
+            'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -165,16 +178,28 @@ class FacultyPublicationSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class PatentApplicantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = PatentApplicant
+        fields = ['id', 'name', 'applicant_type', 'is_primary']
+
+
 class PatentSerializer(serializers.ModelSerializer):
-    school_name = serializers.CharField(source='school.name', read_only=True)
+    school_name    = serializers.CharField(source='school.name', read_only=True)
+    applicants     = PatentApplicantSerializer(many=True, read_only=True)
+    created_by_name = serializers.CharField(
+                          source='created_by.full_name', read_only=True
+                      )
 
     class Meta:
         model  = Patent
         fields = [
-            'id', 'school', 'school_name', 'applicant_name', 'applicant_type',
-            'title_of_patent', 'details', 'date_of_publication',
-            'journal_number', 'patent_status',
-            'created_by', 'created_at', 'updated_at'
+            'id', 'school', 'school_name',
+            'applicant_name', 'applicant_type',
+            'title_of_patent', 'details',
+            'date_of_publication', 'journal_number', 'patent_status',
+            'is_own_work', 'applicants',
+            'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -184,7 +209,10 @@ class PatentSerializer(serializers.ModelSerializer):
 
 
 class CertificationSerializer(serializers.ModelSerializer):
-    school_name = serializers.CharField(source='school.name', read_only=True)
+    school_name     = serializers.CharField(source='school.name', read_only=True)
+    created_by_name = serializers.CharField(
+                          source='created_by.full_name', read_only=True
+                      )
 
     class Meta:
         model  = Certification
@@ -192,7 +220,7 @@ class CertificationSerializer(serializers.ModelSerializer):
             'id', 'school', 'school_name', 'date', 'name',
             'title_of_course', 'details', 'agency',
             'credly_or_proof_link', 'person_type',
-            'created_by', 'created_at', 'updated_at'
+            'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 

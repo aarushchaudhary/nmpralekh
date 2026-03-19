@@ -16,17 +16,21 @@ export default function FacultyDashboard() {
   return (
     <Layout>
       <Routes>
-        <Route index                      element={<DashboardHome />} />
-        <Route path="assignments"         element={<MyAssignmentsPage />} />
-        <Route path="exams"               element={<ExamsPage facultyMode />} />
-        <Route path="marks"               element={<MarksPage />} />
-        <Route path="school-activities"   element={<SchoolActivities readOnly />} />
-        <Route path="student-activities"  element={<StudentActivities readOnly />} />
-        <Route path="fdp"                 element={<FDPPage readOnly />} />
-        <Route path="publications"        element={<PublicationsPage readOnly />} />
-        <Route path="patents"             element={<PatentsPage readOnly />} />
-        <Route path="certifications"      element={<CertificationsPage readOnly />} />
-        <Route path="placements"          element={<PlacementsPage readOnly />} />
+        <Route index                     element={<DashboardHome />} />
+        <Route path="assignments"        element={<MyAssignmentsPage />} />
+
+        {/* Faculty has full create/update on these */}
+        <Route path="exams"              element={<ExamsPage facultyMode />} />
+        <Route path="marks"              element={<MarksPage />} />
+        <Route path="school-activities"  element={<SchoolActivities />} />
+        <Route path="student-activities" element={<StudentActivities />} />
+        <Route path="fdp"                element={<FDPPage />} />
+        <Route path="placements"         element={<PlacementsPage />} />
+
+        {/* Self-managed — faculty sees and edits only their own */}
+        <Route path="publications"       element={<PublicationsPage selfOnly />} />
+        <Route path="patents"            element={<PatentsPage selfOnly />} />
+        <Route path="certifications"     element={<CertificationsPage selfOnly />} />
       </Routes>
     </Layout>
   )

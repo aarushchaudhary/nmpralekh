@@ -21,10 +21,14 @@ urlpatterns = [
     # Publications
     path('publications/',                   views.PublicationListCreateView.as_view(),       name='pub_list_create'),
     path('publications/<int:pk>/',           views.PublicationDetailView.as_view(),           name='pub_detail'),
+    path('publications/<int:publication_id>/authors/', views.PublicationAuthorListCreateView.as_view(), name='publication_authors'),
+    path('publications/<int:publication_id>/authors/<int:pk>/', views.PublicationAuthorDetailView.as_view(), name='publication_author_detail'),
 
     # Patents
     path('patents/',                        views.PatentListCreateView.as_view(),            name='patent_list_create'),
     path('patents/<int:pk>/',                views.PatentDetailView.as_view(),                name='patent_detail'),
+    path('patents/<int:patent_id>/applicants/', views.PatentApplicantListCreateView.as_view(), name='patent_applicants'),
+    path('patents/<int:patent_id>/applicants/<int:pk>/', views.PatentApplicantDetailView.as_view(), name='patent_applicant_detail'),
 
     # Certifications
     path('certifications/',                 views.CertificationListCreateView.as_view(),     name='cert_list_create'),
