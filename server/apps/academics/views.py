@@ -15,6 +15,27 @@ from apps.academics.serializers import (
 )
 from apps.accounts.permissions import IsAdmin, IsUser, IsAdminOrUser, IsMasterOrSuperAdmin
 from apps.schools.utils import get_user_school_ids
+from apps.audit.models import AuditRequest
+
+def create_audit_request(user, table_name, record, action, new_data=None):
+    old_data = {}
+    for field in record._meta.fields:
+        value = getattr(record, field.name)
+        old_data[field.name] = str(value) if value is not None else None
+
+    audit = AuditRequest.objects.create(
+        table_name   = table_name,
+        record_id    = record.id,
+        action       = action,
+        old_data     = old_data,
+        new_data     = new_data,
+        requested_by = user,
+        status       = 'pending'
+    )
+
+    record.pending_audit = audit
+    record.save()
+    return audit
 
 
 # ─────────────────────────────────────────────
@@ -37,7 +58,7 @@ class CourseListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
         return [IsAdminOrUser()]
 
     def get_queryset(self):
-        qs        = Course.objects.filter(school_id__in=self.get_school_ids())
+        qs        = Course.objects.filter(school_id__in=self.get_school_ids(), is_deleted=False)
         is_active = self.request.query_params.get('is_active')
         school_id = self.request.query_params.get('school_id')
         if is_active is not None:
@@ -52,13 +73,23 @@ class CourseDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView)
     permission_classes = [IsAdmin]
 
     def get_queryset(self):
-        return Course.objects.filter(school_id__in=self.get_school_ids())
+        return Course.objects.filter(school_id__in=self.get_school_ids(), is_deleted=False)
+
+    def update(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'courses', record, 'UPDATE', request.data)
+        return Response({
+            'detail': 'Update request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
 
     def destroy(self, request, *args, **kwargs):
-        course           = self.get_object()
-        course.is_active = False
-        course.save()
-        return Response({'detail': 'Course deactivated'})
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'courses', record, 'DELETE')
+        return Response({
+            'detail': 'Delete request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -74,7 +105,8 @@ class AcademicYearListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs        = AcademicYear.objects.filter(
-                        school_id__in=self.get_school_ids()
+                        school_id__in=self.get_school_ids(),
+                        is_deleted=False
                     ).select_related('school', 'course')
         course_id = self.request.query_params.get('course_id')
         school_id = self.request.query_params.get('school_id')
@@ -91,8 +123,25 @@ class AcademicYearDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAP
 
     def get_queryset(self):
         return AcademicYear.objects.filter(
-            school_id__in=self.get_school_ids()
+            school_id__in=self.get_school_ids(),
+            is_deleted=False
         ).select_related('school', 'course')
+
+    def update(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'academic_years', record, 'UPDATE', request.data)
+        return Response({
+            'detail': 'Update request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
+
+    def destroy(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'academic_years', record, 'DELETE')
+        return Response({
+            'detail': 'Delete request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -109,7 +158,8 @@ class SemesterListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     def get_queryset(self):
         school_ids      = self.get_school_ids()
         qs              = Semester.objects.filter(
-                              academic_year__school_id__in=school_ids
+                              academic_year__school_id__in=school_ids,
+                              is_deleted=False
                           ).select_related(
                               'academic_year',
                               'academic_year__course',
@@ -135,8 +185,25 @@ class SemesterDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIVie
     def get_queryset(self):
         school_ids = self.get_school_ids()
         return Semester.objects.filter(
-            academic_year__school_id__in=school_ids
+            academic_year__school_id__in=school_ids,
+            is_deleted=False
         ).select_related('academic_year', 'academic_year__course')
+
+    def update(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'semesters', record, 'UPDATE', request.data)
+        return Response({
+            'detail': 'Update request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
+
+    def destroy(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'semesters', record, 'DELETE')
+        return Response({
+            'detail': 'Delete request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -152,7 +219,8 @@ class SubjectListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs          = Subject.objects.filter(
-                          school_id__in=self.get_school_ids()
+                          school_id__in=self.get_school_ids(),
+                          is_deleted=False
                       ).select_related(
                           'school',
                           'semester',
@@ -181,18 +249,29 @@ class SubjectDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView
 
     def get_queryset(self):
         return Subject.objects.filter(
-            school_id__in=self.get_school_ids()
+            school_id__in=self.get_school_ids(),
+            is_deleted=False
         ).select_related(
             'school', 'semester',
             'semester__academic_year',
             'semester__academic_year__course'
         )
 
+    def update(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'subjects', record, 'UPDATE', request.data)
+        return Response({
+            'detail': 'Update request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
+
     def destroy(self, request, *args, **kwargs):
-        subject           = self.get_object()
-        subject.is_active = False
-        subject.save()
-        return Response({'detail': 'Subject deactivated'})
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'subjects', record, 'DELETE')
+        return Response({
+            'detail': 'Delete request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -208,7 +287,8 @@ class ClassGroupListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs        = ClassGroup.objects.filter(
-                        school_id__in=self.get_school_ids()
+                        school_id__in=self.get_school_ids(),
+                        is_deleted=False
                     ).select_related('school', 'course')
         course_id = self.request.query_params.get('course_id')
         school_id = self.request.query_params.get('school_id')
@@ -229,14 +309,25 @@ class ClassGroupDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIV
 
     def get_queryset(self):
         return ClassGroup.objects.filter(
-            school_id__in=self.get_school_ids()
+            school_id__in=self.get_school_ids(),
+            is_deleted=False
         ).select_related('school', 'course')
 
+    def update(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'class_groups', record, 'UPDATE', request.data)
+        return Response({
+            'detail': 'Update request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
+
     def destroy(self, request, *args, **kwargs):
-        group           = self.get_object()
-        group.is_active = False
-        group.save()
-        return Response({'detail': 'Class group deactivated'})
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'class_groups', record, 'DELETE')
+        return Response({
+            'detail': 'Delete request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -252,7 +343,8 @@ class ExamGroupListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs          = ExamGroup.objects.filter(
-                          school_id__in=self.get_school_ids()
+                          school_id__in=self.get_school_ids(),
+                          is_deleted=False
                       ).select_related(
                           'school',
                           'semester',
@@ -275,12 +367,29 @@ class ExamGroupDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIVi
 
     def get_queryset(self):
         return ExamGroup.objects.filter(
-            school_id__in=self.get_school_ids()
+            school_id__in=self.get_school_ids(),
+            is_deleted=False
         ).select_related(
             'school', 'semester',
             'semester__academic_year',
             'semester__academic_year__course'
         )
+
+    def update(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'exam_groups', record, 'UPDATE', request.data)
+        return Response({
+            'detail': 'Update request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
+
+    def destroy(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'exam_groups', record, 'DELETE')
+        return Response({
+            'detail': 'Delete request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -296,7 +405,8 @@ class ClubListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs        = Club.objects.filter(
-                        school_id__in=self.get_school_ids()
+                        school_id__in=self.get_school_ids(),
+                        is_deleted=False
                     ).select_related('school')
         club_type = self.request.query_params.get('type')
         school_id = self.request.query_params.get('school_id')
@@ -317,14 +427,25 @@ class ClubDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Club.objects.filter(
-            school_id__in=self.get_school_ids()
+            school_id__in=self.get_school_ids(),
+            is_deleted=False
         ).select_related('school')
 
+    def update(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'clubs', record, 'UPDATE', request.data)
+        return Response({
+            'detail': 'Update request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
+
     def destroy(self, request, *args, **kwargs):
-        club           = self.get_object()
-        club.is_active = False
-        club.save()
-        return Response({'detail': 'Club deactivated'})
+        record = self.get_object()
+        audit  = create_audit_request(request.user, 'clubs', record, 'DELETE')
+        return Response({
+            'detail': 'Delete request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────

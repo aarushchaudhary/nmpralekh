@@ -82,8 +82,13 @@ export default function MyAssignmentsPage() {
   }
 
   const handleDelete = async (id) => {
-    await api.delete(`/academics/assignments/${id}/`)
-    fetchAssignments()
+    try {
+      const res = await api.delete(`/academics/assignments/${id}/`)
+      console.log('Delete response:', res.data)
+      fetchAssignments()
+    } catch (err) {
+      console.error('Delete failed:', err)
+    }
   }
 
   return (
@@ -125,6 +130,11 @@ export default function MyAssignmentsPage() {
                   </span>
                   <span className="text-xs text-gray-400">{a.subject_code}</span>
                   <Badge label={a.status} color={statusColor[a.status]} />
+                  {a.pending_audit && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
+                        Pending Approval
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-gray-500">
                   {a.class_group_name} ·{' '}
@@ -140,13 +150,19 @@ export default function MyAssignmentsPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {a.status === 'pending' && (
-                  <span className="text-xs text-yellow-600">Awaiting approval</span>
-                )}
-                {a.status !== 'approved' && (
-                  <Button size="sm" variant="danger" onClick={() => handleDelete(a.id)}>
-                    Remove
-                  </Button>
+                {a.pending_audit ? (
+                  <span className="text-xs text-yellow-600 italic">Change pending...</span>
+                ) : (
+                  <>
+                    {a.status === 'pending' && (
+                      <span className="text-xs text-yellow-600">Awaiting approval</span>
+                    )}
+                    {a.status !== 'approved' && (
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(a.id)}>
+                        Remove
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>

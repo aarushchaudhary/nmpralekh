@@ -89,9 +89,15 @@ export default function YearsPage() {
   const handleDeleteYear = async () => {
     setSaving(true)
     try {
-      await api.delete(`/academics/years/${selected.id}/`)
-      fetchYears(); setShowConfirm(false)
-    } finally { setSaving(false) }
+      const res = await api.delete(`/academics/years/${selected.id}/`)
+      console.log('Delete response:', res.data)
+      setShowConfirm(false)
+      fetchYears()
+    } catch (err) {
+      console.error('Delete failed:', err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const yearColumns = [
@@ -101,12 +107,28 @@ export default function YearsPage() {
       render: row => `Year ${row.year_number}` },
     { key: 'graduation_year', label: 'Graduation Year' },
     {
+      key: 'status', label: 'Status', sortable: false,
+      render: row => row.pending_audit ? (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
+          Pending Approval
+        </span>
+      ) : null
+    },
+    {
       key: 'actions', label: '', sortable: false,
       render: row => (
-        <Button size="sm" variant="danger"
-          onClick={() => { setSelected(row); setShowConfirm(true) }}>
-          Delete
-        </Button>
+        <div className="flex gap-2">
+          {row.pending_audit ? (
+            <span className="text-xs text-yellow-600 italic">
+              Change pending...
+            </span>
+          ) : (
+            <Button size="sm" variant="danger"
+              onClick={() => { setSelected(row); setShowConfirm(true) }}>
+              Delete
+            </Button>
+          )}
+        </div>
       )
     }
   ]
@@ -127,14 +149,35 @@ export default function YearsPage() {
     { key: 'start_date', label: 'Start Date', render: row => row.start_date || '—' },
     { key: 'end_date',   label: 'End Date',   render: row => row.end_date   || '—' },
     {
+      key: 'status', label: 'Status', sortable: false,
+      render: row => row.pending_audit ? (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
+          Pending Approval
+        </span>
+      ) : null
+    },
+    {
       key: 'actions', label: '', sortable: false,
       render: row => (
-        <Button size="sm" variant="danger"
-          onClick={() => {
-            api.delete(`/academics/semesters/${row.id}/`).then(fetchSems)
-          }}>
-          Delete
-        </Button>
+        <div className="flex gap-2">
+          {row.pending_audit ? (
+            <span className="text-xs text-yellow-600 italic">
+              Change pending...
+            </span>
+          ) : (
+            <Button size="sm" variant="danger"
+              onClick={() => {
+                api.delete(`/academics/semesters/${row.id}/`)
+                  .then(res => {
+                    console.log('Delete response:', res.data)
+                    fetchSems()
+                  })
+                  .catch(err => console.error('Delete failed:', err))
+              }}>
+              Delete
+            </Button>
+          )}
+        </div>
       )
     }
   ]

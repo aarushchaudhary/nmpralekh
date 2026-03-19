@@ -55,6 +55,20 @@ export default function LoginPage() {
             </div>
           )}
 
+          <button
+            onClick={() => {
+              document.cookie.split(';').forEach(c => {
+                document.cookie = c.replace(/^ +/, '')
+                  .replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
+              })
+              window.location.reload()
+            }}
+            className="text-xs text-gray-400 hover:text-gray-600 mb-4 block"
+            type="button"
+          >
+            Clear stale session
+          </button>
+
           <form onSubmit={handleSubmit} className="space-y-5">
 
             <div>

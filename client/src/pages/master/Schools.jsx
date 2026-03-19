@@ -44,7 +44,7 @@ export default function Schools() {
 
     const openEdit = (school) => {
         setSelected(school)
-        setForm({ campus: school.campus, name: school.name, code: school.code })
+        setForm({ campus: school.campus?.id ?? school.campus, name: school.name, code: school.code })
         setErrors({})
         setShowForm(true)
     }

@@ -8,7 +8,7 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = Course
-        fields = ['id', 'school', 'school_name', 'name', 'code', 'is_active', 'created_at']
+        fields = ['id', 'school', 'school_name', 'name', 'code', 'is_active', 'pending_audit', 'created_at']
         read_only_fields = ['created_at']
 
     def create(self, validated_data):
@@ -25,7 +25,7 @@ class AcademicYearSerializer(serializers.ModelSerializer):
         model  = AcademicYear
         fields = [
             'id', 'school', 'school_name', 'course', 'course_name',
-            'course_code', 'year_number', 'graduation_year', 'created_at'
+            'course_code', 'year_number', 'graduation_year', 'pending_audit', 'created_at'
         ]
         read_only_fields = ['created_at']
 
@@ -41,7 +41,7 @@ class SemesterSerializer(serializers.ModelSerializer):
         model  = Semester
         fields = [
             'id', 'academic_year', 'academic_year_detail',
-            'semester_number', 'start_date', 'end_date', 'created_at'
+            'semester_number', 'start_date', 'end_date', 'pending_audit', 'created_at'
         ]
         read_only_fields = ['created_at']
 
@@ -67,7 +67,7 @@ class SubjectSerializer(serializers.ModelSerializer):
         model  = Subject
         fields = [
             'id', 'school', 'school_name', 'semester', 'semester_detail',
-            'name', 'code', 'is_active', 'created_at'
+            'name', 'code', 'is_active', 'pending_audit', 'created_at'
         ]
         read_only_fields = ['created_at']
 
@@ -95,7 +95,7 @@ class ClassGroupSerializer(serializers.ModelSerializer):
         model  = ClassGroup
         fields = [
             'id', 'school', 'school_name', 'course', 'course_name',
-            'course_code', 'name', 'is_active', 'created_at'
+            'course_code', 'name', 'is_active', 'pending_audit', 'created_at'
         ]
         read_only_fields = ['created_at']
 
@@ -118,7 +118,7 @@ class ExamGroupSerializer(serializers.ModelSerializer):
         model  = ExamGroup
         fields = [
             'id', 'school', 'school_name', 'semester', 'semester_detail',
-            'name', 'class_group_ids', 'class_group_names', 'created_at'
+            'name', 'class_group_ids', 'class_group_names', 'pending_audit', 'created_at'
         ]
         read_only_fields = ['created_at']
 
@@ -157,7 +157,7 @@ class ClubSerializer(serializers.ModelSerializer):
         model  = Club
         fields = [
             'id', 'school', 'school_name', 'name',
-            'type', 'is_active', 'created_at'
+            'type', 'is_active', 'pending_audit', 'created_at'
         ]
         read_only_fields = ['created_at']
 

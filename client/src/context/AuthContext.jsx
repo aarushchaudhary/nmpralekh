@@ -1,29 +1,40 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import api from '../api/axios'
+import axios from 'axios'
 
 const AuthContext = createContext(null)
+
+// use a plain axios instance for auth checks — bypasses interceptors
+const authApi = axios.create({
+  baseURL:         '/api',
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json' },
+})
 
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // verify session on mount by calling /me/
-    api.get('/auth/me/')
+    // use plain axios — not the interceptor version
+    // so a 401 here does NOT trigger a refresh loop
+    authApi.get('/auth/me/')
       .then(res => setUser(res.data))
-      .catch(() => setUser(null))
+      .catch(() => setUser(null))   // silently set null — no retry
       .finally(() => setLoading(false))
   }, [])
 
   const login = async (username, password) => {
-    const res = await api.post('/auth/login/', { username, password })
+    const res = await authApi.post('/auth/login/', { username, password })
     setUser(res.data.user)
     return res.data.user
   }
 
   const logout = async () => {
-    try { await api.post('/auth/logout/', {}) } catch {}
+    try {
+      await authApi.post('/auth/logout/', {})
+    } catch {}
     setUser(null)
+    window.location.href = '/login'
   }
 
   return (

@@ -12,6 +12,10 @@ class Course(models.Model):
                                     related_name='courses_created')
     created_at  = models.DateTimeField(auto_now_add=True)
     is_active   = models.BooleanField(default=True)
+    is_deleted  = models.BooleanField(default=False)
+    pending_audit = models.ForeignKey('audit.AuditRequest', null=True, blank=True,
+                                      on_delete=models.SET_NULL,
+                                      related_name='courses_pending')
 
     class Meta:
         db_table        = 'courses'
@@ -36,6 +40,10 @@ class AcademicYear(models.Model):
     created_by       = models.ForeignKey(User, on_delete=models.RESTRICT,
                                          related_name='academic_years_created')
     created_at       = models.DateTimeField(auto_now_add=True)
+    is_deleted       = models.BooleanField(default=False)
+    pending_audit    = models.ForeignKey('audit.AuditRequest', null=True, blank=True,
+                                         on_delete=models.SET_NULL,
+                                         related_name='academic_years_pending')
 
     class Meta:
         db_table        = 'academic_years'
@@ -57,6 +65,10 @@ class Semester(models.Model):
     created_by        = models.ForeignKey(User, on_delete=models.RESTRICT,
                                           related_name='semesters_created')
     created_at        = models.DateTimeField(auto_now_add=True)
+    is_deleted        = models.BooleanField(default=False)
+    pending_audit     = models.ForeignKey('audit.AuditRequest', null=True, blank=True,
+                                          on_delete=models.SET_NULL,
+                                          related_name='semesters_pending')
 
     class Meta:
         db_table        = 'semesters'
@@ -82,6 +94,10 @@ class Subject(models.Model):
                                     related_name='subjects_created')
     created_at  = models.DateTimeField(auto_now_add=True)
     is_active   = models.BooleanField(default=True)
+    is_deleted  = models.BooleanField(default=False)
+    pending_audit = models.ForeignKey('audit.AuditRequest', null=True, blank=True,
+                                      on_delete=models.SET_NULL,
+                                      related_name='subjects_pending')
 
     class Meta:
         db_table        = 'subjects'
@@ -103,6 +119,10 @@ class ClassGroup(models.Model):
                                     related_name='class_groups_created')
     created_at  = models.DateTimeField(auto_now_add=True)
     is_active   = models.BooleanField(default=True)
+    is_deleted  = models.BooleanField(default=False)
+    pending_audit = models.ForeignKey('audit.AuditRequest', null=True, blank=True,
+                                      on_delete=models.SET_NULL,
+                                      related_name='class_groups_pending')
 
     class Meta:
         db_table        = 'class_groups'
@@ -128,6 +148,10 @@ class ExamGroup(models.Model):
     created_by    = models.ForeignKey(User, on_delete=models.RESTRICT,
                                       related_name='exam_groups_created')
     created_at    = models.DateTimeField(auto_now_add=True)
+    is_deleted    = models.BooleanField(default=False)
+    pending_audit = models.ForeignKey('audit.AuditRequest', null=True, blank=True,
+                                      on_delete=models.SET_NULL,
+                                      related_name='exam_groups_pending')
 
     class Meta:
         db_table        = 'exam_groups'
@@ -154,6 +178,10 @@ class Club(models.Model):
                                     related_name='clubs_created')
     created_at  = models.DateTimeField(auto_now_add=True)
     is_active   = models.BooleanField(default=True)
+    is_deleted  = models.BooleanField(default=False)
+    pending_audit = models.ForeignKey('audit.AuditRequest', null=True, blank=True,
+                                      on_delete=models.SET_NULL,
+                                      related_name='clubs_pending')
 
     class Meta:
         db_table        = 'clubs'

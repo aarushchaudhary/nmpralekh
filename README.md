@@ -22,41 +22,30 @@ A full-stack Management Information System portal built for NMIMS University acr
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Browser                              │
-│              http://localhost:5173 (dev)                    │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────────┐
-│                   Vite Dev Server                           │
-│         Proxies /api/* → http://localhost:8000              │
-│         (Production: Nginx handles this)                    │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────────┐
-│              Django + Gunicorn                              │
-│                                                             │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────┐ ┌────────┐  │
-│  │accounts │ │ schools │ │ records │ │audit │ │export  │  │
-│  │ Users   │ │Campuses │ │ 8 MIS   │ │Approve│ │ Excel  │  │
-│  │ Roles   │ │ Schools │ │ Modules │ │Reject │ │ Export │  │
-│  │  JWT    │ │Mapping  │ │ Marks   │ │      │ │        │  │
-│  └─────────┘ └─────────┘ └─────────┘ └──────┘ └────────┘  │
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │                  academics app                       │   │
-│  │  Courses │ Years │ Semesters │ Subjects │ ClassGroups│   │
-│  │  ExamGroups │ Clubs │ FacultyAssignments             │   │
-│  └──────────────────────────────────────────────────────┘   │
-└──────┬──────────────────┬──────────────────┬────────────────┘
-       │                  │                  │
-┌──────▼──────┐  ┌────────▼──────┐  ┌───────▼────────┐
-│   MariaDB   │  │     Redis     │  │    Celery      │
-│ All tables  │  │ Cache counts  │  │ Background     │
-│ ACID/InnoDB │  │ Sessions      │  │ Excel exports  │
-│ Indexed     │  │ Export files  │  │                │
-└─────────────┘  └───────────────┘  └────────────────┘
+```mermaid
+graph TD
+    A[Browser<br>http://localhost:5173] -->|HTTP/API| B[Vite Dev Server / Nginx]
+    B -->|Proxy /api/*| C[Django + Gunicorn<br>REST API]
+    
+    subgraph Django Applications
+        D1[accounts: Users, Roles, JWT]
+        D2[schools: Campuses, Schools]
+        D3[records: 8 MIS Modules]
+        D4[audit: Approve/Reject]
+        D5[export: Excel Export]
+        D6[academics: Courses, Years, Clubs, etc.]
+    end
+    
+    C --> D1
+    C --> D2
+    C --> D3
+    C --> D4
+    C --> D5
+    C --> D6
+    
+    C -->|Read/Write| DB[(MariaDB<br>ACID/InnoDB)]
+    C -->|Cache/Sessions| Cache[(Redis)]
+    C -->|Task Queue| Worker[Celery<br>Background Tasks]
 ```
 
 ---
@@ -165,22 +154,25 @@ nmpralekh/
 
 ## User Roles and Hierarchy
 
-```
-master
-  └── Creates campuses, schools, users, assigns them to schools
-super_admin (per campus)
-  └── Read-only view of all records in their campus + export
-admin (per school)
-  └── Full CRUD on all records for their school
-      Approves faculty teaching assignment requests
-user / faculty (per school)
-  └── Creates records for their school
-      Manages their own publications, patents, certifications
-      Requests teaching assignments (needs admin approval)
-      Enters student marks for their assigned subjects
-delete_auth
-  └── Reviews and approves or rejects all update and delete
-      requests before they are applied to the database
+```mermaid
+graph TD
+    master[Master] -->|Creates & Assigns| campuses[Campuses, Schools, Users]
+    
+    subgraph Campus Level
+        super_admin[Super Admin] -->|Read-Only & Export| all_records[All Records in Campus]
+    end
+    
+    subgraph School Level
+        admin[Admin] -->|Full CRUD & Approvals| school_records[All Records in School]
+        admin -->|Approves| faculty_assignments[Faculty Teaching Assignments]
+        
+        faculty[Faculty / User] -->|Creates| own_records[Own Records / Marks]
+        faculty -->|Requests| teaching_assignments[Teaching Assignments]
+        faculty -->|Requests Update/Delete| edit_requests[Audit Requests]
+    end
+    
+    delete_auth[Delete Auth Reviewer] -->|Reviews| edit_requests
+    delete_auth -->|Approves/Rejects| DB_updates[Database Updates]
 ```
 
 | Action | master | super_admin | admin | faculty | delete_auth |
@@ -189,8 +181,8 @@ delete_auth
 | Create schools | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Create users | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Assign users to schools | ✅ | ❌ | ❌ | ❌ | ❌ |
-| View all campus records | ✅ | ✅ | ❌ | ❌ | ❌ |
-| View own school records | ✅ | ✅ | ✅ | ✅ | ❌ |
+| View all campus records | ❌ | ✅ | ❌ | ❌ | ❌ |
+| View own school records | ❌ | ✅ | ✅ | ✅ | ❌ |
 | Create records | ❌ | ❌ | ✅ | ✅ | ❌ |
 | Request update/delete | ❌ | ❌ | ✅ | ✅ | ❌ |
 | Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -218,50 +210,58 @@ delete_auth
 
 ## Academic Structure Flow
 
-```
-Master creates campus
-  → Admin creates Course (e.g. B.Tech CSEDS)
-    → Admin creates Academic Year (Year 1, Graduation 2027)
-      → Admin creates Semester (Semester 1, July-Nov 2024)
-        → Admin creates Subjects (Data Structures, Mathematics)
-          → Admin creates Class Groups (CSDS-A, CSDS-B)
-            → Admin creates Exam Groups (Mid Term 1, End Semester)
-              → Admin creates Clubs (Sankalp, PlaceCom)
-
-Faculty requests teaching assignment
-  → Selects school, semester, subject, class group
-  → Admin approves or rejects with notes
-  → On approval faculty can create exams and enter marks
-    for their assigned subjects and class groups only
+```mermaid
+flowchart TD
+    M[Master] -->|Creates| C[Campus]
+    A[Admin] -->|Creates| Course[Course <br>e.g. B.Tech CSEDS]
+    Course -->|Contains| AY[Academic Year <br>e.g. Year 1, Graduation 2027]
+    AY -->|Contains| Sem[Semester <br>e.g. Semester 1, July-Nov 2024]
+    Sem -->|Contains| Sub[Subjects <br>e.g. Data Structures, Math]
+    Sem -->|Contains| CG[Class Groups <br>e.g. CSDS-A, CSDS-B]
+    Sem -->|Contains| EG[Exam Groups <br>e.g. Mid Term 1, End Sem]
+    Sem -->|Contains| Clubs[Clubs <br>e.g. Sankalp, PlaceCom]
+    
+    F[Faculty] -.->|Requests Assignment| Sub
+    F -.->|Requests Assignment| CG
+    A -.->|Approves/Rejects| Assignment[Teaching Assignment]
+    Assignment -->|Enables| Exams[Create Exams & Enter Marks <br>for assigned subjects/groups]
 ```
 
 ---
 
 ## Audit and Delete Auth Flow
 
-Every UPDATE and DELETE goes through an approval workflow:
+Every **UPDATE** and **DELETE** goes through a strict approval workflow:
 
-```
-1. Admin or faculty submits edit or delete on any record
-      ↓
-2. System snapshots the current row into old_data (JSON)
-3. Creates AuditRequest with status = pending
-4. Record is flagged with pending_audit_id
-5. Original record is NOT changed yet
-      ↓
-6. delete_auth logs in → sees Pending Requests dashboard
-7. Each request shows a before/after diff (field by field)
-      ↓
-8a. APPROVE → Django applies change inside transaction.atomic()
-              → record updated or soft-deleted
-              → pending_audit_id cleared
-              → AuditRequest marked approved
-
-8b. REJECT  → record stays exactly as it was
-              → pending_audit_id cleared
-              → AuditRequest marked rejected
-
-9. All decisions logged in History with reviewer name and timestamp
+```mermaid
+sequenceDiagram
+    participant U as Admin/Faculty
+    participant S as System
+    participant DB as MariaDB
+    participant D as Delete Auth (Reviewer)
+    
+    U->>S: Submits Edit/Delete request
+    S->>S: Snapshot current row to old_data (JSON)
+    S->>DB: Add pending_audit_id flag to Record
+    S->>DB: Create AuditRequest (status=pending)
+    Note over S,DB: Original record remains unchanged!
+    
+    D->>S: Logs in & views Pending Requests
+    S-->>D: Displays field-by-field diff
+    
+    alt is Approved
+        D->>S: APPROVE
+        S->>DB: Apply changes inside transaction.atomic()
+        S->>DB: Clear pending_audit_id
+        S->>DB: Mark AuditRequest approved
+    else is Rejected
+        D->>S: REJECT
+        S->>DB: Record stays exactly as it was
+        S->>DB: Clear pending_audit_id
+        S->>DB: Mark AuditRequest rejected
+    end
+    
+    Note over S,DB: All decisions logged in History with reviewer name & timestamp
 ```
 
 ---
@@ -415,45 +415,24 @@ Open `http://localhost:5173` in your browser.
 
 ## First Use Flow
 
-```
-1. Log in as master_admin
-
-2. Campuses → Create NMIMS Hyderabad (HYD)
-
-3. Schools → Create School of Technology (campus: HYD)
-
-4. Users → Create:
-   - super_admin (campus: HYD)
-   - admin (campus: HYD)
-   - faculty members (campus: HYD)
-   - delete_auth reviewer
-
-5. Assignments → Filter by campus → Assign admin and faculty to school
-
-6. Log in as admin → Academics:
-   - Create Course → B.Tech Computer Science
-   - Create Year → Year 1 (graduation 2027)
-   - Create Semester → Semester 1
-   - Create Subjects → Data Structures, Mathematics
-   - Create Class Groups → CSDS-A, CSDS-B
-   - Create Exam Groups → Mid Term 1
-   - Create Clubs → Sankalp (club), PlaceCom (placecom)
-
-7. Log in as faculty → My Assignments → Request teaching assignment
-
-8. Log in as admin → Faculty Assignments → Approve request
-
-9. Log in as faculty → Exams → Add Exam
-   (dropdowns show only assigned subjects and class groups)
-
-10. Faculty → Marks → Select exam → Enter student marks
-
-11. Faculty → My Publications → Add publication with co-authors
-
-12. Admin → any record → Edit → Submit for Approval
-
-13. Log in as delete_auth → Pending Requests
-    → Review before/after diff → Approve or Reject
+```mermaid
+flowchart TD
+    step1[1. Log in as master_admin] --> step2[2. Create Campus <br> NMIMS Hyderabad]
+    step2 --> step3[3. Create School <br> School of Technology]
+    step3 --> step4[4. Create Users <br> super_admin, admin, faculty, delete_auth]
+    step4 --> step5[5. Assign Admin & Faculty to School]
+    
+    step5 --> step6[6. Admin Academic Setup <br> Courses, Years, Semesters, etc.]
+    step6 --> step7[7. Faculty requests Teaching Assignment]
+    step7 --> step8[8. Admin approves Assignment]
+    
+    step8 --> step9[9. Faculty adds Exam <br> & Enters Marks]
+    step8 --> step10[10. Faculty adds MIS Records <br> e.g., Publications]
+    
+    step9 --> step11[11. Submit Record for Approval <br> Edit/Delete]
+    step10 --> step11
+    
+    step11 --> step12[12. delete_auth Reviewer <br> Approves/Rejects changes]
 ```
 
 ---
@@ -582,31 +561,31 @@ GET    /api/export/academics/all/
 
 ## Database Schema
 
-```
-campuses
-  └──< schools
-         └──< user_school_mapping >── users (campus FK)
-         └──< courses
-                └──< academic_years
-                       └──< semesters
-                              └──< subjects
-                              └──< exam_groups >──< class_groups (M2M)
-         └──< class_groups
-         └──< clubs
-
-faculty_teaching_assignments → faculty + subject + class_group
-
-exams_conducted              → school, exam_group, subject, class_group, faculty
-student_marks                → exam
-school_activities            → school + school_activity_collaborations
-student_activities           → school, club + student_activity_collaborations
-faculty_fdp_workshop_gl      → school
-faculty_publications         → school + publication_authors
-patents                      → school + patent_applicants
-certifications               → school
-placement_activities         → school, placecom
-
-audit_requests               → every update/delete flows through here
+```mermaid
+erDiagram
+    CAMPUSES ||--o{ SCHOOLS : "contains"
+    SCHOOLS ||--o{ USER_SCHOOL_MAPPING : "maps users"
+    USERS ||--o{ USER_SCHOOL_MAPPING : "belongs to"
+    
+    SCHOOLS ||--|{ COURSES : "offers"
+    COURSES ||--|{ ACADEMIC_YEARS : "has"
+    ACADEMIC_YEARS ||--|{ SEMESTERS : "has"
+    SEMESTERS ||--|{ SUBJECTS : "has"
+    SEMESTERS ||--|{ EXAM_GROUPS : "has"
+    EXAM_GROUPS }o--o{ CLASS_GROUPS : "includes (M2M)"
+    
+    SCHOOLS ||--o{ CLUBS : "has"
+    SCHOOLS ||--o{ CLASS_GROUPS : "has"
+    
+    FACULTY_TEACHING_ASSIGNMENTS }|--|| USERS : "faculty"
+    FACULTY_TEACHING_ASSIGNMENTS }|--|| SUBJECTS : "subject"
+    FACULTY_TEACHING_ASSIGNMENTS }|--|| CLASS_GROUPS : "class_group"
+    
+    EXAMS_CONDUCTED }|--|| EXAM_GROUPS : "exam_group"
+    STUDENT_MARKS }|--|| EXAMS_CONDUCTED : "exam"
+    
+    MIS_RECORDS }|--|| SCHOOLS : "has (8 modules)"
+    MIS_RECORDS }o--o| AUDIT_REQUESTS : "pending_audit_id"
 ```
 
 All record tables share this pattern:

@@ -72,7 +72,20 @@ class SchoolListCreateView(generics.ListCreateAPIView):
         return SchoolSerializer
 
     def get_queryset(self):
-        return School.objects.filter(is_active=True).order_by('name')
+        user = self.request.user
+        qs   = School.objects.filter(is_active=True).order_by('name')
+
+        # master sees all schools
+        if user.role == 'master':
+            return qs
+
+        # super_admin sees only their campus schools
+        if user.role == 'super_admin':
+            if user.campus_id:
+                return qs.filter(campus_id=user.campus_id)
+            return qs.none()
+
+        return qs
 
 
 class SchoolDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -115,8 +128,12 @@ class MySchoolsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        school_ids = get_user_school_ids(request.user)
-        schools = School.objects.filter(id__in=school_ids, is_active=True)
+        user       = request.user
+        school_ids = get_user_school_ids(user)
+        schools    = School.objects.filter(
+                         id__in=school_ids,
+                         is_active=True
+                     )
         return Response(SchoolSerializer(schools, many=True).data)
 
 

@@ -8,6 +8,7 @@ from django.apps import apps
 from apps.audit.models import AuditRequest
 from apps.audit.serializers import AuditRequestSerializer
 from apps.accounts.permissions import IsDeleteAuth, IsMasterOrSuperAdmin
+from apps.schools.utils import get_user_school_ids
 
 
 class AuditRequestListView(generics.ListAPIView):
@@ -15,9 +16,12 @@ class AuditRequestListView(generics.ListAPIView):
     permission_classes = [IsDeleteAuth]
 
     def get_queryset(self):
-        return AuditRequest.objects.filter(
-            status='pending'
-        ).select_related('requested_by', 'reviewed_by')
+        user = self.request.user
+        school_ids = get_user_school_ids(user)
+        qs = AuditRequest.objects.filter(status='pending')
+        # Only scope if user is not a superadmin (or decide if superadmin sees all)
+        # get_user_school_ids correctly returns all if superadmin, so we just filter
+        return qs.filter(school_id__in=school_ids).select_related('requested_by', 'reviewed_by')
 
 
 class AuditRequestDetailView(generics.RetrieveAPIView):
@@ -50,6 +54,13 @@ class AuditApproveView(APIView):
                     'patents':               ('records', 'Patent'),
                     'certifications':        ('records', 'Certification'),
                     'placement_activities':  ('records', 'PlacementActivity'),
+                    'courses':               ('academics', 'Course'),
+                    'academic_years':        ('academics', 'AcademicYear'),
+                    'semesters':             ('academics', 'Semester'),
+                    'subjects':              ('academics', 'Subject'),
+                    'class_groups':          ('academics', 'ClassGroup'),
+                    'exam_groups':           ('academics', 'ExamGroup'),
+                    'clubs':                 ('academics', 'Club'),
                 }
 
                 app_label, model_name = table_model_map[audit.table_name]
@@ -110,6 +121,13 @@ class AuditRejectView(APIView):
                 'patents':                 ('records', 'Patent'),
                 'certifications':          ('records', 'Certification'),
                 'placement_activities':    ('records', 'PlacementActivity'),
+                'courses':                 ('academics', 'Course'),
+                'academic_years':          ('academics', 'AcademicYear'),
+                'semesters':               ('academics', 'Semester'),
+                'subjects':                ('academics', 'Subject'),
+                'class_groups':            ('academics', 'ClassGroup'),
+                'exam_groups':             ('academics', 'ExamGroup'),
+                'clubs':                   ('academics', 'Club'),
             }
 
             try:
@@ -131,9 +149,13 @@ class AuditRejectView(APIView):
 
 class AuditHistoryView(generics.ListAPIView):
     serializer_class   = AuditRequestSerializer
-    permission_classes = [IsMasterOrSuperAdmin]
+    permission_classes = [IsMasterOrSuperAdmin | IsDeleteAuth]
 
     def get_queryset(self):
-        return AuditRequest.objects.exclude(
+        user = self.request.user
+        school_ids = get_user_school_ids(user)
+        return AuditRequest.objects.filter(
+            school_id__in=school_ids
+        ).exclude(
             status='pending'
         ).select_related('requested_by', 'reviewed_by').order_by('-reviewed_at')

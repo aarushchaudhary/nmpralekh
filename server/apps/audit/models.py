@@ -1,5 +1,6 @@
 from django.db import models
 from apps.accounts.models import User
+from apps.schools.models import School
 
 
 class AuditRequest(models.Model):
@@ -23,6 +24,13 @@ class AuditRequest(models.Model):
         ('patents',                        'Patents'),
         ('certifications',                 'Certifications'),
         ('placement_activities',           'Placement Activities'),
+        ('courses',                        'Courses'),
+        ('academic_years',                 'Academic Years'),
+        ('semesters',                      'Semesters'),
+        ('subjects',                       'Subjects'),
+        ('class_groups',                   'Class Groups'),
+        ('exam_groups',                    'Exam Groups'),
+        ('clubs',                          'Clubs'),
     ]
 
     table_name   = models.CharField(max_length=100, choices=TABLE_CHOICES)
@@ -30,6 +38,13 @@ class AuditRequest(models.Model):
     action       = models.CharField(max_length=10, choices=ACTION_CHOICES)
     old_data     = models.JSONField()
     new_data     = models.JSONField(null=True, blank=True)
+    school       = models.ForeignKey(
+                       School,
+                       on_delete=models.CASCADE,
+                       null=True,
+                       blank=True,
+                       related_name='audit_requests'
+                   )
     requested_by = models.ForeignKey(
                         User,
                         on_delete=models.RESTRICT,

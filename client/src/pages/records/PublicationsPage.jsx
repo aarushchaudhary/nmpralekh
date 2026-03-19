@@ -129,9 +129,15 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
   const handleDelete = async () => {
     setSaving(true)
     try {
-      await api.delete(`/records/publications/${selected.id}/`)
-      setShowDeleteConfirm(false); fetch()
-    } finally { setSaving(false) }
+      const res = await api.delete(`/records/publications/${selected.id}/`)
+      console.log('Delete response:', res.data)
+      setShowDeleteConfirm(false)
+      fetch()
+    } catch (err) {
+      console.error('Delete failed:', err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   // for faculty selfOnly mode — they can edit their own only
@@ -171,12 +177,32 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
     { key: 'publication', label: 'Published In',
       render: row => row.publication || '—' },
     {
+      key: 'status', label: 'Status', sortable: false,
+      render: row => row.pending_audit ? (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
+          Pending Approval
+        </span>
+      ) : null
+    },
+    {
       key: 'actions', label: '', sortable: false,
       render: row => canEdit(row) && (
         <div className="flex gap-2">
-          <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>Edit</Button>
-          <Button size="sm" variant="danger"
-            onClick={() => { setSelected(row); setShowDeleteConfirm(true) }}>Delete</Button>
+          {row.pending_audit ? (
+            <span className="text-xs text-yellow-600 italic">
+              Change pending...
+            </span>
+          ) : (
+            <>
+              <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
+                Edit
+              </Button>
+              <Button size="sm" variant="danger"
+                onClick={() => { setSelected(row); setShowDeleteConfirm(true) }}>
+                Delete
+              </Button>
+            </>
+          )}
         </div>
       )
     }

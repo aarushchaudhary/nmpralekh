@@ -43,7 +43,7 @@ class SchoolSerializer(serializers.ModelSerializer):
 class SchoolCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model  = School
-        fields = ['name', 'code', 'is_active']
+        fields = ['campus', 'name', 'code', 'is_active']
 
 
 class UserSchoolMappingSerializer(serializers.ModelSerializer):

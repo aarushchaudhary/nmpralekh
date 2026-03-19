@@ -46,21 +46,23 @@ class LoginView(APIView):
         refresh  = RefreshToken.for_user(user)
         response = Response({'user': UserSerializer(user).data})
 
+        is_secure = not settings.DEBUG
+
         response.set_cookie(
             'access_token',
             str(refresh.access_token),
             max_age  = 60 * 30,
             httponly = True,
-            secure   = True,
-            samesite = 'None',
+            secure   = is_secure,
+            samesite = 'Lax',
         )
         response.set_cookie(
             'refresh_token',
             str(refresh),
             max_age  = 60 * 60 * 24 * 7,
             httponly = True,
-            secure   = True,
-            samesite = 'None',
+            secure   = is_secure,
+            samesite = 'Lax',
         )
         return response
 
@@ -86,6 +88,7 @@ class LogoutView(APIView):
 class RefreshTokenView(APIView):
     """Called automatically when access token expires"""
     permission_classes = []
+    throttle_classes   = []
 
     def post(self, request):
         refresh_token = request.COOKIES.get('refresh_token')
@@ -97,13 +100,16 @@ class RefreshTokenView(APIView):
         try:
             refresh  = RefreshToken(refresh_token)
             response = Response({'detail': 'Token refreshed'})
+
+            is_secure = not settings.DEBUG
+
             response.set_cookie(
                 'access_token',
                 str(refresh.access_token),
                 max_age  = 60 * 30,
                 httponly = True,
-                secure   = True,
-                samesite = 'None',
+                secure   = is_secure,
+                samesite = 'Lax',
             )
             return response
         except Exception:

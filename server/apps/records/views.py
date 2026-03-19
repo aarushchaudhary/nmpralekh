@@ -41,6 +41,7 @@ def create_audit_request(user, table_name, record, action, new_data=None):
         old_data     = old_data,
         new_data     = new_data,
         requested_by = user,
+        school       = getattr(record, 'school', None),
         status       = 'pending'
     )
 

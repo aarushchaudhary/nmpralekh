@@ -45,7 +45,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     """Used by master to edit existing users"""
     class Meta:
         model  = User
-        fields = ['full_name', 'role', 'is_active', 'email']
+        fields = ['full_name', 'role', 'is_active', 'email', 'campus']
 
 
 class ChangePasswordSerializer(serializers.Serializer):

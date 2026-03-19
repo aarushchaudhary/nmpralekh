@@ -72,9 +72,15 @@ export default function SubjectsPage() {
   const handleDeactivate = async () => {
     setSaving(true)
     try {
-      await api.delete(`/academics/subjects/${selected.id}/`)
-      fetch(); setShowConfirm(false)
-    } finally { setSaving(false) }
+      const res = await api.delete(`/academics/subjects/${selected.id}/`)
+      console.log('Delete response:', res.data)
+      setShowConfirm(false)
+      fetch()
+    } catch (err) {
+      console.error('Delete failed:', err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const columns = [
@@ -93,15 +99,31 @@ export default function SubjectsPage() {
                             color={row.is_active ? 'green' : 'gray'} />
     },
     {
+      key: 'audit_status', label: 'Approval Status', sortable: false,
+      render: row => row.pending_audit ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
+              Pending Approval
+          </span>
+      ) : null
+    },
+    {
       key: 'actions', label: '', sortable: false,
       render: row => (
         <div className="flex gap-2">
-          <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>Edit</Button>
-          {row.is_active && (
-            <Button size="sm" variant="danger"
-              onClick={() => { setSelected(row); setShowConfirm(true) }}>
-              Deactivate
-            </Button>
+          {row.pending_audit ? (
+            <span className="text-xs text-yellow-600 italic">
+              Change pending...
+            </span>
+          ) : (
+            <>
+              <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>Edit</Button>
+              {row.is_active && (
+                <Button size="sm" variant="danger"
+                  onClick={() => { setSelected(row); setShowConfirm(true) }}>
+                  Deactivate
+                </Button>
+              )}
+            </>
           )}
         </div>
       )
