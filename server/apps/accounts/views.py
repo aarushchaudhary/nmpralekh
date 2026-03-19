@@ -1,7 +1,9 @@
+from django.conf import settings
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 
@@ -11,11 +13,15 @@ from apps.accounts.serializers import (
     UserUpdateSerializer, LoginSerializer
 )
 from apps.accounts.permissions import IsMaster, IsAnyRole
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 
 
 class LoginView(APIView):
     permission_classes = []
+    throttle_classes   = [AnonRateThrottle]
 
+    @method_decorator(ratelimit(key='ip', rate='10/m', method='POST', block=True))
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -37,12 +43,26 @@ class LoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'access':  str(refresh.access_token),
-            'refresh': str(refresh),
-            'user':    UserSerializer(user).data
-        })
+        refresh  = RefreshToken.for_user(user)
+        response = Response({'user': UserSerializer(user).data})
+
+        response.set_cookie(
+            'access_token',
+            str(refresh.access_token),
+            max_age  = 60 * 30,
+            httponly = True,
+            secure   = True,
+            samesite = 'None',
+        )
+        response.set_cookie(
+            'refresh_token',
+            str(refresh),
+            max_age  = 60 * 60 * 24 * 7,
+            httponly = True,
+            secure   = True,
+            samesite = 'None',
+        )
+        return response
 
 
 class LogoutView(APIView):
@@ -50,14 +70,46 @@ class LogoutView(APIView):
 
     def post(self, request):
         try:
-            refresh_token = request.data['refresh']
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({'detail': 'Logged out successfully'})
+            refresh_token = request.COOKIES.get('refresh_token')
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+        except Exception:
+            pass
+
+        response = Response({'detail': 'Logged out successfully'})
+        response.delete_cookie('access_token',  samesite='None')
+        response.delete_cookie('refresh_token', samesite='None')
+        return response
+
+
+class RefreshTokenView(APIView):
+    """Called automatically when access token expires"""
+    permission_classes = []
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get('refresh_token')
+        if not refresh_token:
+            return Response(
+                {'detail': 'No refresh token'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        try:
+            refresh  = RefreshToken(refresh_token)
+            response = Response({'detail': 'Token refreshed'})
+            response.set_cookie(
+                'access_token',
+                str(refresh.access_token),
+                max_age  = 60 * 30,
+                httponly = True,
+                secure   = True,
+                samesite = 'None',
+            )
+            return response
         except Exception:
             return Response(
-                {'detail': 'Invalid or expired token'},
-                status=status.HTTP_400_BAD_REQUEST
+                {'detail': 'Invalid refresh token'},
+                status=status.HTTP_401_UNAUTHORIZED
             )
 
 

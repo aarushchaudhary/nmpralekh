@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useRecords from '../../hooks/useRecords'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
@@ -7,6 +7,7 @@ import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import api from '../../api/axios'
 
 const roleOptions = [
     { value: 'super_admin', label: 'Super Admin' },
@@ -25,11 +26,23 @@ const roleBadgeColor = {
 
 const emptyForm = {
     username: '', email: '', password: '',
-    full_name: '', role: '', is_active: true,
+    full_name: '', role: '', is_active: true, campus: ''
 }
 
 export default function Users() {
-    const { data, loading, create, update, remove } = useRecords('/users/')
+    const { data, loading, create, update, remove , totalPages, currentPage, goToPage} = useRecords('/users/')
+
+    const [campusOptions, setCampusOptions] = useState([])
+
+    useEffect(() => {
+        api.get('/schools/campuses/').then(res => {
+            const data = res.data?.results ?? res.data
+            setCampusOptions(data
+                .filter(c => c.is_active)
+                .map(c => ({ value: c.id, label: `${c.code} — ${c.name}` }))
+            )
+        })
+    }, [])
 
     const [showForm, setShowForm] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
@@ -54,6 +67,7 @@ export default function Users() {
             email: user.email,
             role: user.role,
             is_active: user.is_active,
+            campus: user.campus || '',
         })
         setErrors({})
         setShowForm(true)
@@ -80,6 +94,7 @@ export default function Users() {
                     email: form.email,
                     role: form.role,
                     is_active: form.is_active,
+                    campus: form.campus || null,
                 })
             } else {
                 await create(form)
@@ -108,6 +123,7 @@ export default function Users() {
         { key: 'full_name', label: 'Name' },
         { key: 'username', label: 'Username' },
         { key: 'email', label: 'Email' },
+        { key: 'campus_name', label: 'Campus', render: row => row.campus_name || '—' },
         {
             key: 'role', label: 'Role',
             render: row => (
@@ -152,7 +168,11 @@ export default function Users() {
                 action={<Button onClick={openCreate}>+ Add User</Button>}
             />
 
-            <Table columns={columns} data={data} loading={loading} />
+            <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
             <Modal
                 isOpen={showForm}
@@ -193,6 +213,11 @@ export default function Users() {
                         onChange={set('role')}
                         options={roleOptions}
                         required error={errors.role}
+                    />
+                    <FormInput
+                        label="Campus" type="select" value={form.campus}
+                        onChange={set('campus')} options={campusOptions}
+                        error={errors.campus}
                     />
                     <div className="flex justify-end gap-3 pt-2">
                         <Button variant="secondary" onClick={() => setShowForm(false)}>

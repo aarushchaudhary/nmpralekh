@@ -32,7 +32,7 @@ const empty = {
 
 export default function PatentsPage({ readOnly = false, selfOnly = false }) {
   const { user }                         = useAuth()
-  const { data, loading, create, fetch } = useRecords('/records/patents/')
+  const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/patents/')
   const { schoolOptions }                = useSchools()
   const { exportFile, exporting }        = useExport('/export/patents/', 'patents.xlsx')
 
@@ -202,7 +202,11 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
         </div>
       )}
 
-      <Table columns={columns} data={data} loading={loading} />
+      <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
       <Modal isOpen={showForm} onClose={() => setShowForm(false)}
         title={isEdit ? 'Edit Patent' : 'Add Patent'} size="lg">

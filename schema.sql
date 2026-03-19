@@ -1,5 +1,5 @@
 -- =============================================================================
--- MIS PORTAL DATABASE SCHEMA
+-- NMPRALEKH DATABASE SCHEMA
 -- Compatible with: MariaDB 10.6+
 -- Engine: InnoDB (ACID compliant)
 -- Charset: utf8mb4 (full Unicode support)

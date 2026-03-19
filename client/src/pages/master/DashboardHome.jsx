@@ -24,19 +24,23 @@ export default function DashboardHome() {
 
     useEffect(() => {
         Promise.all([
+            api.get('/schools/campuses/'),
             api.get('/schools/'),
             api.get('/users/'),
             api.get('/schools/assign/'),
-        ]).then(([schools, users, assignments]) => {
+        ]).then(([campuses, schools, users, assignments]) => {
+            const campusData = campuses.data?.results ?? campuses.data
             const schoolData = schools.data?.results ?? schools.data
             const userData = users.data?.results ?? users.data
             const assignmentData = assignments.data?.results ?? assignments.data
 
             setStats({
+                campuses: campusData.length,
                 schools: schoolData.length,
                 users: userData.length,
                 admins: userData.filter(u => u.role === 'admin').length,
                 faculty: userData.filter(u => u.role === 'user').length,
+                super_admins: userData.filter(u => u.role === 'super_admin').length,
                 assignments: assignmentData.length,
             })
         }).catch(() => { })
@@ -50,10 +54,10 @@ export default function DashboardHome() {
             />
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <StatCard label="Total Schools" value={stats.schools} color="blue" />
-                <StatCard label="Total Users" value={stats.users} color="green" />
-                <StatCard label="Admins" value={stats.admins} color="purple" />
-                <StatCard label="Faculty" value={stats.faculty} color="orange" />
+                <StatCard label="Total Campuses" value={stats.campuses} color="blue" />
+                <StatCard label="Total Schools" value={stats.schools} color="green" />
+                <StatCard label="Super Admins" value={stats.super_admins} color="purple" />
+                <StatCard label="Admins" value={stats.admins} color="orange" />
             </div>
 
             <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -62,6 +66,7 @@ export default function DashboardHome() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {[
+                        { label: 'Add a new campus', path: '/master/campuses' },
                         { label: 'Add a new school', path: '/master/schools' },
                         { label: 'Create a new user', path: '/master/users' },
                         { label: 'Assign user to school', path: '/master/assignments' },

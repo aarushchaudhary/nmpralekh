@@ -18,7 +18,7 @@ const empty = {
 
 export default function ExamsPage({ readOnly = false, facultyMode = false }) {
     const { user } = useAuth()
-    const { data, loading, create, fetch } = useRecords('/records/exams/')
+    const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/exams/')
     const { schoolOptions } = useSchools()
     const { exportFile, exporting } = useExport('/export/exams/', 'exams.xlsx')
 
@@ -212,7 +212,11 @@ export default function ExamsPage({ readOnly = false, facultyMode = false }) {
                 }
             />
 
-            <Table columns={columns} data={data} loading={loading} />
+            <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
             <Modal isOpen={showForm} onClose={() => setShowForm(false)}
                 title={selected ? 'Edit Exam Record' : 'Add Exam Record'} size="lg">

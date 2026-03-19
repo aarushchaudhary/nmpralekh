@@ -48,4 +48,5 @@ htmlcov/
 .pytest_cache/
 
 # Pycache everywhere
-**/__pycache__/
+**/__pycache__/*.pem
+*.pem

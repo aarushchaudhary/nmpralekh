@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from apps.accounts.permissions import IsAdminOrUser, IsAdminOrUserOrSuperAdmin
 from apps.schools.utils import get_user_school_ids
+from apps.records.cache_utils import get_dashboard_counts
 from apps.audit.models import AuditRequest
 from apps.records.models import (
     ExamsConducted, SchoolActivity, SchoolActivityCollaboration,
@@ -76,13 +77,10 @@ class ExamsListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs = self.get_base_queryset(ExamsConducted)
-        school_id = self.request.query_params.get('school_id')
-        year      = self.request.query_params.get('year')
-        if school_id:
-            qs = qs.filter(school_id=school_id)
-        if year:
-            qs = qs.filter(expected_graduation_year=year)
-        return qs
+        return qs.select_related(
+            'school', 'exam_group', 'subject',
+            'class_group', 'faculty', 'created_by'
+        )
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -123,17 +121,10 @@ class SchoolActivityListCreateView(SchoolScopedMixin, generics.ListCreateAPIView
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
-        qs        = self.get_base_queryset(SchoolActivity)
-        school_id = self.request.query_params.get('school_id')
-        date_from = self.request.query_params.get('date_from')
-        date_to   = self.request.query_params.get('date_to')
-        if school_id:
-            qs = qs.filter(school_id=school_id)
-        if date_from:
-            qs = qs.filter(date__gte=date_from)
-        if date_to:
-            qs = qs.filter(date__lte=date_to)
-        return qs
+        qs = self.get_base_queryset(SchoolActivity)
+        return qs.select_related(
+            'school', 'created_by'
+        ).prefetch_related('collaborations')
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -173,17 +164,10 @@ class StudentActivityListCreateView(SchoolScopedMixin, generics.ListCreateAPIVie
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
-        qs        = self.get_base_queryset(StudentActivity)
-        school_id = self.request.query_params.get('school_id')
-        date_from = self.request.query_params.get('date_from')
-        date_to   = self.request.query_params.get('date_to')
-        if school_id:
-            qs = qs.filter(school_id=school_id)
-        if date_from:
-            qs = qs.filter(date__gte=date_from)
-        if date_to:
-            qs = qs.filter(date__lte=date_to)
-        return qs
+        qs = self.get_base_queryset(StudentActivity)
+        return qs.select_related(
+            'school', 'club', 'created_by'
+        ).prefetch_related('collaborations')
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -223,20 +207,8 @@ class FDPListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
-        qs        = self.get_base_queryset(FacultyFDPWorkshopGL)
-        school_id = self.request.query_params.get('school_id')
-        fdp_type  = self.request.query_params.get('type')
-        date_from = self.request.query_params.get('date_from')
-        date_to   = self.request.query_params.get('date_to')
-        if school_id:
-            qs = qs.filter(school_id=school_id)
-        if fdp_type:
-            qs = qs.filter(type=fdp_type)
-        if date_from:
-            qs = qs.filter(date_start__gte=date_from)
-        if date_to:
-            qs = qs.filter(date_start__lte=date_to)
-        return qs
+        qs = self.get_base_queryset(FacultyFDPWorkshopGL)
+        return qs.select_related('school', 'created_by')
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -302,21 +274,11 @@ class PublicationListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
         qs         = FacultyPublication.objects.filter(
                          school_id__in=school_ids,
                          is_deleted=False
+                     ).select_related(
+                         'school', 'created_by'
                      ).prefetch_related('authors')
-
-        # faculty only sees their own publications
         if user.role == 'user':
             qs = qs.filter(created_by=user)
-
-        author_type = self.request.query_params.get('author_type')
-        date_from   = self.request.query_params.get('date_from')
-        date_to     = self.request.query_params.get('date_to')
-        school_id   = self.request.query_params.get('school_id')
-
-        if author_type: qs = qs.filter(author_type=author_type)
-        if date_from:   qs = qs.filter(date__gte=date_from)
-        if date_to:     qs = qs.filter(date__lte=date_to)
-        if school_id:   qs = qs.filter(school_id=school_id)
         return qs
 
     def get_permissions(self):
@@ -381,19 +343,11 @@ class PatentListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
         qs         = Patent.objects.filter(
                          school_id__in=school_ids,
                          is_deleted=False
+                     ).select_related(
+                         'school', 'created_by'
                      ).prefetch_related('applicants')
-
-        # faculty only sees their own patents
         if user.role == 'user':
             qs = qs.filter(created_by=user)
-
-        patent_status  = self.request.query_params.get('status')
-        applicant_type = self.request.query_params.get('applicant_type')
-        school_id      = self.request.query_params.get('school_id')
-
-        if patent_status:  qs = qs.filter(patent_status=patent_status)
-        if applicant_type: qs = qs.filter(applicant_type=applicant_type)
-        if school_id:      qs = qs.filter(school_id=school_id)
         return qs
 
     def get_permissions(self):
@@ -439,23 +393,9 @@ class CertificationListCreateView(SchoolScopedMixin, generics.ListCreateAPIView)
         qs         = Certification.objects.filter(
                          school_id__in=school_ids,
                          is_deleted=False
-                     )
-
-        # faculty only sees their own certifications
+                     ).select_related('school', 'created_by')
         if user.role == 'user':
             qs = qs.filter(created_by=user)
-
-        person_type = self.request.query_params.get('person_type')
-        agency      = self.request.query_params.get('agency')
-        date_from   = self.request.query_params.get('date_from')
-        date_to     = self.request.query_params.get('date_to')
-        school_id   = self.request.query_params.get('school_id')
-
-        if person_type: qs = qs.filter(person_type=person_type)
-        if agency:      qs = qs.filter(agency__icontains=agency)
-        if date_from:   qs = qs.filter(date__gte=date_from)
-        if date_to:     qs = qs.filter(date__lte=date_to)
-        if school_id:   qs = qs.filter(school_id=school_id)
         return qs
 
     def get_permissions(self):
@@ -496,20 +436,8 @@ class PlacementListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
-        qs           = self.get_base_queryset(PlacementActivity)
-        school_id    = self.request.query_params.get('school_id')
-        company_name = self.request.query_params.get('company_name')
-        date_from    = self.request.query_params.get('date_from')
-        date_to      = self.request.query_params.get('date_to')
-        if school_id:
-            qs = qs.filter(school_id=school_id)
-        if company_name:
-            qs = qs.filter(company_name__icontains=company_name)
-        if date_from:
-            qs = qs.filter(date__gte=date_from)
-        if date_to:
-            qs = qs.filter(date__lte=date_to)
-        return qs
+        qs = self.get_base_queryset(PlacementActivity)
+        return qs.select_related('school', 'placecom', 'created_by')
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -553,11 +481,8 @@ class StudentMarksListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
         qs         = StudentMarks.objects.filter(
                          exam__school_id__in=school_ids
                      ).select_related(
-                         'exam',
-                         'exam__exam_group',
-                         'exam__subject',
-                         'exam__class_group',
-                         'created_by'
+                         'exam', 'exam__school', 'exam__exam_group',
+                         'exam__subject', 'exam__class_group', 'created_by'
                      )
         exam_id = self.request.query_params.get('exam_id')
         if exam_id:
@@ -574,3 +499,14 @@ class StudentMarksDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAP
         return StudentMarks.objects.filter(
             exam__school_id__in=school_ids
         )
+
+
+from rest_framework.views import APIView
+
+class DashboardCountsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        school_ids = list(get_user_school_ids(request.user))
+        counts     = get_dashboard_counts(school_ids, request.user.role)
+        return Response(counts)

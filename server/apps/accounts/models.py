@@ -40,6 +40,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     email       = models.EmailField(unique=True)
     full_name   = models.CharField(max_length=255)
     role        = models.CharField(max_length=20, choices=ROLES)
+    campus      = models.ForeignKey(
+                    'schools.Campus',
+                    on_delete=models.SET_NULL,
+                    null=True, blank=True,
+                    related_name='users'
+                  )
     is_active   = models.BooleanField(default=True)
     is_staff    = models.BooleanField(default=False)
     created_by  = models.ForeignKey(

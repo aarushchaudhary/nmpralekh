@@ -13,7 +13,7 @@ import api         from '../../api/axios'
 const empty = { school: '', semester: '', name: '' }
 
 export default function ExamGroupsPage() {
-  const { data, loading, create, fetch } = useRecords('/academics/exam-groups/')
+  const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/academics/exam-groups/')
   const { schoolOptions }                = useSchools()
   const { exportFile, exporting }        = useExport('/export/academics/exam-groups/', 'exam_groups.xlsx')
 
@@ -115,7 +115,11 @@ export default function ExamGroupsPage() {
           </div>
         } />
 
-      <Table columns={columns} data={data} loading={loading} />
+      <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
       <Modal isOpen={showForm} onClose={() => setShowForm(false)}
         title={isEdit ? 'Edit Exam Group' : 'Add Exam Group'}>

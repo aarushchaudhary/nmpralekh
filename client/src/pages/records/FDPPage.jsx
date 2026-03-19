@@ -28,7 +28,7 @@ const empty = {
 export default function FDPPage({ readOnly = false }) {
     const { user } = useAuth()
     const { exportFile, exporting } = useExport('/export/fdp/', 'fdp.xlsx')
-    const { data, loading, create, fetch } = useRecords('/records/fdp/')
+    const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/fdp/')
     const { schoolOptions } = useSchools()
 
     const [showForm, setShowForm] = useState(false)
@@ -125,7 +125,11 @@ export default function FDPPage({ readOnly = false }) {
                     </div>
                 } />
 
-            <Table columns={columns} data={data} loading={loading} />
+            <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
             <Modal isOpen={showForm} onClose={() => setShowForm(false)}
                 title={selected ? 'Edit FDP Record' : 'Add FDP Record'} size="lg">

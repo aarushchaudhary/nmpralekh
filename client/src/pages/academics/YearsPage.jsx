@@ -14,8 +14,15 @@ const emptyYear = { school: '', course: '', year_number: '', graduation_year: ''
 const emptySem  = { academic_year: '', semester_number: '', start_date: '', end_date: '' }
 
 export default function YearsPage() {
-  const { data: years,     loading: yearsLoading,    create: createYear,    fetch: fetchYears }    = useRecords('/academics/years/')
-  const { data: semesters, loading: semsLoading,     create: createSem,     fetch: fetchSems }     = useRecords('/academics/semesters/')
+  const {
+    data: years, loading: yearsLoading, create: createYear, fetch: fetchYears,
+    totalPages: yearsTotalPages, currentPage: yearsCurrentPage, goToPage: goToYearsPage
+  } = useRecords('/academics/years/')
+  
+  const {
+    data: semesters, loading: semsLoading, create: createSem, fetch: fetchSems,
+    totalPages: semsTotalPages, currentPage: semsCurrentPage, goToPage: goToSemsPage
+  } = useRecords('/academics/semesters/')
   const { schoolOptions }   = useSchools()
   const { exportFile: exportYears,    exporting: exportingYears }    = useExport('/export/academics/years/',     'academic_years.xlsx')
   const { exportFile: exportSemesters, exporting: exportingSemesters } = useExport('/export/academics/semesters/', 'semesters.xlsx')
@@ -177,8 +184,8 @@ export default function YearsPage() {
       </div>
 
       {tab === 'years'
-        ? <Table columns={yearColumns} data={years} loading={yearsLoading} />
-        : <Table columns={semColumns}  data={semesters} loading={semsLoading} />
+        ? <Table columns={yearColumns} data={years} loading={yearsLoading} serverPagination totalPages={yearsTotalPages} currentPage={yearsCurrentPage} onPageChange={goToYearsPage} />
+        : <Table columns={semColumns}  data={semesters} loading={semsLoading} serverPagination totalPages={semsTotalPages} currentPage={semsCurrentPage} onPageChange={goToSemsPage} />
       }
 
       {/* Add Year Modal */}

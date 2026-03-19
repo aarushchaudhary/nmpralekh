@@ -20,7 +20,7 @@ const empty = {
 export default function SchoolActivitiesPage({ readOnly = false }) {
     const { user } = useAuth()
     const { exportFile, exporting } = useExport('/export/school-activities/', 'school_activities.xlsx')
-    const { data, loading, create, fetch } = useRecords('/records/school-activities/')
+    const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/school-activities/')
     const { schoolOptions } = useSchools()
 
     const [showForm, setShowForm] = useState(false)
@@ -117,7 +117,11 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
                     </div>
                 } />
 
-            <Table columns={columns} data={data} loading={loading} />
+            <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
             <Modal isOpen={showForm} onClose={() => setShowForm(false)}
                 title={selected ? 'Edit School Activity' : 'Add School Activity'}>

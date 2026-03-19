@@ -49,6 +49,12 @@ class AuditRequest(models.Model):
     class Meta:
         db_table = 'audit_requests'
         ordering = ['-requested_at']
+        indexes  = [
+            models.Index(fields=['status']),
+            models.Index(fields=['table_name', 'record_id']),
+            models.Index(fields=['requested_by']),
+            models.Index(fields=['requested_at']),
+        ]
 
     def __str__(self):
         return f'{self.action} on {self.table_name} (record {self.record_id}) — {self.status}'

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 const roleNavLinks = {
     master: [
         { label: 'Dashboard', path: '/master' },
+        { label: 'Campuses', path: '/master/campuses' },
         { label: 'Schools', path: '/master/schools' },
         { label: 'Users', path: '/master/users' },
         { label: 'Assignments', path: '/master/assignments' },
@@ -92,8 +93,8 @@ export default function Sidebar({ isOpen, onClose }) {
 
                 {/* Logo */}
                 <div className="px-6 py-5 border-b border-gray-100">
-                    <h1 className="text-lg font-bold text-primary-700">MIS Portal</h1>
-                    <p className="text-xs text-gray-400 mt-0.5">NMPralekh</p>
+                    <h1 className="text-lg font-bold text-primary-700">NMPralekh</h1>
+                    <p className="text-xs text-gray-400 mt-0.5">MIS Portal</p>
                 </div>
 
                 {/* User info */}

@@ -5,13 +5,62 @@ from rest_framework.permissions import IsAuthenticated
 
 from apps.accounts.permissions import IsAdminOrUser
 
-from apps.schools.models import School, UserSchoolMapping
+from apps.schools.models import Campus, School, UserSchoolMapping
 from apps.schools.serializers import (
     SchoolSerializer, SchoolCreateSerializer,
-    UserSchoolMappingSerializer, UserSchoolMappingCreateSerializer
+    UserSchoolMappingSerializer, UserSchoolMappingCreateSerializer,
+    CampusSerializer, CampusCreateSerializer
 )
 from apps.schools.utils import get_user_school_ids
 from apps.accounts.permissions import IsMaster, IsMasterOrSuperAdmin, IsAnyRole
+
+
+class CampusListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsMaster]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return CampusCreateSerializer
+        return CampusSerializer
+
+    def get_queryset(self):
+        return Campus.objects.all().order_by('name')
+
+
+class CampusDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsMaster]
+    queryset           = Campus.objects.all()
+
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return CampusCreateSerializer
+        return CampusSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        campus           = self.get_object()
+        campus.is_active = False
+        campus.save()
+        return Response({'detail': 'Campus deactivated'})
+
+
+class CampusSchoolsView(APIView):
+    """All schools belonging to a specific campus"""
+    permission_classes = [IsMaster]
+
+    def get(self, request, pk):
+        schools = School.objects.filter(campus_id=pk, is_active=True)
+        return Response(SchoolSerializer(schools, many=True).data)
+
+
+class CampusUsersView(APIView):
+    """All users belonging to a specific campus"""
+    permission_classes = [IsMaster]
+
+    def get(self, request, pk):
+        from apps.accounts.models import User
+        from apps.accounts.serializers import UserSerializer
+        users = User.objects.filter(campus_id=pk, is_active=True)
+        return Response(UserSerializer(users, many=True).data)
 
 
 class SchoolListCreateView(generics.ListCreateAPIView):

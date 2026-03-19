@@ -4,11 +4,14 @@ from apps.accounts.models import User
 
 class UserSerializer(serializers.ModelSerializer):
     """Used for reading user data — password never included"""
+    campus_name = serializers.CharField(source='campus.name', read_only=True)
+
     class Meta:
         model  = User
         fields = [
             'id', 'username', 'email', 'full_name',
-            'role', 'is_active', 'created_at', 'last_login'
+            'role', 'is_active', 'campus', 'campus_name',
+            'created_at', 'last_login'
         ]
 
 
@@ -20,7 +23,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model  = User
         fields = [
             'id', 'username', 'email', 'password',
-            'full_name', 'role', 'is_active'
+            'full_name', 'role', 'is_active', 'campus'
         ]
 
     def create(self, validated_data):
@@ -32,6 +35,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
             full_name  = validated_data['full_name'],
             role       = validated_data['role'],
             is_active  = validated_data.get('is_active', True),
+            campus     = validated_data.get('campus', None),
             created_by = request.user if request else None
         )
         return user

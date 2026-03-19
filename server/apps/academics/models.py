@@ -204,6 +204,11 @@ class FacultyTeachingAssignment(models.Model):
         db_table        = 'faculty_teaching_assignments'
         unique_together = ('faculty', 'subject', 'class_group')
         ordering        = ['-requested_at']
+        indexes         = [
+            models.Index(fields=['faculty', 'status']),
+            models.Index(fields=['school', 'status']),
+            models.Index(fields=['status']),
+        ]
 
     def __str__(self):
         return (

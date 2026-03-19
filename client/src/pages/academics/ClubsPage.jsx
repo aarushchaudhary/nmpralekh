@@ -22,7 +22,7 @@ const typeColor = { club: 'blue', committee: 'purple', placecom: 'green' }
 const empty = { school: '', name: '', type: 'club' }
 
 export default function ClubsPage() {
-  const { data, loading, create, fetch } = useRecords('/academics/clubs/')
+  const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/academics/clubs/')
   const { schoolOptions }                = useSchools()
   const { exportFile, exporting }        = useExport('/export/academics/clubs/', 'clubs.xlsx')
 
@@ -118,7 +118,11 @@ export default function ClubsPage() {
           </div>
         } />
 
-      <Table columns={columns} data={data} loading={loading} />
+      <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
       <Modal isOpen={showForm} onClose={() => setShowForm(false)}
         title={isEdit ? 'Edit Club' : 'Add Club / Committee'}>

@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import useRecords  from '../../hooks/useRecords'
-import useExport   from '../../hooks/useExport'
-import useSchools  from '../../hooks/useSchools'
 import PageHeader  from '../../components/ui/PageHeader'
 import Button      from '../../components/ui/Button'
 import Table       from '../../components/ui/Table'
@@ -11,12 +9,10 @@ import Badge       from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import api         from '../../api/axios'
 
-const empty = { school: '', name: '', code: '' }
+const empty = { name: '', code: '', city: '' }
 
-export default function CoursesPage() {
-  const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/academics/courses/')
-  const { schoolOptions }                = useSchools()
-  const { exportFile, exporting }        = useExport('/export/academics/courses/', 'courses.xlsx')
+export default function Campuses() {
+  const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/schools/campuses/')
 
   const [showForm, setShowForm]       = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -34,15 +30,15 @@ export default function CoursesPage() {
 
   const openEdit = row => {
     setSelected(row)
-    setForm({ school: row.school, name: row.name, code: row.code })
+    setForm({ name: row.name, code: row.code, city: row.city })
     setErrors({}); setShowForm(true)
   }
 
   const validate = () => {
     const e = {}
-    if (!form.school) e.school = 'School is required'
-    if (!form.name)   e.name   = 'Course name is required'
-    if (!form.code)   e.code   = 'Course code is required'
+    if (!form.name) e.name = 'Campus name is required'
+    if (!form.code) e.code = 'Campus code is required'
+    if (!form.city) e.city = 'City is required'
     setErrors(e); return !Object.keys(e).length
   }
 
@@ -51,11 +47,9 @@ export default function CoursesPage() {
     setSaving(true)
     try {
       if (isEdit) {
-        await api.put(`/academics/courses/${selected.id}/`, form)
+        await api.put(`/schools/campuses/${selected.id}/`, form)
         fetch()
-      } else {
-        await create(form)
-      }
+      } else { await create(form) }
       setShowForm(false)
     } catch (err) {
       if (err.response?.data) setErrors(err.response.data)
@@ -65,15 +59,18 @@ export default function CoursesPage() {
   const handleDeactivate = async () => {
     setSaving(true)
     try {
-      await api.delete(`/academics/courses/${selected.id}/`)
+      await api.delete(`/schools/campuses/${selected.id}/`)
       fetch(); setShowConfirm(false)
     } finally { setSaving(false) }
   }
 
   const columns = [
-    { key: 'school_name', label: 'School' },
-    { key: 'name',        label: 'Course Name' },
-    { key: 'code',        label: 'Code' },
+    { key: 'name',  label: 'Campus Name',
+      render: row => <span className="font-medium">{row.name}</span> },
+    { key: 'code',  label: 'Code' },
+    { key: 'city',  label: 'City' },
+    { key: 'school_count', label: 'Schools' },
+    { key: 'user_count',   label: 'Users' },
     {
       key: 'is_active', label: 'Status', sortable: false,
       render: row => <Badge label={row.is_active ? 'Active' : 'Inactive'}
@@ -99,18 +96,11 @@ export default function CoursesPage() {
 
   return (
     <div>
-      <PageHeader title="Courses" subtitle="Manage all courses offered by your school"
-        action={
-          <div className="flex gap-2">
-            <button onClick={() => exportFile()} disabled={exporting}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white
-                         text-sm font-medium rounded-lg transition-colors
-                         disabled:opacity-50 flex items-center gap-2">
-              {exporting ? 'Exporting...' : '⬇ Export'}
-            </button>
-            <Button onClick={openCreate}>+ Add Course</Button>
-          </div>
-        } />
+      <PageHeader
+        title="Campuses"
+        subtitle="Manage all 9 NMIMS campuses"
+        action={<Button onClick={openCreate}>+ Add Campus</Button>}
+      />
 
       <Table columns={columns} data={data}
         serverPagination
@@ -119,29 +109,29 @@ export default function CoursesPage() {
         onPageChange={goToPage} loading={loading} />
 
       <Modal isOpen={showForm} onClose={() => setShowForm(false)}
-        title={isEdit ? 'Edit Course' : 'Add Course'}>
+        title={isEdit ? 'Edit Campus' : 'Add Campus'}>
         <div className="space-y-4">
-          <FormInput label="School" type="select" value={form.school}
-            onChange={set('school')} options={schoolOptions}
-            required error={errors.school} />
-          <FormInput label="Course Name" value={form.name} onChange={set('name')}
-            placeholder="e.g. B.Tech Computer Science"
+          <FormInput label="Campus Name" value={form.name} onChange={set('name')}
+            placeholder="e.g. NMIMS Hyderabad"
             required error={errors.name} />
-          <FormInput label="Course Code" value={form.code} onChange={set('code')}
-            placeholder="e.g. BTECH-CS"
+          <FormInput label="Campus Code" value={form.code} onChange={set('code')}
+            placeholder="e.g. HYD"
             required error={errors.code} />
+          <FormInput label="City" value={form.city} onChange={set('city')}
+            placeholder="e.g. Hyderabad"
+            required error={errors.city} />
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
             <Button onClick={handleSubmit} loading={saving}>
-              {isEdit ? 'Save Changes' : 'Create Course'}
+              {isEdit ? 'Save Changes' : 'Create Campus'}
             </Button>
           </div>
         </div>
       </Modal>
 
       <ConfirmDialog isOpen={showConfirm} onClose={() => setShowConfirm(false)}
-        onConfirm={handleDeactivate} title="Deactivate Course"
-        message={`Deactivate "${selected?.name}"? This will hide it from all dropdowns.`}
+        onConfirm={handleDeactivate} title="Deactivate Campus"
+        message={`Deactivate "${selected?.name}"? All schools and users under this campus will lose access.`}
         confirmLabel="Deactivate" loading={saving} />
     </div>
   )

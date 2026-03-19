@@ -34,6 +34,13 @@ class ExamsConducted(models.Model):
     class Meta:
         db_table = 'exams_conducted'
         ordering = ['-date']
+        indexes  = [
+            models.Index(fields=['school', 'is_deleted']),
+            models.Index(fields=['created_by']),
+            models.Index(fields=['date']),
+            models.Index(fields=['exam_group']),
+            models.Index(fields=['class_group']),
+        ]
 
     def __str__(self):
         return (
@@ -58,6 +65,11 @@ class SchoolActivity(models.Model):
     class Meta:
         db_table = 'school_activities'
         ordering = ['-date']
+        indexes  = [
+            models.Index(fields=['school', 'is_deleted']),
+            models.Index(fields=['date']),
+            models.Index(fields=['created_by']),
+        ]
 
     def __str__(self):
         return f'{self.name} ({self.school.name})'
@@ -107,6 +119,11 @@ class StudentActivity(models.Model):
     class Meta:
         db_table = 'student_activities'
         ordering = ['-date']
+        indexes  = [
+            models.Index(fields=['school', 'is_deleted']),
+            models.Index(fields=['date']),
+            models.Index(fields=['created_by']),
+        ]
 
     def __str__(self):
         return f'{self.name} by {self.club or self.conducted_by}'
@@ -148,6 +165,12 @@ class FacultyFDPWorkshopGL(models.Model):
     class Meta:
         db_table = 'faculty_fdp_workshop_gl'
         ordering = ['-date_start']
+        indexes  = [
+            models.Index(fields=['school', 'is_deleted']),
+            models.Index(fields=['date_start']),
+            models.Index(fields=['type']),
+            models.Index(fields=['created_by']),
+        ]
 
     def __str__(self):
         return f'{self.type} - {self.name} ({self.faculty_name})'
@@ -178,6 +201,12 @@ class FacultyPublication(models.Model):
     class Meta:
         db_table = 'faculty_publications'
         ordering = ['-date']
+        indexes  = [
+            models.Index(fields=['school', 'is_deleted']),
+            models.Index(fields=['date']),
+            models.Index(fields=['created_by']),
+            models.Index(fields=['author_type']),
+        ]
 
     def __str__(self):
         return f'{self.title_of_paper} by {self.author_name}'
@@ -213,6 +242,12 @@ class Patent(models.Model):
     class Meta:
         db_table = 'patents'
         ordering = ['-date_of_publication']
+        indexes  = [
+            models.Index(fields=['school', 'is_deleted']),
+            models.Index(fields=['date_of_publication']),
+            models.Index(fields=['created_by']),
+            models.Index(fields=['patent_status']),
+        ]
 
     def __str__(self):
         return f'{self.title_of_patent} ({self.applicant_name})'
@@ -241,6 +276,12 @@ class Certification(models.Model):
     class Meta:
         db_table = 'certifications'
         ordering = ['-date']
+        indexes  = [
+            models.Index(fields=['school', 'is_deleted']),
+            models.Index(fields=['date']),
+            models.Index(fields=['created_by']),
+            models.Index(fields=['agency']),
+        ]
 
     def __str__(self):
         return f'{self.title_of_course} - {self.name}'
@@ -269,6 +310,11 @@ class PlacementActivity(models.Model):
     class Meta:
         db_table = 'placement_activities'
         ordering = ['-date']
+        indexes  = [
+            models.Index(fields=['school', 'is_deleted']),
+            models.Index(fields=['date']),
+            models.Index(fields=['created_by']),
+        ]
 
     def __str__(self):
         return f'{self.name} ({self.school.name})'
@@ -290,6 +336,10 @@ class StudentMarks(models.Model):
         db_table        = 'student_marks'
         unique_together = ('exam', 'roll_number')
         ordering        = ['roll_number']
+        indexes         = [
+            models.Index(fields=['exam']),
+            models.Index(fields=['roll_number']),
+        ]
 
     def __str__(self):
         return (

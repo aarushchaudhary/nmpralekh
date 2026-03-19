@@ -23,13 +23,20 @@ export default function DashboardHome() {
     const { exportFile, exporting } = useExport('/export/all/', 'MIS_Dashboard.xlsx')
 
     useEffect(() => {
-        api.get('/schools/my-schools/').then(res => setSchools(res.data))
-        modules.forEach(mod => {
-            api.get(mod.endpoint).then(res => {
-                const data = res.data?.results ?? res.data
-                setCounts(prev => ({ ...prev, [mod.path]: data.length }))
-            }).catch(() => { })
+        api.get('/records/dashboard-counts/').then(res => {
+            const data = res.data
+            setCounts({
+                'exams': data.exams,
+                'school-activities': data.school_activities,
+                'student-activities': data.student_activities,
+                'fdp': data.fdp,
+                'publications': data.publications,
+                'patents': data.patents,
+                'certifications': data.certifications,
+                'placements': data.placements
+            })
         })
+        api.get('/schools/my-schools/').then(res => setSchools(res.data))
     }, [])
 
     return (

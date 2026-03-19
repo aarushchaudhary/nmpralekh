@@ -1,12 +1,43 @@
 from rest_framework import serializers
-from apps.schools.models import School, UserSchoolMapping
+from apps.schools.models import Campus, School, UserSchoolMapping
 from apps.accounts.serializers import UserSerializer
 
 
+class CampusSerializer(serializers.ModelSerializer):
+    school_count = serializers.SerializerMethodField()
+    user_count   = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = Campus
+        fields = [
+            'id', 'name', 'code', 'city',
+            'is_active', 'created_at',
+            'school_count', 'user_count'
+        ]
+
+    def get_school_count(self, obj):
+        return obj.schools.filter(is_active=True).count()
+
+    def get_user_count(self, obj):
+        return obj.users.filter(is_active=True).count()
+
+
+class CampusCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = Campus
+        fields = ['name', 'code', 'city', 'is_active']
+
+
 class SchoolSerializer(serializers.ModelSerializer):
+    campus_name = serializers.CharField(source='campus.name', read_only=True)
+    campus_code = serializers.CharField(source='campus.code', read_only=True)
+
     class Meta:
         model  = School
-        fields = ['id', 'name', 'code', 'is_active', 'created_at']
+        fields = [
+            'id', 'campus', 'campus_name', 'campus_code',
+            'name', 'code', 'is_active', 'created_at'
+        ]
 
 
 class SchoolCreateSerializer(serializers.ModelSerializer):

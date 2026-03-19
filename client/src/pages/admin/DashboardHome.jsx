@@ -41,16 +41,20 @@ export default function DashboardHome() {
     const { exportFile: exportAcademics, exporting: exportingAcademics } = useExport('/export/academics/all/', 'Academics_All.xlsx')
 
     useEffect(() => {
-        // fetch school names
-        api.get('/schools/my-schools/').then(res => setSchools(res.data))
-
-        // fetch counts for each module
-        modules.forEach(mod => {
-            api.get(mod.endpoint).then(res => {
-                const data = res.data?.results ?? res.data
-                setCounts(prev => ({ ...prev, [mod.path]: data.length }))
-            }).catch(() => { })
+        api.get('/records/dashboard-counts/').then(res => {
+            const data = res.data
+            setCounts({
+                'exams': data.exams,
+                'school-activities': data.school_activities,
+                'student-activities': data.student_activities,
+                'fdp': data.fdp,
+                'publications': data.publications,
+                'patents': data.patents,
+                'certifications': data.certifications,
+                'placements': data.placements
+            })
         })
+        api.get('/schools/my-schools/').then(res => setSchools(res.data))
     }, [])
 
     return (

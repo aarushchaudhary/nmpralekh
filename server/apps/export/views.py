@@ -39,6 +39,35 @@ class ExportExamsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Exams Conducted'
@@ -46,7 +75,7 @@ class ExportExamsView(APIView):
         headers = ['School', 'Course', 'Examination', 'Date', 'Expected Graduation Year']
         style_header_row(ws, headers)
 
-        for exam in get_scoped_queryset(ExamsConducted, request.user):
+        for exam in apply_filters(get_scoped_queryset(ExamsConducted, request.user)):
             ws.append([
                 exam.school.name,
                 exam.course,
@@ -67,6 +96,35 @@ class ExportSchoolActivitiesView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'School Activity'
@@ -74,7 +132,7 @@ class ExportSchoolActivitiesView(APIView):
         headers = ['School', 'Name', 'Date', 'Details', 'School Wide']
         style_header_row(ws, headers)
 
-        for act in get_scoped_queryset(SchoolActivity, request.user):
+        for act in apply_filters(get_scoped_queryset(SchoolActivity, request.user)):
             ws.append([
                 act.school.name,
                 act.name,
@@ -95,6 +153,35 @@ class ExportStudentActivitiesView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Student Activity'
@@ -102,7 +189,7 @@ class ExportStudentActivitiesView(APIView):
         headers = ['School', 'Name', 'Date', 'Details', 'Conducted By', 'Type']
         style_header_row(ws, headers)
 
-        for act in get_scoped_queryset(StudentActivity, request.user):
+        for act in apply_filters(get_scoped_queryset(StudentActivity, request.user)):
             ws.append([
                 act.school.name,
                 act.name,
@@ -124,6 +211,35 @@ class ExportFDPView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Faculty FDP, Workshop, GL'
@@ -131,7 +247,7 @@ class ExportFDPView(APIView):
         headers = ['School', 'Faculty Name', 'Date Start', 'Date End', 'Name', 'Details', 'Type', 'Organizing Body']
         style_header_row(ws, headers)
 
-        for fdp in get_scoped_queryset(FacultyFDPWorkshopGL, request.user):
+        for fdp in apply_filters(get_scoped_queryset(FacultyFDPWorkshopGL, request.user)):
             ws.append([
                 fdp.school.name,
                 fdp.faculty_name,
@@ -155,6 +271,35 @@ class ExportPublicationsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Faculty Publication'
@@ -163,7 +308,7 @@ class ExportPublicationsView(APIView):
                    'Journal/Conference', 'Date', 'Venue', 'Publication', 'DOI/Link']
         style_header_row(ws, headers)
 
-        for pub in get_scoped_queryset(FacultyPublication, request.user):
+        for pub in apply_filters(get_scoped_queryset(FacultyPublication, request.user)):
             ws.append([
                 pub.school.name,
                 pub.author_name,
@@ -188,6 +333,35 @@ class ExportPatentsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'PATENT'
@@ -196,7 +370,7 @@ class ExportPatentsView(APIView):
                    'Details', 'Date of Publication', 'Journal Number', 'Status']
         style_header_row(ws, headers)
 
-        for patent in get_scoped_queryset(Patent, request.user):
+        for patent in apply_filters(get_scoped_queryset(Patent, request.user)):
             ws.append([
                 patent.school.name,
                 patent.applicant_name,
@@ -220,6 +394,35 @@ class ExportCertificationsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'CERTIFICATES'
@@ -228,7 +431,7 @@ class ExportCertificationsView(APIView):
                    'Details', 'Agency', 'Proof Link', 'Person Type']
         style_header_row(ws, headers)
 
-        for cert in get_scoped_queryset(Certification, request.user):
+        for cert in apply_filters(get_scoped_queryset(Certification, request.user)):
             ws.append([
                 cert.school.name,
                 str(cert.date),
@@ -252,6 +455,35 @@ class ExportPlacementsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Placement Activities'
@@ -259,7 +491,7 @@ class ExportPlacementsView(APIView):
         headers = ['School', 'Name', 'Date', 'Details', 'Company Name']
         style_header_row(ws, headers)
 
-        for placement in get_scoped_queryset(PlacementActivity, request.user):
+        for placement in apply_filters(get_scoped_queryset(PlacementActivity, request.user)):
             ws.append([
                 placement.school.name,
                 placement.name,
@@ -276,54 +508,57 @@ class ExportPlacementsView(APIView):
         return response
 
 
+from .tasks import generate_export_task
+
 class ExportAllView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
-        wb   = openpyxl.Workbook()
-        user = request.user
+        school_ids = list(get_user_school_ids(request.user))
 
-        # remove default empty sheet
-        wb.remove(wb.active)
-
-        sheets = [
-            ('Exams Conducted',       ExamsConducted,      ['School', 'Course', 'Examination', 'Date', 'Graduation Year'],
-             lambda r: [r.school.name, r.course, r.examination, str(r.date), r.expected_graduation_year]),
-
-            ('School Activity',       SchoolActivity,      ['School', 'Name', 'Date', 'Details', 'School Wide'],
-             lambda r: [r.school.name, r.name, str(r.date), r.details, 'Yes' if r.is_school_wide else 'No']),
-
-            ('Student Activity',      StudentActivity,     ['School', 'Name', 'Date', 'Details', 'Conducted By', 'Type'],
-             lambda r: [r.school.name, r.name, str(r.date), r.details, r.conducted_by, r.activity_type]),
-
-            ('Faculty FDP',           FacultyFDPWorkshopGL,['School', 'Faculty', 'Date Start', 'Date End', 'Name', 'Type'],
-             lambda r: [r.school.name, r.faculty_name, str(r.date_start), str(r.date_end or ''), r.name, r.type]),
-
-            ('Faculty Publication',   FacultyPublication,  ['School', 'Author', 'Title', 'Journal', 'Date', 'Publication'],
-             lambda r: [r.school.name, r.author_name, r.title_of_paper, r.journal_or_conference_name, str(r.date), r.publication or '']),
-
-            ('PATENT',                Patent,              ['School', 'Applicant', 'Title', 'Date', 'Journal No', 'Status'],
-             lambda r: [r.school.name, r.applicant_name, r.title_of_patent, str(r.date_of_publication), r.journal_number, r.patent_status]),
-
-            ('CERTIFICATES',          Certification,       ['School', 'Date', 'Name', 'Course', 'Agency', 'Link'],
-             lambda r: [r.school.name, str(r.date), r.name, r.title_of_course, r.agency, r.credly_or_proof_link or '']),
-
-            ('Placement Activities',  PlacementActivity,   ['School', 'Name', 'Date', 'Details', 'Company'],
-             lambda r: [r.school.name, r.name, str(r.date), r.details, r.company_name or '']),
-        ]
-
-        for sheet_title, Model, headers, row_fn in sheets:
-            ws = wb.create_sheet(title=sheet_title)
-            style_header_row(ws, headers)
-            for record in get_scoped_queryset(Model, user):
-                ws.append(row_fn(record))
-
-        response = HttpResponse(
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        # start background task
+        task = generate_export_task.delay(
+            school_ids=school_ids,
+            export_type='all',
+            filters=dict(request.query_params)
         )
-        response['Content-Disposition'] = 'attachment; filename=MIS_Dashboard.xlsx'
-        wb.save(response)
-        return response
+
+        from rest_framework.response import Response
+        # return task ID immediately — don't wait
+        return Response({
+            'task_id': task.id,
+            'status':  'processing',
+            'message': 'Your export is being generated. Poll /api/export/status/{task_id}/ to check.'
+        }, status=202)
+
+
+class ExportStatusView(APIView):
+    """Frontend polls this every 2 seconds until ready"""
+    permission_classes = [IsAdminOrUserOrSuperAdmin]
+
+    def get(self, request, task_id):
+        from celery.result import AsyncResult
+        from django.core.cache import cache
+        from django.http import HttpResponse
+        from rest_framework.response import Response
+        
+        result    = AsyncResult(task_id)
+        cache_key = f'export_{task_id}'
+        file_data = cache.get(cache_key)
+
+        if file_data:
+            # file is ready — send it
+            response = HttpResponse(
+                file_data,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = 'attachment; filename=MIS_Dashboard.xlsx'
+            return response
+
+        if result.failed():
+            return Response({'status': 'failed'}, status=500)
+
+        return Response({'status': 'processing'})
 
 
 def get_scoped_academics(model, user, school_field='school_id'):
@@ -337,12 +572,41 @@ class ExportCoursesView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Courses'
         headers = ['School', 'Course Name', 'Code', 'Status']
         style_header_row(ws, headers)
-        for obj in get_scoped_academics(Course, request.user):
+        for obj in apply_filters(get_scoped_academics(Course, request.user)):
             ws.append([
                 obj.school.name, obj.name, obj.code,
                 'Active' if obj.is_active else 'Inactive'
@@ -359,6 +623,35 @@ class ExportAcademicYearsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Academic Years'
@@ -367,7 +660,7 @@ class ExportAcademicYearsView(APIView):
         qs = AcademicYear.objects.filter(
             school_id__in=get_user_school_ids(request.user)
         ).select_related('school', 'course')
-        for obj in qs:
+        for obj in apply_filters(qs):
             ws.append([
                 obj.school.name, obj.course.name,
                 obj.course.code, obj.year_number, obj.graduation_year
@@ -384,6 +677,35 @@ class ExportSemestersView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Semesters'
@@ -395,7 +717,7 @@ class ExportSemestersView(APIView):
         ).select_related(
             'academic_year', 'academic_year__school', 'academic_year__course'
         )
-        for obj in qs:
+        for obj in apply_filters(qs):
             ws.append([
                 obj.academic_year.school.name,
                 obj.academic_year.course.name,
@@ -417,6 +739,35 @@ class ExportSubjectsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Subjects'
@@ -430,7 +781,7 @@ class ExportSubjectsView(APIView):
             'semester__academic_year',
             'semester__academic_year__course'
         )
-        for obj in qs:
+        for obj in apply_filters(qs):
             ws.append([
                 obj.school.name,
                 obj.name,
@@ -452,6 +803,35 @@ class ExportClassGroupsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Class Groups'
@@ -460,7 +840,7 @@ class ExportClassGroupsView(APIView):
         qs = ClassGroup.objects.filter(
             school_id__in=get_user_school_ids(request.user)
         ).select_related('school', 'course')
-        for obj in qs:
+        for obj in apply_filters(qs):
             ws.append([
                 obj.school.name, obj.name,
                 obj.course.name, obj.course.code,
@@ -478,6 +858,35 @@ class ExportExamGroupsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Exam Groups'
@@ -490,7 +899,7 @@ class ExportExamGroupsView(APIView):
             'semester__academic_year',
             'semester__academic_year__course'
         )
-        for obj in qs:
+        for obj in apply_filters(qs):
             ws.append([
                 obj.school.name,
                 obj.name,
@@ -511,12 +920,41 @@ class ExportClubsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Clubs and Committees'
         headers = ['School', 'Name', 'Type', 'Status']
         style_header_row(ws, headers)
-        for obj in get_scoped_academics(Club, request.user):
+        for obj in apply_filters(get_scoped_academics(Club, request.user)):
             ws.append([
                 obj.school.name, obj.name, obj.type,
                 'Active' if obj.is_active else 'Inactive',
@@ -533,6 +971,35 @@ class ExportStudentMarksView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Student Marks'
@@ -550,7 +1017,7 @@ class ExportStudentMarksView(APIView):
             'exam__subject',
             'exam__class_group',
         )
-        for obj in qs:
+        for obj in apply_filters(qs):
             ws.append([
                 obj.exam.school.name,
                 obj.exam.exam_group.name  if obj.exam.exam_group  else '',
@@ -577,6 +1044,35 @@ class ExportAcademicsAllView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request):
+
+        # optional filters
+        school_id = request.query_params.get('school_id')
+        date_from = request.query_params.get('date_from')
+        date_to   = request.query_params.get('date_to')
+
+        def apply_filters(qs):
+            from django.core.exceptions import FieldError
+            try:
+                if school_id: qs = qs.filter(school_id=school_id)
+                # Not all models have a 'date' field, e.g. AcademicYear
+                if date_from: qs = qs.filter(date__gte=date_from)
+                if date_to:   qs = qs.filter(date__lte=date_to)
+            except FieldError:
+                pass
+            
+            # Additional logic for models using date_start or date_of_publication
+            try:
+                if date_from: qs = qs.filter(date_start__gte=date_from)
+                if date_to:   qs = qs.filter(date_start__lte=date_to)
+            except FieldError: pass
+            
+            try:
+                if date_from: qs = qs.filter(date_of_publication__gte=date_from)
+                if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
+            except FieldError: pass
+            
+            return qs[:5000]   # hard safety cap
+
         wb   = openpyxl.Workbook()
         user = request.user
         wb.remove(wb.active)
@@ -586,16 +1082,16 @@ class ExportAcademicsAllView(APIView):
         # Courses sheet
         ws = wb.create_sheet('Courses')
         style_header_row(ws, ['School', 'Course Name', 'Code', 'Status'])
-        for obj in Course.objects.filter(school_id__in=school_ids).select_related('school'):
+        for obj in apply_filters(Course.objects.filter(school_id__in=school_ids).select_related('school')):
             ws.append([obj.school.name, obj.name, obj.code,
                        'Active' if obj.is_active else 'Inactive'])
 
         # Academic Years sheet
         ws = wb.create_sheet('Academic Years')
         style_header_row(ws, ['School', 'Course', 'Year', 'Graduation Year'])
-        for obj in AcademicYear.objects.filter(
+        for obj in apply_filters(AcademicYear.objects.filter(
             school_id__in=school_ids
-        ).select_related('school', 'course'):
+        ).select_related('school', 'course')):
             ws.append([obj.school.name, obj.course.name,
                        obj.year_number, obj.graduation_year])
 
@@ -603,10 +1099,10 @@ class ExportAcademicsAllView(APIView):
         ws = wb.create_sheet('Semesters')
         style_header_row(ws, ['School', 'Course', 'Year', 'Semester',
                                'Start Date', 'End Date'])
-        for obj in Semester.objects.filter(
+        for obj in apply_filters(Semester.objects.filter(
             academic_year__school_id__in=school_ids
         ).select_related('academic_year', 'academic_year__school',
-                          'academic_year__course'):
+                          'academic_year__course')):
             ws.append([
                 obj.academic_year.school.name,
                 obj.academic_year.course.name,
@@ -620,11 +1116,11 @@ class ExportAcademicsAllView(APIView):
         ws = wb.create_sheet('Subjects')
         style_header_row(ws, ['School', 'Subject', 'Code', 'Course',
                                'Year', 'Semester', 'Status'])
-        for obj in Subject.objects.filter(
+        for obj in apply_filters(Subject.objects.filter(
             school_id__in=school_ids
         ).select_related('school', 'semester',
                           'semester__academic_year',
-                          'semester__academic_year__course'):
+                          'semester__academic_year__course')):
             ws.append([
                 obj.school.name, obj.name, obj.code,
                 obj.semester.academic_year.course.name,
@@ -636,20 +1132,20 @@ class ExportAcademicsAllView(APIView):
         # Class Groups sheet
         ws = wb.create_sheet('Class Groups')
         style_header_row(ws, ['School', 'Class Group', 'Course', 'Status'])
-        for obj in ClassGroup.objects.filter(
+        for obj in apply_filters(ClassGroup.objects.filter(
             school_id__in=school_ids
-        ).select_related('school', 'course'):
+        ).select_related('school', 'course')):
             ws.append([obj.school.name, obj.name, obj.course.name,
                        'Active' if obj.is_active else 'Inactive'])
 
         # Exam Groups sheet
         ws = wb.create_sheet('Exam Groups')
         style_header_row(ws, ['School', 'Exam Group', 'Course', 'Year', 'Semester'])
-        for obj in ExamGroup.objects.filter(
+        for obj in apply_filters(ExamGroup.objects.filter(
             school_id__in=school_ids
         ).select_related('school', 'semester',
                           'semester__academic_year',
-                          'semester__academic_year__course'):
+                          'semester__academic_year__course')):
             ws.append([
                 obj.school.name, obj.name,
                 obj.semester.academic_year.course.name,
@@ -660,9 +1156,9 @@ class ExportAcademicsAllView(APIView):
         # Clubs sheet
         ws = wb.create_sheet('Clubs and Committees')
         style_header_row(ws, ['School', 'Name', 'Type', 'Status'])
-        for obj in Club.objects.filter(
+        for obj in apply_filters(Club.objects.filter(
             school_id__in=school_ids
-        ).select_related('school'):
+        ).select_related('school')):
             ws.append([obj.school.name, obj.name, obj.type,
                        'Active' if obj.is_active else 'Inactive'])
 
@@ -671,10 +1167,10 @@ class ExportAcademicsAllView(APIView):
         style_header_row(ws, ['School', 'Exam Group', 'Subject',
                                'Class Group', 'Date', 'Student Name',
                                'Roll Number', 'Marks', 'Max Marks', 'Absent'])
-        for obj in StudentMarks.objects.filter(
+        for obj in apply_filters(StudentMarks.objects.filter(
             exam__school_id__in=school_ids
         ).select_related('exam', 'exam__school', 'exam__exam_group',
-                          'exam__subject', 'exam__class_group'):
+                          'exam__subject', 'exam__class_group')):
             ws.append([
                 obj.exam.school.name,
                 obj.exam.exam_group.name  if obj.exam.exam_group  else '',

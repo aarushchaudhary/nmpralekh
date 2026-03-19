@@ -14,7 +14,7 @@ import api         from '../../api/axios'
 const empty = { school: '', course: '', name: '' }
 
 export default function ClassGroupsPage() {
-  const { data, loading, create, fetch } = useRecords('/academics/class-groups/')
+  const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/academics/class-groups/')
   const { schoolOptions }                = useSchools()
   const { exportFile, exporting }        = useExport('/export/academics/class-groups/', 'class_groups.xlsx')
 
@@ -115,7 +115,11 @@ export default function ClassGroupsPage() {
           </div>
         } />
 
-      <Table columns={columns} data={data} loading={loading} />
+      <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
       <Modal isOpen={showForm} onClose={() => setShowForm(false)}
         title={isEdit ? 'Edit Class Group' : 'Add Class Group'}>

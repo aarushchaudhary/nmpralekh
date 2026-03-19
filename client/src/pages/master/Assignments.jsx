@@ -10,7 +10,7 @@ import api from '../../api/axios'
 import { useEffect } from 'react'
 
 export default function Assignments() {
-    const { data, loading, create, remove } = useRecords('/schools/assign/')
+    const { data, loading, create, remove , totalPages, currentPage, goToPage} = useRecords('/schools/assign/')
 
     const [showForm, setShowForm] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
@@ -22,23 +22,40 @@ export default function Assignments() {
     const [userOptions, setUserOptions] = useState([])
     const [schoolOptions, setSchoolOptions] = useState([])
 
-    // load users and schools for dropdowns
+    const [selectedCampus, setSelectedCampus] = useState('')
+    const [campusOptions, setCampusOptions] = useState([])
+
     useEffect(() => {
-        api.get('/users/').then(res => {
-            const users = res.data?.results ?? res.data
-            setUserOptions(users
-                .filter(u => u.is_active && u.role !== 'master')
-                .map(u => ({ value: u.id, label: `${u.full_name} (${u.role})` }))
-            )
-        })
-        api.get('/schools/').then(res => {
-            const schools = res.data?.results ?? res.data
-            setSchoolOptions(schools
-                .filter(s => s.is_active)
-                .map(s => ({ value: s.id, label: s.name }))
+        api.get('/schools/campuses/').then(res => {
+            const data = res.data?.results ?? res.data
+            setCampusOptions(data
+                .filter(c => c.is_active)
+                .map(c => ({ value: c.id, label: `${c.code} — ${c.name}` }))
             )
         })
     }, [])
+
+    useEffect(() => {
+        if (!selectedCampus) return
+
+        api.get('/users/').then(res => {
+            const users = res.data?.results ?? res.data
+            setUserOptions(users
+                .filter(u => u.is_active && u.role !== 'master'
+                    && String(u.campus) === String(selectedCampus))
+                .map(u => ({ value: u.id, label: `${u.full_name} (${u.role})` }))
+            )
+        })
+
+        api.get('/schools/').then(res => {
+            const schools = res.data?.results ?? res.data
+            setSchoolOptions(schools
+                .filter(s => s.is_active
+                    && String(s.campus) === String(selectedCampus))
+                .map(s => ({ value: s.id, label: s.name }))
+            )
+        })
+    }, [selectedCampus])
 
     const handleSubmit = async () => {
         const e = {}
@@ -99,7 +116,11 @@ export default function Assignments() {
                 }
             />
 
-            <Table columns={columns} data={data} loading={loading} />
+            <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
             <Modal
                 isOpen={showForm}
@@ -107,6 +128,14 @@ export default function Assignments() {
                 title="Assign User to School"
             >
                 <div className="space-y-4">
+                    <FormInput label="Filter by Campus" type="select"
+                        value={selectedCampus}
+                        onChange={e => {
+                            setSelectedCampus(e.target.value)
+                            setForm({ user: '', school: '' })
+                        }}
+                        options={campusOptions}
+                    />
                     <FormInput
                         label="User" type="select"
                         value={form.user}

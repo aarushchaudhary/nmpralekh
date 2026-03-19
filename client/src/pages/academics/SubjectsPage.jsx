@@ -14,7 +14,7 @@ import api         from '../../api/axios'
 const empty = { school: '', semester: '', name: '', code: '' }
 
 export default function SubjectsPage() {
-  const { data, loading, create, fetch } = useRecords('/academics/subjects/')
+  const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/academics/subjects/')
   const { schoolOptions }                = useSchools()
   const { exportFile, exporting }        = useExport('/export/academics/subjects/', 'subjects.xlsx')
 
@@ -123,7 +123,11 @@ export default function SubjectsPage() {
           </div>
         } />
 
-      <Table columns={columns} data={data} loading={loading} />
+      <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
       <Modal isOpen={showForm} onClose={() => setShowForm(false)}
         title={isEdit ? 'Edit Subject' : 'Add Subject'}>

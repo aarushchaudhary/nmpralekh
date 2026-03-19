@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useRecords from '../../hooks/useRecords'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
@@ -7,11 +7,24 @@ import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import api from '../../api/axios'
 
-const empty = { name: '', code: '' }
+const empty = { campus: '', name: '', code: '' }
 
 export default function Schools() {
-    const { data, loading, create, update, remove } = useRecords('/schools/')
+    const { data, loading, create, update, remove , totalPages, currentPage, goToPage} = useRecords('/schools/')
+
+    const [campusOptions, setCampusOptions] = useState([])
+
+    useEffect(() => {
+        api.get('/schools/campuses/').then(res => {
+            const data = res.data?.results ?? res.data
+            setCampusOptions(data
+                .filter(c => c.is_active)
+                .map(c => ({ value: c.id, label: `${c.code} — ${c.name}` }))
+            )
+        })
+    }, [])
 
     const [showForm, setShowForm] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
@@ -31,7 +44,7 @@ export default function Schools() {
 
     const openEdit = (school) => {
         setSelected(school)
-        setForm({ name: school.name, code: school.code })
+        setForm({ campus: school.campus, name: school.name, code: school.code })
         setErrors({})
         setShowForm(true)
     }
@@ -43,6 +56,7 @@ export default function Schools() {
 
     const validate = () => {
         const e = {}
+        if (!form.campus) e.campus = 'Campus is required'
         if (!form.name.trim()) e.name = 'School name is required'
         if (!form.code.trim()) e.code = 'School code is required'
         setErrors(e)
@@ -78,6 +92,7 @@ export default function Schools() {
     }
 
     const columns = [
+        { key: 'campus_name', label: 'Campus' },
         { key: 'name', label: 'School Name' },
         { key: 'code', label: 'Code' },
         {
@@ -117,7 +132,11 @@ export default function Schools() {
                 }
             />
 
-            <Table columns={columns} data={data} loading={loading} />
+            <Table columns={columns} data={data}
+        serverPagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={goToPage} loading={loading} />
 
             {/* Create / Edit Modal */}
             <Modal
@@ -126,6 +145,15 @@ export default function Schools() {
                 title={isEdit ? 'Edit School' : 'Add New School'}
             >
                 <div className="space-y-4">
+                    <FormInput
+                        label="Campus"
+                        type="select"
+                        value={form.campus}
+                        onChange={e => setForm(f => ({ ...f, campus: e.target.value }))}
+                        options={campusOptions}
+                        required
+                        error={errors.campus}
+                    />
                     <FormInput
                         label="School Name"
                         value={form.name}
