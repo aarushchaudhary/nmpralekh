@@ -511,3 +511,41 @@ class DashboardCountsView(APIView):
         school_ids = list(get_user_school_ids(request.user))
         counts     = get_dashboard_counts(school_ids, request.user.role)
         return Response(counts)
+
+
+# ─────────────────────────────────────────────
+# DATABASE BACKUP
+# ─────────────────────────────────────────────
+from apps.accounts.permissions import IsMaster
+from .models import BackupConfiguration
+from .serializers import BackupConfigurationSerializer
+from .tasks import perform_db_backup
+
+
+class BackupConfigurationView(APIView):
+    permission_classes = [IsMaster]
+
+    def get(self, request):
+        config, created = BackupConfiguration.objects.get_or_create(id=1)
+        serializer = BackupConfigurationSerializer(config)
+        return Response(serializer.data)
+
+    def put(self, request):
+        config, created = BackupConfiguration.objects.get_or_create(id=1)
+        serializer = BackupConfigurationSerializer(config, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save(updated_by=request.user)
+            # Logic to dynamically update django-celery-beat schedule goes here
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TriggerManualBackupView(APIView):
+    permission_classes = [IsMaster]
+
+    def post(self, request):
+        scope = request.data.get('backup_scope', 'full')
+        date_from = request.data.get('date_from')
+        date_to = request.data.get('date_to')
+        perform_db_backup.delay(scope=scope, date_from=date_from, date_to=date_to)
+        return Response({"message": "Backup task has been added to the queue."})

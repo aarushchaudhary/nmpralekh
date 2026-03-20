@@ -395,3 +395,52 @@ class PatentApplicant(models.Model):
 
     def __str__(self):
         return f'{self.name} → {self.patent.title_of_patent[:50]}'
+
+
+class BackupConfiguration(models.Model):
+    SCHEDULE_TYPE_CHOICES = [
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+    ]
+    DAY_OF_WEEK_CHOICES = [
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday'),
+    ]
+    BACKUP_SCOPE_CHOICES = [
+        ('full', 'From Beginning (Full Backup)'),
+        ('date_range', 'Date Range'),
+    ]
+
+    # Automated backup settings
+    is_active = models.BooleanField(default=True)
+    schedule_type = models.CharField(
+        max_length=10, choices=SCHEDULE_TYPE_CHOICES, default='weekly',
+        help_text="Weekly or Monthly automated backups"
+    )
+    schedule_day = models.PositiveSmallIntegerField(
+        choices=DAY_OF_WEEK_CHOICES, null=True, blank=True,
+        help_text="Day of week for weekly backups"
+    )
+
+    # Manual backup scope
+    backup_scope = models.CharField(
+        max_length=15, choices=BACKUP_SCOPE_CHOICES, default='full',
+        help_text="Scope for manual backups"
+    )
+    date_from = models.DateField(null=True, blank=True)
+    date_to = models.DateField(null=True, blank=True)
+
+    last_run = models.DateTimeField(null=True, blank=True)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Backup Configuration"
+
+    def __str__(self):
+        return f"Backup Config ({self.get_schedule_type_display()}, Scope: {self.get_backup_scope_display()})"

@@ -4,7 +4,7 @@ from apps.records.models import (
     StudentActivity, StudentActivityCollaboration,
     FacultyFDPWorkshopGL, FacultyPublication,
     Patent, Certification, PlacementActivity, StudentMarks,
-    PublicationAuthor, PatentApplicant
+    PublicationAuthor, PatentApplicant, BackupConfiguration
 )
 
 
@@ -245,3 +245,10 @@ class PlacementActivitySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
         return super().create(validated_data)
+
+
+class BackupConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BackupConfiguration
+        fields = '__all__'
+        read_only_fields = ('last_run', 'updated_by', 'updated_at')

@@ -43,4 +43,8 @@ urlpatterns = [
     # Student Marks
     path('marks/',          views.StudentMarksListCreateView.as_view(),  name='marks_list_create'),
     path('marks/<int:pk>/', views.StudentMarksDetailView.as_view(),       name='marks_detail'),
+
+    # Backup
+    path('backup-config/',  views.BackupConfigurationView.as_view(),     name='backup-config'),
+    path('backup-manual/',  views.TriggerManualBackupView.as_view(),     name='backup-manual'),
 ]

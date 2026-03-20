@@ -1,0 +1,28 @@
+# nmpralekh/server/Containerfile
+FROM docker.io/library/python:3.11-slim
+
+# Prevent Python from writing pyc files and enable unbuffered logging
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install system dependencies (including postgresql-client for pg_dump backups)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies globally inside the container
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the Django project
+COPY . .
+
+# Make the entrypoint script executable
+RUN chmod +x entrypoint.sh
+
+# The default command will be overridden by podman-compose for Celery
+CMD ["./entrypoint.sh"]

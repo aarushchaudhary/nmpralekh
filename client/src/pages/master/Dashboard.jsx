@@ -7,6 +7,7 @@ import Users from './Users'
 import Assignments from './Assignments'
 import ExportHistory from './ExportHistory'
 import ManualExport from './ManualExport'
+import BackupSettings from './BackupSettings'
 
 export default function MasterDashboard() {
   return (
@@ -19,6 +20,7 @@ export default function MasterDashboard() {
         <Route path="assignments" element={<Assignments />} />
         <Route path="exports" element={<ExportHistory />} />
         <Route path="exports/manual" element={<ManualExport />} />
+        <Route path="backup-settings" element={<BackupSettings />} />
       </Routes>
     </Layout>
   )

@@ -12,6 +12,8 @@ const roleNavLinks = {
         { label: '— Exports', path: null },
         { label: 'Export History', path: '/master/exports' },
         { label: 'Manual Export', path: '/master/exports/manual' },
+        { label: '— System', path: null },
+        { label: 'Backup Settings', path: '/master/backup-settings' },
     ],
     super_admin: [
         { label: 'Dashboard', path: '/superadmin' },
