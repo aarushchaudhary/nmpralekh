@@ -81,9 +81,7 @@ export default function Users() {
         if (!isEdit && !form.username?.trim()) e.username = 'Username is required'
         if (!isEdit && !form.password?.trim()) e.password = 'Password is required'
 
-        if (['super_admin', 'delete_auth'].includes(form.role) && !form.campus) {
-            e.campus = 'Campus must be assigned for this role'
-        }
+
 
         setErrors(e)
         return !Object.keys(e).length
@@ -220,19 +218,11 @@ export default function Users() {
                         required error={errors.role}
                     />
                     
-                    {/* Show campus field only for super_admin and delete_auth */}
-                    {['super_admin', 'delete_auth'].includes(form.role) && (
-                        <div>
-                            <FormInput
-                                label="Campus" type="select" value={form.campus}
-                                onChange={set('campus')} options={campusOptions}
-                                required error={errors.campus}
-                            />
-                            <p className="text-xs text-yellow-600 mt-1">
-                                This user will only see data from the selected campus
-                            </p>
-                        </div>
-                    )}
+                    <FormInput
+                        label="Campus" type="select" value={form.campus}
+                        onChange={set('campus')} options={campusOptions}
+                        error={errors.campus}
+                    />
                     <div className="flex justify-end gap-3 pt-2">
                         <Button variant="secondary" onClick={() => setShowForm(false)}>
                             Cancel

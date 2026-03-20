@@ -9,6 +9,9 @@ const roleNavLinks = {
         { label: 'Schools', path: '/master/schools' },
         { label: 'Users', path: '/master/users' },
         { label: 'Assignments', path: '/master/assignments' },
+        { label: '— Exports', path: null },
+        { label: 'Export History', path: '/master/exports' },
+        { label: 'Manual Export', path: '/master/exports/manual' },
     ],
     super_admin: [
         { label: 'Dashboard', path: '/superadmin' },

@@ -1,3 +1,4 @@
+import os
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from django.http import HttpResponse
@@ -508,7 +509,7 @@ class ExportPlacementsView(APIView):
         return response
 
 
-from .tasks import generate_export_task
+from .tasks import build_campus_workbook
 
 class ExportAllView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
@@ -516,20 +517,14 @@ class ExportAllView(APIView):
     def get(self, request):
         school_ids = list(get_user_school_ids(request.user))
 
-        # start background task
-        task = generate_export_task.delay(
-            school_ids=school_ids,
-            export_type='all',
-            filters=dict(request.query_params)
-        )
+        wb, total_records = build_campus_workbook(school_ids)
 
-        from rest_framework.response import Response
-        # return task ID immediately — don't wait
-        return Response({
-            'task_id': task.id,
-            'status':  'processing',
-            'message': 'Your export is being generated. Poll /api/export/status/{task_id}/ to check.'
-        }, status=202)
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=MIS_Dashboard.xlsx'
+        wb.save(response)
+        return response
 
 
 class ExportStatusView(APIView):
@@ -1190,3 +1185,137 @@ class ExportAcademicsAllView(APIView):
         response['Content-Disposition'] = 'attachment; filename=academics_all.xlsx'
         wb.save(response)
         return response
+
+
+from rest_framework.response import Response
+from apps.export.models import GeneratedExport
+from apps.export.tasks import (
+    generate_nightly_exports,
+    generate_manual_export
+)
+from apps.accounts.permissions import IsMaster
+
+
+class ExportHistoryView(APIView):
+    permission_classes = [IsMaster]
+
+    def get(self, request):
+        exports   = GeneratedExport.objects.select_related(
+                        'campus', 'generated_by'
+                    )
+        campus_id = request.query_params.get('campus_id')
+        if campus_id:
+            exports = exports.filter(campus_id=campus_id)
+
+        data = [{
+            'id':             e.id,
+            'campus':         e.campus.name if e.campus else 'All',
+            'campus_code':    e.campus.code if e.campus else 'ALL',
+            'export_type':    e.export_type,
+            'filename':       e.filename,
+            'generated_by':   e.generated_by.full_name if e.generated_by else 'System',
+            'generated_at':   e.generated_at.isoformat(),
+            'file_size_kb':   e.file_size_kb,
+            'record_count':   e.record_count,
+            'date_range_from': str(e.date_range_from) if e.date_range_from else None,
+            'date_range_to':   str(e.date_range_to)   if e.date_range_to   else None,
+        } for e in exports]
+
+        return Response(data)
+
+
+class ExportDownloadView(APIView):
+    permission_classes = [IsMaster]
+
+    def get(self, request, pk):
+        try:
+            export = GeneratedExport.objects.get(pk=pk)
+        except GeneratedExport.DoesNotExist:
+            return Response({'detail': 'Export not found'}, status=404)
+
+        if not os.path.exists(export.filepath):
+            return Response(
+                {'detail': 'File no longer exists on server'},
+                status=404
+            )
+
+        with open(export.filepath, 'rb') as f:
+            response = HttpResponse(
+                f.read(),
+                content_type=(
+                    'application/vnd.openxmlformats-officedocument'
+                    '.spreadsheetml.sheet'
+                )
+            )
+            response['Content-Disposition'] = (
+                f'attachment; filename="{export.filename}"'
+            )
+            return response
+
+
+class TriggerManualExportView(APIView):
+    permission_classes = [IsMaster]
+
+    def post(self, request):
+        campus_id = request.data.get('campus_id')
+        date_from = request.data.get('date_from')
+        date_to   = request.data.get('date_to')
+
+        if not campus_id:
+            return Response(
+                {'detail': 'campus_id is required'},
+                status=400
+            )
+
+        from apps.schools.models import School
+        school_ids = list(
+            School.objects.filter(
+                campus_id=campus_id,
+                is_active=True
+            ).values_list('id', flat=True)
+        )
+
+        task = generate_manual_export.delay(
+            campus_id  = campus_id,
+            school_ids = school_ids,
+            filters    = {
+                'date_from': date_from,
+                'date_to':   date_to,
+            },
+            user_id = request.user.id
+        )
+
+        return Response({
+            'detail':  'Export started in background',
+            'task_id': task.id,
+        }, status=202)
+
+
+class TriggerNightlyExportView(APIView):
+    permission_classes = [IsMaster]
+
+    def post(self, request):
+        task = generate_nightly_exports.delay()
+        return Response({
+            'detail':  'Nightly export triggered manually',
+            'task_id': task.id,
+        }, status=202)
+
+
+class ExportTaskStatusView(APIView):
+    """Frontend polls this to check if export is ready"""
+    permission_classes = [IsMaster]
+
+    def get(self, request, task_id):
+        from celery.result import AsyncResult
+        result = AsyncResult(task_id)
+
+        if result.successful():
+            return Response({
+                'status': 'completed',
+                'result': result.result,
+            })
+        elif result.failed():
+            return Response({'status': 'failed'}, status=500)
+        else:
+            return Response({'status': 'processing'})

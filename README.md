@@ -10,7 +10,7 @@ A full-stack Management Information System portal built for NMIMS University acr
 |---|---|
 | Frontend | React 18 + Vite + Tailwind CSS |
 | Backend | Django 6 + Django REST Framework |
-| Database | MariaDB 10.6+ (InnoDB, ACID compliant) |
+| Database | PostgreSQL 15+ (ACID compliant) |
 | Auth | JWT via djangorestframework-simplejwt + httpOnly cookies |
 | Cache | Redis + django-redis |
 | Background Tasks | Celery |
@@ -43,7 +43,7 @@ graph TD
     C --> D5
     C --> D6
     
-    C -->|Read/Write| DB[(MariaDB<br>ACID/InnoDB)]
+    C -->|Read/Write| DB[(PostgreSQL<br>ACID)]
     C -->|Cache/Sessions| Cache[(Redis)]
     C -->|Task Queue| Worker[Celery<br>Background Tasks]
 ```
@@ -237,7 +237,7 @@ Every **UPDATE** and **DELETE** goes through a strict approval workflow:
 sequenceDiagram
     participant U as Admin/Faculty
     participant S as System
-    participant DB as MariaDB
+    participant DB as PostgreSQL
     participant D as Delete Auth (Reviewer)
     
     U->>S: Submits Edit/Delete request
@@ -271,7 +271,7 @@ sequenceDiagram
 ```
 Python 3.11+
 Node.js 18+
-MariaDB 10.6+
+PostgreSQL 15+
 Redis 6+
 Git
 ```
@@ -301,13 +301,28 @@ cd server
 pip install -r requirements.txt
 ```
 
-### 4. Set up MariaDB
+### 4. Set up PostgreSQL
 
 ```sql
-CREATE DATABASE mis_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'mis_user'@'localhost' IDENTIFIED BY 'your_strong_password';
-GRANT ALL PRIVILEGES ON mis_portal.* TO 'mis_user'@'localhost';
-FLUSH PRIVILEGES;
+CREATE DATABASE nmpralekh
+    ENCODING 'UTF8'
+    LC_COLLATE 'en_US.UTF-8'
+    LC_CTYPE 'en_US.UTF-8'
+    TEMPLATE template0;
+
+CREATE USER mis_user WITH PASSWORD 'your_strong_password';
+
+ALTER ROLE mis_user SET client_encoding TO 'utf8';
+ALTER ROLE mis_user SET default_transaction_isolation TO 'read committed';
+ALTER ROLE mis_user SET timezone TO 'Asia/Kolkata';
+
+GRANT ALL PRIVILEGES ON DATABASE nmpralekh TO mis_user;
+
+-- PostgreSQL 15+ also requires this
+\c nmpralekh
+GRANT ALL ON SCHEMA public TO mis_user;
+
+\q
 ```
 
 ### 5. Configure environment variables
@@ -319,11 +334,11 @@ SECRET_KEY=your_long_random_secret_key
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-DB_NAME=mis_portal
+DB_NAME=nmpralekh
 DB_USER=mis_user
 DB_PASSWORD=your_strong_password
-DB_HOST=localhost
-DB_PORT=3306
+DB_HOST=127.0.0.1
+DB_PORT=5432
 
 JWT_ACCESS_MINUTES=30
 JWT_REFRESH_DAYS=7
@@ -365,6 +380,100 @@ Enter username, email and password when prompted. This account gets the `master`
 ```bash
 cd ../client
 npm install
+```
+
+---
+
+## Database Optimization (pgBouncer)
+
+For production-grade connection pooling, it is highly recommended to use **pgBouncer**.
+
+### Step 1 — Install pgBouncer
+```bash
+sudo apt update
+sudo apt install pgbouncer -y
+```
+Verify installation:
+```bash
+pgbouncer --version
+```
+
+### Step 2 — Configure pgBouncer
+Open the config file:
+```bash
+sudo nano /etc/pgbouncer/pgbouncer.ini
+```
+Replace the entire content with:
+```ini
+[databases]
+nmpralekh = host=127.0.0.1 port=5432 dbname=nmpralekh
+
+[pgbouncer]
+listen_port          = 6432
+listen_addr          = 127.0.0.1
+auth_type            = md5
+auth_file            = /etc/pgbouncer/userlist.txt
+
+pool_mode            = transaction
+max_client_conn      = 200
+default_pool_size    = 20
+reserve_pool_size    = 5
+reserve_pool_timeout = 5
+
+log_connections      = 0
+log_disconnections   = 0
+log_pooler_errors    = 1
+
+server_reset_query   = DISCARD ALL
+ignore_startup_parameters = extra_float_digits
+
+admin_users = pgbouncer
+stats_users = pgbouncer
+```
+
+### Step 3 — Create pgBouncer User File
+pgBouncer needs its own user authentication file. First get the MD5 hash of your password:
+```bash
+echo -n "your_strong_passwordmis_user" | md5sum
+```
+Copy the hash it outputs. Then open the userlist file:
+```bash
+sudo nano /etc/pgbouncer/userlist.txt
+```
+
+Add this line using your hash:
+```
+"mis_user" "md5YOURHASHHERE"
+```
+
+For example if your hash was `abc123`:
+```
+"mis_user" "md5abc123"
+"pgbouncer" "admin"
+```
+
+### Step 4 — Start pgBouncer
+```bash
+sudo systemctl start pgbouncer
+sudo systemctl enable pgbouncer
+sudo systemctl status pgbouncer
+```
+Should show `active (running)`.
+
+### Step 5 — Test pgBouncer Connection
+```bash
+psql -U mis_user -d nmpralekh -h 127.0.0.1 -p 6432
+```
+If it connects successfully type `\q` to exit.
+
+### Step 6 — Update Django to Use pgBouncer Port
+Open `server/.env` and change the port from `5432` to `6432`:
+```ini
+DB_NAME=nmpralekh
+DB_USER=mis_user
+DB_PASSWORD=your_strong_password
+DB_HOST=127.0.0.1
+DB_PORT=6432
 ```
 
 ---
@@ -609,7 +718,7 @@ Dashboard loads      →  <5ms (Redis cached 60 seconds)
 Export row limit     →  5000 rows per file
 Pagination           →  25 records per page server-side
 DB indexes           →  On school, date, created_by, status columns
-Connection pooling   →  CONN_MAX_AGE = 600 seconds
+Connection pooling   →  CONN_MAX_AGE = 0 (Managed by pgBouncer)
 Rate limiting        →  20/min anonymous, 200/min authenticated
 ```
 
@@ -642,7 +751,7 @@ podman-compose exec backend python manage.py createsuperuser
 ```
 
 Services:
-- `db` — MariaDB with persistent named volume
+- `db` — PostgreSQL with persistent named volume
 - `backend` — Django + Gunicorn, runs migrate on startup
 - `frontend` — Nginx serving Vite production build, proxies /api to backend
 - `redis` — Cache and Celery broker

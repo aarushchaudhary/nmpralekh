@@ -63,6 +63,11 @@ class UserSchoolMappingCreateSerializer(serializers.ModelSerializer):
         fields = ['user', 'school']
 
     def validate(self, data):
+        # only admin and faculty (user) roles can be assigned to schools
+        if data['user'].role not in ('admin', 'user'):
+            raise serializers.ValidationError(
+                'Only Admin and Faculty users can be assigned to schools'
+            )
         # prevent duplicate assignments
         if UserSchoolMapping.objects.filter(
             user=data['user'], school=data['school']

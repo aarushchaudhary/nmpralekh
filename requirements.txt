@@ -6,12 +6,15 @@ click==8.3.1
 click-didyoumean==0.3.1
 click-plugins==1.1.1.2
 click-repl==0.3.0
+cron-descriptor==1.4.5
 Django==6.0.3
+django-celery-beat==2.9.0
 django-cors-headers==4.9.0
 django-db-geventpool==4.0.8
 django-ratelimit==4.1.0
 django-redis==6.0.0
 django-sslserver==0.22
+django-timezone-field==7.2.1
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 et_xmlfile==2.0.0
@@ -21,7 +24,9 @@ mysqlclient==2.2.8
 openpyxl==3.1.5
 packaging==26.0
 prompt_toolkit==3.0.52
+psycopg2-binary==2.9.11
 PyJWT==2.11.0
+python-crontab==3.3.0
 python-dateutil==2.9.0.post0
 python-decouple==3.8
 redis==7.3.0
