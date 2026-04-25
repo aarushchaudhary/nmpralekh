@@ -27,12 +27,10 @@ export default function DashboardHome() {
             api.get('/schools/campuses/'),
             api.get('/schools/'),
             api.get('/users/'),
-            api.get('/schools/assign/'),
-        ]).then(([campuses, schools, users, assignments]) => {
+        ]).then(([campuses, schools, users]) => {
             const campusData = campuses.data?.results ?? campuses.data
             const schoolData = schools.data?.results ?? schools.data
             const userData = users.data?.results ?? users.data
-            const assignmentData = assignments.data?.results ?? assignments.data
 
             setStats({
                 campuses: campusData.length,
@@ -41,7 +39,6 @@ export default function DashboardHome() {
                 admins: userData.filter(u => u.role === 'admin').length,
                 faculty: userData.filter(u => u.role === 'user').length,
                 super_admins: userData.filter(u => u.role === 'super_admin').length,
-                assignments: assignmentData.length,
             })
         }).catch(() => { })
     }, [])

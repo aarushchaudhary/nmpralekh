@@ -6,7 +6,6 @@ import useExport from '../../hooks/useExport'
 import api from '../../api/axios'
 
 const modules = [
-    { label: 'Exams Conducted', path: 'exams', endpoint: '/records/exams/' },
     { label: 'School Activities', path: 'school-activities', endpoint: '/records/school-activities/' },
     { label: 'Student Activities', path: 'student-activities', endpoint: '/records/student-activities/' },
     { label: 'FDP / Workshop / GL', path: 'fdp', endpoint: '/records/fdp/' },
@@ -26,7 +25,6 @@ export default function DashboardHome() {
         api.get('/records/dashboard-counts/').then(res => {
             const data = res.data
             setCounts({
-                'exams': data.exams,
                 'school-activities': data.school_activities,
                 'student-activities': data.student_activities,
                 'fdp': data.fdp,

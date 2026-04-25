@@ -3,51 +3,32 @@ from apps.accounts.models import User
 from apps.schools.models import School
 
 
-class ExamsConducted(models.Model):
-    school          = models.ForeignKey(School, on_delete=models.RESTRICT,
-                                        related_name='exams')
-    exam_group      = models.ForeignKey('academics.ExamGroup',
-                                        on_delete=models.RESTRICT,
-                                        related_name='exams',
-                                        null=True, blank=True)
-    subject         = models.ForeignKey('academics.Subject',
-                                        on_delete=models.RESTRICT,
-                                        related_name='exams',
-                                        null=True, blank=True)
-    class_group     = models.ForeignKey('academics.ClassGroup',
-                                        on_delete=models.RESTRICT,
-                                        related_name='exams',
-                                        null=True, blank=True)
-    faculty         = models.ForeignKey(User, on_delete=models.RESTRICT,
-                                        related_name='exams_conducted',
-                                        null=True, blank=True)
-    date            = models.DateField()
-    created_by      = models.ForeignKey(User, on_delete=models.RESTRICT,
-                                        related_name='exams_created')
-    created_at      = models.DateTimeField(auto_now_add=True)
-    updated_at      = models.DateTimeField(auto_now=True)
-    is_deleted      = models.BooleanField(default=False)
-    pending_audit   = models.ForeignKey('audit.AuditRequest', null=True,
-                                        blank=True, on_delete=models.SET_NULL,
-                                        related_name='exams_pending')
+class Club(models.Model):
+    TYPE_CHOICES = [
+        ('club',      'Club'),
+        ('committee', 'Committee'),
+        ('placecom',  'Placement Committee'),
+    ]
+
+    name        = models.CharField(max_length=255)
+    type        = models.CharField(max_length=20, choices=TYPE_CHOICES, default='club')
+    school      = models.ForeignKey(School, on_delete=models.CASCADE, related_name='clubs')
+    is_active   = models.BooleanField(default=True)
+    created_by  = models.ForeignKey(User, on_delete=models.RESTRICT,
+                                    related_name='clubs_created')
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'exams_conducted'
-        ordering = ['-date']
-        indexes  = [
-            models.Index(fields=['school', 'is_deleted']),
-            models.Index(fields=['created_by']),
-            models.Index(fields=['date']),
-            models.Index(fields=['exam_group']),
-            models.Index(fields=['class_group']),
+        db_table = 'clubs'
+        ordering = ['name']
+        unique_together = ('name', 'school', 'type')
+        indexes = [
+            models.Index(fields=['school', 'type', 'is_active']),
         ]
 
     def __str__(self):
-        return (
-            f'{self.exam_group.name if self.exam_group else "No Group"} — '
-            f'{self.subject.name if self.subject else "No Subject"} — '
-            f'{self.class_group.name if self.class_group else "No Class"}'
-        )
+        return f'{self.name} ({self.get_type_display()}) — {self.school.name}'
 
 
 class SchoolActivity(models.Model):
@@ -100,9 +81,12 @@ class StudentActivity(models.Model):
     name            = models.CharField(max_length=500)
     date            = models.DateField()
     details         = models.TextField()
-    club            = models.ForeignKey('academics.Club', null=True, blank=True,
-                                        on_delete=models.SET_NULL,
-                                        related_name='student_activities')
+    club            = models.ForeignKey('Club', null=True, blank=True,
+                                       on_delete=models.SET_NULL,
+                                       related_name='student_activities',
+                                       help_text='Select from registered clubs')
+    club_name       = models.CharField(max_length=255, null=True, blank=True,
+                                       help_text='Auto-filled from club, or manual entry')
     conducted_by    = models.CharField(max_length=255, null=True, blank=True,
                                        help_text='Free text if club not in list')
     activity_type   = models.CharField(max_length=20, choices=TYPE_CHOICES,
@@ -126,7 +110,7 @@ class StudentActivity(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.name} by {self.club or self.conducted_by}'
+        return f'{self.name} by {self.club_name or self.conducted_by}'
 
 
 class StudentActivityCollaboration(models.Model):
@@ -190,7 +174,8 @@ class FacultyPublication(models.Model):
     date                        = models.DateField()
     venue                       = models.CharField(max_length=500, null=True, blank=True)
     publication                 = models.CharField(max_length=255, null=True, blank=True)
-    doi_or_link                 = models.CharField(max_length=500, null=True, blank=True)
+    doi_or_link                 = models.CharField(max_length=500, default='',
+                                                    help_text='DOI or direct link to publication')
     created_by                  = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='publications_created')
     created_at                  = models.DateTimeField(auto_now_add=True)
     updated_at                  = models.DateTimeField(auto_now=True)
@@ -232,6 +217,8 @@ class Patent(models.Model):
     date_of_publication  = models.DateField()
     journal_number       = models.CharField(max_length=100)
     patent_status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default='filed')
+    doi_or_link          = models.CharField(max_length=500, default='',
+                                            help_text='DOI or direct link to patent')
     created_by           = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='patents_created')
     created_at           = models.DateTimeField(auto_now_add=True)
     updated_at           = models.DateTimeField(auto_now=True)
@@ -265,7 +252,8 @@ class Certification(models.Model):
     title_of_course      = models.CharField(max_length=500)
     details              = models.TextField(null=True, blank=True)
     agency               = models.CharField(max_length=255)
-    credly_or_proof_link = models.CharField(max_length=500, null=True, blank=True)
+    credly_or_proof_link = models.CharField(max_length=500, default='',
+                                             help_text='Credly badge or certificate proof link')
     person_type          = models.CharField(max_length=10, choices=PERSON_TYPE_CHOICES, default='faculty')
     created_by           = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='certifications_created')
     created_at           = models.DateTimeField(auto_now_add=True)
@@ -294,10 +282,8 @@ class PlacementActivity(models.Model):
     date            = models.DateField()
     details         = models.TextField()
     company_name    = models.CharField(max_length=255, null=True, blank=True)
-    placecom        = models.ForeignKey('academics.Club', null=True, blank=True,
-                                        on_delete=models.SET_NULL,
-                                        related_name='placement_activities',
-                                        limit_choices_to={'type': 'placecom'})
+    placecom_name   = models.CharField(max_length=255, null=True, blank=True,
+                                       help_text='Name of the placement committee')
     created_by      = models.ForeignKey(User, on_delete=models.RESTRICT,
                                         related_name='placements_created')
     created_at      = models.DateTimeField(auto_now_add=True)
@@ -318,34 +304,6 @@ class PlacementActivity(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.school.name})'
-
-class StudentMarks(models.Model):
-    exam            = models.ForeignKey(ExamsConducted, on_delete=models.CASCADE,
-                                        related_name='marks')
-    student_name    = models.CharField(max_length=255)
-    roll_number     = models.CharField(max_length=50)
-    marks_obtained  = models.DecimalField(max_digits=6, decimal_places=2)
-    max_marks       = models.DecimalField(max_digits=6, decimal_places=2)
-    is_absent       = models.BooleanField(default=False)
-    created_by      = models.ForeignKey(User, on_delete=models.RESTRICT,
-                                        related_name='marks_entered')
-    created_at      = models.DateTimeField(auto_now_add=True)
-    updated_at      = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table        = 'student_marks'
-        unique_together = ('exam', 'roll_number')
-        ordering        = ['roll_number']
-        indexes         = [
-            models.Index(fields=['exam']),
-            models.Index(fields=['roll_number']),
-        ]
-
-    def __str__(self):
-        return (
-            f'{self.student_name} ({self.roll_number}) — '
-            f'{self.marks_obtained}/{self.max_marks}'
-        )
 
 
 class PublicationAuthor(models.Model):

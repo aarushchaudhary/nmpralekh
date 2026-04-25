@@ -1,7 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 import DashboardHome from './DashboardHome'
-import ExamsPage from '../records/ExamPage'
 import SchoolActivities from '../records/SchoolActivitiesPage'
 import StudentActivities from '../records/StudentActivitiesPage'
 import FDPPage from '../records/FDPPage'
@@ -9,13 +8,14 @@ import PublicationsPage from '../records/PublicationsPage'
 import PatentsPage from '../records/PatentsPage'
 import CertificationsPage from '../records/CertificationsPage'
 import PlacementsPage from '../records/PlacementsPage'
+import CampusUsersPage from './CampusUsersPage'
 
 export default function SuperAdminDashboard() {
   return (
     <Layout>
       <Routes>
         <Route index element={<DashboardHome />} />
-        <Route path="exams" element={<ExamsPage readOnly />} />
+        <Route path="campus-users" element={<CampusUsersPage />} />
         <Route path="school-activities" element={<SchoolActivities readOnly />} />
         <Route path="student-activities" element={<StudentActivities readOnly />} />
         <Route path="fdp" element={<FDPPage readOnly />} />

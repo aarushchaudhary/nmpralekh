@@ -22,18 +22,17 @@ const typeBadgeColor = { club: 'blue', committee: 'purple', other: 'gray' }
 
 const empty = {
     school: '', name: '', date: '', details: '',
-    club: '', conducted_by: '', activity_type: 'club'
+    club: '', club_name: '', conducted_by: '', activity_type: 'club'
 }
 
 export default function StudentActivitiesPage({ readOnly = false }) {
     const { user } = useAuth()
-    const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/student-activities/')
+    const { data, loading, create, fetch, totalPages, currentPage, goToPage } = useRecords('/records/student-activities/')
     const { schoolOptions } = useSchools()
     const { exportFile, exporting } = useExport('/export/student-activities/', 'student_activities.xlsx')
 
     const [clubOptions, setClubOptions] = useState([])
-    const [committeeOptions, setCommitteeOptions] = useState([])
-    const [showOtherInput, setShowOtherInput] = useState(false)
+    const [showOther, setShowOther] = useState(false)
 
     const [showForm, setShowForm] = useState(false)
     const [showEditConfirm, setShowEditConfirm] = useState(false)
@@ -45,55 +44,55 @@ export default function StudentActivitiesPage({ readOnly = false }) {
 
     const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
 
+    // Fetch clubs when school or activity_type changes
     useEffect(() => {
-        // load clubs
-        api.get('/academics/clubs/?type=club&is_active=true').then(res => {
-            const data = res.data?.results ?? res.data
-            setClubOptions([
-                ...data.map(c => ({ value: c.id, label: c.name })),
-                { value: 'other', label: 'Other (type below)' }
-            ])
-        })
-        // load committees
-        api.get('/academics/clubs/?type=committee&is_active=true').then(res => {
-            const data = res.data?.results ?? res.data
-            setCommitteeOptions([
-                ...data.map(c => ({ value: c.id, label: c.name })),
-                { value: 'other', label: 'Other (type below)' }
-            ])
-        })
-    }, [])
+        if (!form.school || form.activity_type === 'other') {
+            setClubOptions([])
+            return
+        }
+        const clubType = form.activity_type // 'club' or 'committee'
+        api.get(`/records/clubs/?school=${form.school}&type=${clubType}&is_active=true`)
+            .then(res => {
+                const clubs = res.data?.results ?? res.data
+                setClubOptions([
+                    ...clubs.map(c => ({ value: String(c.id), label: c.name })),
+                    { value: 'other', label: 'Other (type below)' }
+                ])
+            })
+            .catch(() => setClubOptions([{ value: 'other', label: 'Other (type below)' }]))
+    }, [form.school, form.activity_type])
 
-    // show free text field when Other is selected
     const handleClubChange = e => {
         const val = e.target.value
-        setForm(p => ({ ...p, club: val === 'other' ? '' : val, conducted_by: '' }))
-        setShowOtherInput(val === 'other')
+        if (val === 'other') {
+            setShowOther(true)
+            setForm(p => ({ ...p, club: '', club_name: '' }))
+        } else {
+            setShowOther(false)
+            const label = clubOptions.find(o => o.value === val)?.label || ''
+            setForm(p => ({ ...p, club: val, club_name: label }))
+        }
     }
-
-    const currentOptions = form.activity_type === 'club'
-        ? clubOptions
-        : form.activity_type === 'committee'
-            ? committeeOptions
-            : []
 
     const openCreate = () => {
         setSelected(null); setForm(empty)
-        setShowOtherInput(false); setErrors({}); setShowForm(true)
+        setShowOther(false); setErrors({}); setShowForm(true)
     }
 
     const openEdit = row => {
         setSelected(row)
+        const hasClubFK = !!row.club
         setForm({
             school: row.school,
             name: row.name,
             date: row.date,
             details: row.details,
-            club: row.club || '',
+            club: row.club ? String(row.club) : '',
+            club_name: row.club_name || '',
             conducted_by: row.conducted_by || '',
             activity_type: row.activity_type,
         })
-        setShowOtherInput(!row.club && !!row.conducted_by)
+        setShowOther(!hasClubFK && (!!row.club_name || !!row.conducted_by))
         setErrors({}); setShowForm(true)
     }
 
@@ -103,8 +102,10 @@ export default function StudentActivitiesPage({ readOnly = false }) {
         if (!form.name) e.name = 'Activity name is required'
         if (!form.date) e.date = 'Date is required'
         if (!form.details) e.details = 'Details are required'
-        if (form.activity_type !== 'other' && !form.club && !form.conducted_by)
-            e.club = 'Please select or enter who conducted this activity'
+        if (form.activity_type !== 'other' && !form.club && !showOther)
+            e.club = 'Please select a club or committee'
+        if (showOther && !form.club_name && !form.conducted_by)
+            e.club_name = 'Please enter who conducted this activity'
         setErrors(e); return !Object.keys(e).length
     }
 
@@ -113,7 +114,6 @@ export default function StudentActivitiesPage({ readOnly = false }) {
         setSaving(true)
         try {
             const payload = { ...form }
-            // if club is empty string set to null
             if (!payload.club) payload.club = null
             if (selected) {
                 await api.put(`/records/student-activities/${selected.id}/`, payload)
@@ -204,16 +204,21 @@ export default function StudentActivitiesPage({ readOnly = false }) {
             />
 
             <Table columns={columns} data={data}
-        serverPagination
-        totalPages={totalPages}
-        currentPage={currentPage}
-        onPageChange={goToPage} loading={loading} />
+                serverPagination
+                totalPages={totalPages}
+                currentPage={currentPage}
+                onPageChange={goToPage} loading={loading} />
 
             <Modal isOpen={showForm} onClose={() => setShowForm(false)}
                 title={selected ? 'Edit Student Activity' : 'Add Student Activity'} size="lg">
                 <div className="space-y-4">
                     <FormInput label="School" type="select" value={form.school}
-                        onChange={set('school')} options={schoolOptions}
+                        onChange={e => {
+                            set('school')(e)
+                            setForm(p => ({ ...p, club: '', club_name: '' }))
+                            setShowOther(false)
+                        }}
+                        options={schoolOptions}
                         required error={errors.school} />
                     <FormInput label="Activity Name" value={form.name} onChange={set('name')}
                         placeholder="e.g. MongoDB Learnathon" required error={errors.name} />
@@ -225,29 +230,31 @@ export default function StudentActivitiesPage({ readOnly = false }) {
                         value={form.activity_type}
                         onChange={e => {
                             set('activity_type')(e)
-                            setForm(p => ({ ...p, club: '', conducted_by: '' }))
-                            setShowOtherInput(false)
+                            setForm(p => ({ ...p, club: '', club_name: '', conducted_by: '' }))
+                            setShowOther(false)
                         }}
                         options={typeOptions} />
 
-                    {/* Club / Committee dropdown — only show for club or committee type */}
+                    {/* Club / Committee dropdown */}
                     {form.activity_type !== 'other' && (
                         <FormInput
                             label={form.activity_type === 'club' ? 'Club' : 'Committee'}
                             type="select"
-                            value={showOtherInput ? 'other' : form.club}
+                            value={showOther ? 'other' : form.club}
                             onChange={handleClubChange}
-                            options={currentOptions}
+                            options={clubOptions}
                             error={errors.club}
+                            required
                         />
                     )}
 
-                    {/* Free text fallback when Other selected */}
-                    {(showOtherInput || form.activity_type === 'other') && (
-                        <FormInput label="Conducted By (free text)"
-                            value={form.conducted_by} onChange={set('conducted_by')}
-                            placeholder="Enter club or committee name"
-                            error={errors.conducted_by} />
+                    {/* Free text fallback */}
+                    {(showOther || form.activity_type === 'other') && (
+                        <FormInput label="Conducted By (name)"
+                            value={form.activity_type === 'other' ? form.conducted_by : form.club_name}
+                            onChange={form.activity_type === 'other' ? set('conducted_by') : set('club_name')}
+                            placeholder="Enter name manually"
+                            error={errors.club_name || errors.conducted_by} />
                     )}
 
                     <FormInput label="Details" type="textarea" value={form.details}

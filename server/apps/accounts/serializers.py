@@ -15,6 +15,25 @@ class UserSerializer(serializers.ModelSerializer):
         ]
 
 
+class UserVisibilitySerializer(serializers.ModelSerializer):
+    """Used for Admin/SuperAdmin user-visibility views — shows school codes"""
+    school_code = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = User
+        fields = [
+            'id', 'username', 'email', 'full_name',
+            'role', 'is_active', 'school_code',
+        ]
+
+    def get_school_code(self, obj):
+        from apps.schools.models import UserSchoolMapping
+        codes = UserSchoolMapping.objects.filter(
+            user=obj
+        ).select_related('school').values_list('school__code', flat=True)
+        return ', '.join(codes) if codes else ''
+
+
 class UserCreateSerializer(serializers.ModelSerializer):
     """Used by master to create new users"""
     password = serializers.CharField(write_only=True, min_length=8)

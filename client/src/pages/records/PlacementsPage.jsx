@@ -11,7 +11,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axios'
 
-const empty = { school: '', name: '', date: '', details: '', company_name: '', placecom: '' }
+const empty = { school: '', name: '', date: '', details: '', company_name: '', placecom_name: '' }
 
 export default function PlacementsPage({ readOnly = false }) {
     const { user } = useAuth()
@@ -19,7 +19,6 @@ export default function PlacementsPage({ readOnly = false }) {
     const { schoolOptions } = useSchools()
     const { exportFile, exporting } = useExport('/export/placements/', 'placements.xlsx')
 
-    const [placecomOptions, setPlacecomOptions] = useState([])
     const [showForm, setShowForm] = useState(false)
     const [showEditConfirm, setShowEditConfirm] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -30,13 +29,6 @@ export default function PlacementsPage({ readOnly = false }) {
 
     const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
 
-    useEffect(() => {
-        api.get('/academics/clubs/?type=placecom&is_active=true').then(res => {
-            const data = res.data?.results ?? res.data
-            setPlacecomOptions(data.map(c => ({ value: c.id, label: c.name })))
-        })
-    }, [])
-
     const openCreate = () => { setSelected(null); setForm(empty); setErrors({}); setShowForm(true) }
     const openEdit = row => {
         setSelected(row)
@@ -46,7 +38,7 @@ export default function PlacementsPage({ readOnly = false }) {
             date: row.date,
             details: row.details,
             company_name: row.company_name || '',
-            placecom: row.placecom || '',
+            placecom_name: row.placecom_name || '',
         })
         setErrors({}); setShowForm(true)
     }
@@ -65,7 +57,6 @@ export default function PlacementsPage({ readOnly = false }) {
         setSaving(true)
         try {
             const payload = { ...form }
-            if (!payload.placecom) payload.placecom = null
             if (selected) {
                 await api.put(`/records/placements/${selected.id}/`, payload)
                 setShowEditConfirm(false)
@@ -163,8 +154,8 @@ export default function PlacementsPage({ readOnly = false }) {
                         required error={errors.name} />
                     <FormInput label="Date" type="date" value={form.date}
                         onChange={set('date')} required error={errors.date} />
-                    <FormInput label="PlaceCom" type="select" value={form.placecom}
-                        onChange={set('placecom')} options={placecomOptions} />
+                    <FormInput label="PlaceCom (optional)" value={form.placecom_name}
+                        onChange={set('placecom_name')} placeholder="e.g. Placement Committee" />
                     <FormInput label="Company Name (optional)" value={form.company_name}
                         onChange={set('company_name')} placeholder="e.g. TCS, Infosys" />
                     <FormInput label="Details" type="textarea" value={form.details}

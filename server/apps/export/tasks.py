@@ -23,9 +23,9 @@ def style_header(ws, headers):
 def build_campus_workbook(school_ids):
     """Builds a complete workbook for given school IDs"""
     from apps.records.models import (
-        ExamsConducted, SchoolActivity, StudentActivity,
+        SchoolActivity, StudentActivity,
         FacultyFDPWorkshopGL, FacultyPublication,
-        Patent, Certification, PlacementActivity, StudentMarks
+        Patent, Certification, PlacementActivity
     )
 
     wb = openpyxl.Workbook()
@@ -33,22 +33,6 @@ def build_campus_workbook(school_ids):
     total_records = 0
 
     sheets = [
-        (
-            'Exams Conducted',
-            ExamsConducted.objects.filter(
-                school_id__in=school_ids, is_deleted=False
-            ).select_related(
-                'school', 'exam_group', 'subject', 'class_group'
-            ),
-            ['School', 'Exam Group', 'Subject', 'Class Group', 'Date'],
-            lambda r: [
-                r.school.name,
-                r.exam_group.name  if r.exam_group  else '',
-                r.subject.name     if r.subject     else '',
-                r.class_group.name if r.class_group else '',
-                str(r.date),
-            ]
-        ),
         (
             'School Activities',
             SchoolActivity.objects.filter(
@@ -64,11 +48,11 @@ def build_campus_workbook(school_ids):
             'Student Activities',
             StudentActivity.objects.filter(
                 school_id__in=school_ids, is_deleted=False
-            ).select_related('school', 'club'),
+            ).select_related('school'),
             ['School', 'Name', 'Date', 'Details', 'Conducted By', 'Type'],
             lambda r: [
                 r.school.name, r.name, str(r.date), r.details,
-                r.club.name if r.club else r.conducted_by or '',
+                r.club_name or r.conducted_by or '',
                 r.activity_type,
             ]
         ),
@@ -133,26 +117,6 @@ def build_campus_workbook(school_ids):
             lambda r: [
                 r.school.name, r.name, str(r.date),
                 r.details, r.company_name or '',
-            ]
-        ),
-        (
-            'Student Marks',
-            StudentMarks.objects.filter(
-                exam__school_id__in=school_ids
-            ).select_related(
-                'exam', 'exam__school', 'exam__exam_group',
-                'exam__subject', 'exam__class_group'
-            ),
-            ['School', 'Exam Group', 'Subject', 'Class Group',
-             'Student', 'Roll No', 'Marks', 'Max Marks', 'Absent'],
-            lambda r: [
-                r.exam.school.name,
-                r.exam.exam_group.name  if r.exam.exam_group  else '',
-                r.exam.subject.name     if r.exam.subject     else '',
-                r.exam.class_group.name if r.exam.class_group else '',
-                r.student_name, r.roll_number,
-                float(r.marks_obtained), float(r.max_marks),
-                'Yes' if r.is_absent else 'No',
             ]
         ),
     ]

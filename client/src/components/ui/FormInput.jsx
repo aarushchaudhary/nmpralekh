@@ -1,3 +1,5 @@
+import SearchableSelect from './SearchableSelect'
+
 export default function FormInput({
     label, type = 'text', value, onChange,
     placeholder, required, error, disabled,
@@ -20,19 +22,14 @@ export default function FormInput({
             )}
 
             {type === 'select' ? (
-                <select
+                <SearchableSelect
+                    options={options}
                     value={value}
                     onChange={onChange}
+                    placeholder={placeholder || 'Select...'}
                     disabled={disabled}
-                    className={baseClass}
-                >
-                    <option value="">Select...</option>
-                    {options?.map(opt => (
-                        <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                        </option>
-                    ))}
-                </select>
+                    error={!!error}
+                />
             ) : type === 'textarea' ? (
                 <textarea
                     value={value}

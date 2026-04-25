@@ -5,7 +5,6 @@ import PageHeader from '../../components/ui/PageHeader'
 import api from '../../api/axios'
 
 const modules = [
-    { label: 'Exams Conducted', path: 'exams', endpoint: '/records/exams/' },
     { label: 'School Activities', path: 'school-activities', endpoint: '/records/school-activities/' },
     { label: 'Student Activities', path: 'student-activities', endpoint: '/records/student-activities/' },
     { label: 'FDP / Workshop / GL', path: 'fdp', endpoint: '/records/fdp/' },
@@ -16,7 +15,6 @@ const modules = [
 ]
 
 const exportEndpoints = [
-    { label: 'Exams', endpoint: '/export/exams/', file: 'exams.xlsx' },
     { label: 'School Activities', endpoint: '/export/school-activities/', file: 'school_activities.xlsx' },
     { label: 'Student Activities', endpoint: '/export/student-activities/', file: 'student_activities.xlsx' },
     { label: 'FDP / Workshop / GL', endpoint: '/export/fdp/', file: 'fdp.xlsx' },

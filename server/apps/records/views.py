@@ -7,18 +7,19 @@ from apps.schools.utils import get_user_school_ids
 from apps.records.cache_utils import get_dashboard_counts
 from apps.audit.models import AuditRequest
 from apps.records.models import (
-    ExamsConducted, SchoolActivity, SchoolActivityCollaboration,
+    Club,
+    SchoolActivity, SchoolActivityCollaboration,
     StudentActivity, StudentActivityCollaboration,
     FacultyFDPWorkshopGL, FacultyPublication, PublicationAuthor,
-    Patent, PatentApplicant, Certification, PlacementActivity, StudentMarks
+    Patent, PatentApplicant, Certification, PlacementActivity
 )
 from apps.records.serializers import (
-    ExamsConductedSerializer, SchoolActivitySerializer,
+    ClubSerializer,
+    SchoolActivitySerializer,
     StudentActivitySerializer, FacultyFDPWorkshopGLSerializer,
     FacultyPublicationSerializer, PublicationAuthorSerializer,
     PatentSerializer, PatentApplicantSerializer,
     CertificationSerializer, PlacementActivitySerializer,
-    StudentMarksSerializer
 )
 import json
 
@@ -53,7 +54,7 @@ def create_audit_request(user, table_name, record, action, new_data=None):
 
 
 # ─────────────────────────────────────────────
-# BASE MIXIN — shared logic for all 8 modules
+# BASE MIXIN — shared logic for all modules
 # ─────────────────────────────────────────────
 class SchoolScopedMixin:
     """
@@ -70,48 +71,45 @@ class SchoolScopedMixin:
 
 
 # ─────────────────────────────────────────────
-# EXAMS CONDUCTED
+# CLUBS & COMMITTEES
 # ─────────────────────────────────────────────
-class ExamsListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
-    serializer_class   = ExamsConductedSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
-
-    def get_queryset(self):
-        qs = self.get_base_queryset(ExamsConducted)
-        return qs.select_related(
-            'school', 'exam_group', 'subject',
-            'class_group', 'faculty', 'created_by'
-        )
-
-    def get_permissions(self):
-        if self.request.method == 'POST':
-            return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdmin()]
+from apps.accounts.permissions import IsAdmin
 
 
-class ExamsDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
-    serializer_class   = ExamsConductedSerializer
+class ClubListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
+    serializer_class   = ClubSerializer
     permission_classes = [IsAdminOrUser]
 
     def get_queryset(self):
-        return self.get_base_queryset(ExamsConducted)
+        school_ids = get_user_school_ids(self.request.user)
+        qs = Club.objects.filter(
+            school_id__in=school_ids
+        ).select_related('school', 'created_by')
+        # optional query params for filtering
+        school = self.request.query_params.get('school')
+        if school:
+            qs = qs.filter(school_id=school)
+        club_type = self.request.query_params.get('type')
+        if club_type:
+            qs = qs.filter(type=club_type)
+        active = self.request.query_params.get('is_active')
+        if active is not None:
+            qs = qs.filter(is_active=active.lower() == 'true')
+        return qs
 
-    def update(self, request, *args, **kwargs):
-        record   = self.get_object()
-        new_data = request.data
-        audit    = create_audit_request(request.user, 'exams_conducted', record, 'UPDATE', new_data)
-        return Response({
-            'detail': 'Update request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdmin()]
+        return [IsAdminOrUser()]
 
-    def destroy(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'exams_conducted', record, 'DELETE')
-        return Response({
-            'detail': 'Delete request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
+
+class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class   = ClubSerializer
+    permission_classes = [IsAdmin]
+
+    def get_queryset(self):
+        school_ids = get_user_school_ids(self.request.user)
+        return Club.objects.filter(school_id__in=school_ids)
 
 
 # ─────────────────────────────────────────────
@@ -167,7 +165,7 @@ class StudentActivityListCreateView(SchoolScopedMixin, generics.ListCreateAPIVie
     def get_queryset(self):
         qs = self.get_base_queryset(StudentActivity)
         return qs.select_related(
-            'school', 'club', 'created_by'
+            'school', 'created_by'
         ).prefetch_related('collaborations')
 
     def get_permissions(self):
@@ -438,7 +436,7 @@ class PlacementListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs = self.get_base_queryset(PlacementActivity)
-        return qs.select_related('school', 'placecom', 'created_by')
+        return qs.select_related('school', 'created_by')
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -468,38 +466,6 @@ class PlacementDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIVi
             'detail': 'Delete request submitted and pending approval',
             'audit_id': audit.id
         }, status=status.HTTP_202_ACCEPTED)
-
-
-# ─────────────────────────────────────────────
-# STUDENT MARKS
-# ─────────────────────────────────────────────
-class StudentMarksListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
-    serializer_class   = StudentMarksSerializer
-    permission_classes = [IsAdminOrUser]
-
-    def get_queryset(self):
-        school_ids = get_user_school_ids(self.request.user)
-        qs         = StudentMarks.objects.filter(
-                         exam__school_id__in=school_ids
-                     ).select_related(
-                         'exam', 'exam__school', 'exam__exam_group',
-                         'exam__subject', 'exam__class_group', 'created_by'
-                     )
-        exam_id = self.request.query_params.get('exam_id')
-        if exam_id:
-            qs = qs.filter(exam_id=exam_id)
-        return qs
-
-
-class StudentMarksDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
-    serializer_class   = StudentMarksSerializer
-    permission_classes = [IsAdminOrUser]
-
-    def get_queryset(self):
-        school_ids = get_user_school_ids(self.request.user)
-        return StudentMarks.objects.filter(
-            exam__school_id__in=school_ids
-        )
 
 
 from rest_framework.views import APIView

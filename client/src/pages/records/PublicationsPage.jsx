@@ -88,6 +88,7 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
     if (!form.title_of_paper)             e.title_of_paper = 'Title is required'
     if (!form.journal_or_conference_name) e.journal_or_conference_name = 'Journal/Conference is required'
     if (!form.date)                       e.date = 'Date is required'
+    if (!form.doi_or_link)                e.doi_or_link = 'DOI or Link is required'
     setErrors(e); return !Object.keys(e).length
   }
 
@@ -176,6 +177,13 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
     { key: 'date',        label: 'Date' },
     { key: 'publication', label: 'Published In',
       render: row => row.publication || '—' },
+    {
+      key: 'doi_or_link', label: 'Link', sortable: false,
+      render: row => row.doi_or_link ? (
+        <a href={row.doi_or_link} target="_blank" rel="noopener noreferrer"
+           className="text-primary-600 hover:underline text-xs">View Link</a>
+      ) : '—'
+    },
     {
       key: 'status', label: 'Status', sortable: false,
       render: row => row.pending_audit ? (
@@ -278,8 +286,9 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
             <FormInput label="Publication" value={form.publication}
               onChange={set('publication')} placeholder="e.g. IEEE Xplore" />
             <div className="md:col-span-2">
-              <FormInput label="DOI / Link (optional)" value={form.doi_or_link}
-                onChange={set('doi_or_link')} placeholder="https://..." />
+              <FormInput label="DOI / Link" value={form.doi_or_link}
+                onChange={set('doi_or_link')} placeholder="https://..."
+                required error={errors.doi_or_link} />
             </div>
           </div>
 

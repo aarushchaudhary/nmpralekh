@@ -46,7 +46,6 @@ class AuditApproveView(APIView):
             with transaction.atomic():
                 # map table name to Django model
                 table_model_map = {
-                    'exams_conducted':       ('records', 'ExamsConducted'),
                     'school_activities':     ('records', 'SchoolActivity'),
                     'student_activities':    ('records', 'StudentActivity'),
                     'faculty_fdp_workshop_gl': ('records', 'FacultyFDPWorkshopGL'),
@@ -54,13 +53,6 @@ class AuditApproveView(APIView):
                     'patents':               ('records', 'Patent'),
                     'certifications':        ('records', 'Certification'),
                     'placement_activities':  ('records', 'PlacementActivity'),
-                    'courses':               ('academics', 'Course'),
-                    'academic_years':        ('academics', 'AcademicYear'),
-                    'semesters':             ('academics', 'Semester'),
-                    'subjects':              ('academics', 'Subject'),
-                    'class_groups':          ('academics', 'ClassGroup'),
-                    'exam_groups':           ('academics', 'ExamGroup'),
-                    'clubs':                 ('academics', 'Club'),
                 }
 
                 app_label, model_name = table_model_map[audit.table_name]
@@ -113,7 +105,6 @@ class AuditRejectView(APIView):
         with transaction.atomic():
             # clear the pending flag on the record
             table_model_map = {
-                'exams_conducted':         ('records', 'ExamsConducted'),
                 'school_activities':       ('records', 'SchoolActivity'),
                 'student_activities':      ('records', 'StudentActivity'),
                 'faculty_fdp_workshop_gl': ('records', 'FacultyFDPWorkshopGL'),
@@ -121,13 +112,6 @@ class AuditRejectView(APIView):
                 'patents':                 ('records', 'Patent'),
                 'certifications':          ('records', 'Certification'),
                 'placement_activities':    ('records', 'PlacementActivity'),
-                'courses':                 ('academics', 'Course'),
-                'academic_years':          ('academics', 'AcademicYear'),
-                'semesters':               ('academics', 'Semester'),
-                'subjects':                ('academics', 'Subject'),
-                'class_groups':            ('academics', 'ClassGroup'),
-                'exam_groups':             ('academics', 'ExamGroup'),
-                'clubs':                   ('academics', 'Club'),
             }
 
             try:

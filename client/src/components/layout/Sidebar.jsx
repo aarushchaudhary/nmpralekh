@@ -17,8 +17,9 @@ const roleNavLinks = {
     ],
     super_admin: [
         { label: 'Dashboard', path: '/superadmin' },
+        { label: '— Management', path: null },
+        { label: 'Campus Users', path: '/superadmin/campus-users' },
         { label: '— Records', path: null },
-        { label: 'Exams', path: '/superadmin/exams' },
         { label: 'School Activities', path: '/superadmin/school-activities' },
         { label: 'Student Activities', path: '/superadmin/student-activities' },
         { label: 'FDP / Workshop / GL', path: '/superadmin/fdp' },
@@ -29,17 +30,10 @@ const roleNavLinks = {
     ],
     admin: [
         { label: 'Dashboard', path: '/admin' },
-        { label: '— Academics', path: null },
-        { label: 'Courses', path: '/admin/academics/courses' },
-        { label: 'Years & Semesters', path: '/admin/academics/years' },
-        { label: 'Subjects', path: '/admin/academics/subjects' },
-        { label: 'Class Groups', path: '/admin/academics/class-groups' },
-        { label: 'Exam Groups', path: '/admin/academics/exam-groups' },
-        { label: 'Clubs & Committees', path: '/admin/academics/clubs' },
-        { label: 'Faculty Assignments',  path: '/admin/academics/assignments' },
+        { label: '— Management', path: null },
+        { label: 'Clubs & Committees', path: '/admin/clubs' },
+        { label: 'View Faculties', path: '/admin/faculties' },
         { label: '— Records', path: null },
-        { label: 'Exams Conducted', path: '/admin/exams' },
-        { label: 'Student Marks', path: '/admin/marks' },
         { label: 'School Activities', path: '/admin/school-activities' },
         { label: 'Student Activities', path: '/admin/student-activities' },
         { label: 'FDP / Workshop / GL', path: '/admin/fdp' },
@@ -50,11 +44,7 @@ const roleNavLinks = {
     ],
     user: [
         { label: 'Dashboard',           path: '/faculty' },
-        { label: '— My Teaching',       path: null },
-        { label: 'My Assignments',      path: '/faculty/assignments' },
         { label: '— Activities',        path: null },
-        { label: 'Exams Conducted',     path: '/faculty/exams' },
-        { label: 'Student Marks',       path: '/faculty/marks' },
         { label: 'School Activities',   path: '/faculty/school-activities' },
         { label: 'Student Activities',  path: '/faculty/student-activities' },
         { label: 'FDP / Workshop / GL', path: '/faculty/fdp' },
@@ -128,8 +118,8 @@ export default function Sidebar({ isOpen, onClose }) {
                                 end={link.path.split('/').length === 2}
                                 onClick={onClose}
                                 className={({ isActive }) => `
-                  block px-3 py-2 rounded-lg text-sm transition-colors
-                  ${isActive
+                   block px-3 py-2 rounded-lg text-sm transition-colors
+                   ${isActive
                                         ? 'bg-primary-50 text-primary-700 font-medium'
                                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                     }

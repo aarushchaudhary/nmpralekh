@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import PageHeader from '../../components/ui/PageHeader'
 import Button     from '../../components/ui/Button'
 import FormInput  from '../../components/ui/FormInput'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import api        from '../../api/axios'
 
 const DAYS_OF_WEEK = [
@@ -152,16 +153,15 @@ export default function BackupSettings() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Schedule Type
                 </label>
-                <select
-                  name="schedule_type"
+                <SearchableSelect
+                  options={[
+                    { value: 'weekly', label: 'Weekly' },
+                    { value: 'monthly', label: 'Monthly (End of Month)' },
+                  ]}
                   value={autoConfig.schedule_type}
-                  onChange={handleAutoChange}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2
-                             text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly (End of Month)</option>
-                </select>
+                  onChange={e => handleAutoChange({ target: { name: 'schedule_type', value: e.target.value } })}
+                  placeholder="Select schedule"
+                />
               </div>
 
               {/* Day of Week — only for weekly */}
@@ -170,17 +170,12 @@ export default function BackupSettings() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Day of Week
                   </label>
-                  <select
-                    name="schedule_day"
+                  <SearchableSelect
+                    options={DAYS_OF_WEEK}
                     value={autoConfig.schedule_day}
-                    onChange={handleAutoChange}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2
-                               text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    {DAYS_OF_WEEK.map(d => (
-                      <option key={d.value} value={d.value}>{d.label}</option>
-                    ))}
-                  </select>
+                    onChange={e => handleAutoChange({ target: { name: 'schedule_day', value: e.target.value } })}
+                    placeholder="Select day"
+                  />
                   <p className="text-xs text-gray-400 mt-1">
                     Backup will run at the end of the selected day each week.
                   </p>

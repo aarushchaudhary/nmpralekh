@@ -1,8 +1,0 @@
-# nmpralekh/.containerignore
-venv/
-client/node_modules/
-client/dist/
-server/__pycache__/
-server/*.pyc
-.env
-.git/

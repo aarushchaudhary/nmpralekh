@@ -4,9 +4,9 @@ from . import views
 urlpatterns = [
     path('dashboard-counts/', views.DashboardCountsView.as_view(), name='dashboard_counts'),
 
-    # Exams
-    path('exams/',                          views.ExamsListCreateView.as_view(),             name='exams_list_create'),
-    path('exams/<int:pk>/',                  views.ExamsDetailView.as_view(),                 name='exams_detail'),
+    # Clubs & Committees
+    path('clubs/',                          views.ClubListCreateView.as_view(),              name='club_list_create'),
+    path('clubs/<int:pk>/',                 views.ClubDetailView.as_view(),                  name='club_detail'),
 
     # School Activities
     path('school-activities/',              views.SchoolActivityListCreateView.as_view(),    name='sact_list_create'),
@@ -39,10 +39,6 @@ urlpatterns = [
     # Placements
     path('placements/',                     views.PlacementListCreateView.as_view(),         name='placement_list_create'),
     path('placements/<int:pk>/',             views.PlacementDetailView.as_view(),             name='placement_detail'),
-
-    # Student Marks
-    path('marks/',          views.StudentMarksListCreateView.as_view(),  name='marks_list_create'),
-    path('marks/<int:pk>/', views.StudentMarksDetailView.as_view(),       name='marks_detail'),
 
     # Backup
     path('backup-config/',  views.BackupConfigurationView.as_view(),     name='backup-config'),

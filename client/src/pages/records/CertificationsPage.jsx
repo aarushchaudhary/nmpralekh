@@ -73,6 +73,7 @@ export default function CertificationsPage({ readOnly = false, selfOnly = false 
         if (!form.name) e.name = 'Name is required'
         if (!form.title_of_course) e.title_of_course = 'Course title is required'
         if (!form.agency) e.agency = 'Agency is required'
+        if (!form.credly_or_proof_link) e.credly_or_proof_link = 'Proof link is required'
         setErrors(e); return !Object.keys(e).length
     }
 
@@ -202,8 +203,9 @@ export default function CertificationsPage({ readOnly = false, selfOnly = false 
                     <FormInput label="Agency" value={form.agency}
                         onChange={set('agency')} placeholder="e.g. Coursera, Google"
                         required error={errors.agency} />
-                    <FormInput label="Credly / Proof Link (optional)" value={form.credly_or_proof_link}
-                        onChange={set('credly_or_proof_link')} placeholder="https://..." />
+                    <FormInput label="Credly / Proof Link" value={form.credly_or_proof_link}
+                        onChange={set('credly_or_proof_link')} placeholder="https://..."
+                        required error={errors.credly_or_proof_link} />
                     <div className="md:col-span-2">
                         <FormInput label="Details (optional)" type="textarea" value={form.details}
                             onChange={set('details')} />

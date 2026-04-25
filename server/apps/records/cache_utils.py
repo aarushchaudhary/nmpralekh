@@ -1,6 +1,6 @@
 from django.core.cache import cache
 from apps.records.models import (
-    ExamsConducted, SchoolActivity, StudentActivity,
+    SchoolActivity, StudentActivity,
     FacultyFDPWorkshopGL, FacultyPublication,
     Patent, Certification, PlacementActivity
 )
@@ -17,7 +17,6 @@ def get_dashboard_counts(school_ids, role):
     if counts is None:
         filters = {'school_id__in': school_ids, 'is_deleted': False}
         counts  = {
-            'exams':               ExamsConducted.objects.filter(**filters).count(),
             'school_activities':   SchoolActivity.objects.filter(**filters).count(),
             'student_activities':  StudentActivity.objects.filter(**filters).count(),
             'fdp':                 FacultyFDPWorkshopGL.objects.filter(**filters).count(),

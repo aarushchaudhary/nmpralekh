@@ -9,15 +9,19 @@ from django.contrib.auth import authenticate
 
 from apps.accounts.models import User
 from apps.accounts.serializers import (
-    UserSerializer, UserCreateSerializer,
-    UserUpdateSerializer, LoginSerializer
+    UserSerializer, UserVisibilitySerializer,
+    UserCreateSerializer, UserUpdateSerializer, LoginSerializer
 )
-from apps.accounts.permissions import IsMaster, IsAnyRole
+from apps.accounts.permissions import IsMaster, IsAdmin, IsSuperAdmin, IsAnyRole
+from config.pagination import StandardPagination
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 
 
 class LoginView(APIView):
+    authentication_classes = []
     permission_classes = []
     throttle_classes   = [AnonRateThrottle]
 
@@ -87,6 +91,7 @@ class LogoutView(APIView):
 
 class RefreshTokenView(APIView):
     """Called automatically when access token expires"""
+    authentication_classes = []
     permission_classes = []
     throttle_classes   = []
 
@@ -151,3 +156,72 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         user.is_active = False
         user.save()
         return Response({'detail': 'User deactivated successfully'})
+
+
+class SchoolFacultiesView(generics.ListAPIView):
+    """Admin sees all faculty users assigned to their school(s)"""
+    serializer_class   = UserVisibilitySerializer
+    permission_classes = [IsAdmin]
+    pagination_class   = StandardPagination
+    filter_backends    = [DjangoFilterBackend, SearchFilter]
+    search_fields      = ['full_name', 'username', 'email']
+    filterset_fields   = ['role']
+
+    def get_queryset(self):
+        from apps.schools.models import UserSchoolMapping
+        from apps.schools.utils import get_user_school_ids
+
+        school_ids = get_user_school_ids(self.request.user)
+        faculty_user_ids = UserSchoolMapping.objects.filter(
+            school_id__in=school_ids
+        ).values_list('user_id', flat=True)
+
+        qs = User.objects.filter(
+            id__in=faculty_user_ids,
+            role='user',
+            is_active=True
+        ).order_by('full_name')
+
+        # Custom school_code filter
+        school_code = self.request.query_params.get('school_code')
+        if school_code:
+            matching_ids = UserSchoolMapping.objects.filter(
+                school__code__iexact=school_code
+            ).values_list('user_id', flat=True)
+            qs = qs.filter(id__in=matching_ids)
+
+        return qs
+
+
+class CampusUsersView(generics.ListAPIView):
+    """Super Admin sees all users in their campus"""
+    serializer_class   = UserVisibilitySerializer
+    permission_classes = [IsSuperAdmin]
+    pagination_class   = StandardPagination
+    filter_backends    = [DjangoFilterBackend, SearchFilter]
+    search_fields      = ['full_name', 'username', 'email']
+    filterset_fields   = ['role']
+
+    def get_queryset(self):
+        from apps.schools.models import UserSchoolMapping
+
+        campus_id = self.request.user.campus_id
+        if not campus_id:
+            return User.objects.none()
+
+        qs = User.objects.filter(
+            campus_id=campus_id,
+            is_active=True
+        ).exclude(
+            role='master'
+        ).order_by('role', 'full_name')
+
+        # Custom school_code filter
+        school_code = self.request.query_params.get('school_code')
+        if school_code:
+            matching_ids = UserSchoolMapping.objects.filter(
+                school__code__iexact=school_code
+            ).values_list('user_id', flat=True)
+            qs = qs.filter(id__in=matching_ids)
+
+        return qs

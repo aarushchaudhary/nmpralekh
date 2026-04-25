@@ -27,7 +27,7 @@ const statusColor = { filed: 'yellow', published: 'blue', granted: 'green' }
 const empty = {
   school: '', applicant_name: '', applicant_type: 'faculty',
   title_of_patent: '', details: '', date_of_publication: '',
-  journal_number: '', patent_status: 'filed', is_own_work: true
+  journal_number: '', patent_status: 'filed', doi_or_link: '', is_own_work: true
 }
 
 export default function PatentsPage({ readOnly = false, selfOnly = false }) {
@@ -68,6 +68,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
       date_of_publication: row.date_of_publication,
       journal_number:      row.journal_number,
       patent_status:       row.patent_status,
+      doi_or_link:         row.doi_or_link || '',
       is_own_work:         row.is_own_work,
     })
     const res  = await api.get(`/records/patents/${row.id}/applicants/`)
@@ -83,6 +84,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
     if (!form.title_of_patent)     e.title_of_patent     = 'Required'
     if (!form.date_of_publication) e.date_of_publication = 'Required'
     if (!form.journal_number)      e.journal_number      = 'Required'
+    if (!form.doi_or_link)         e.doi_or_link         = 'DOI or Link is required'
     setErrors(e); return !Object.keys(e).length
   }
 
@@ -162,6 +164,13 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
       key: 'patent_status', label: 'Status', sortable: false,
       render: row => <Badge label={row.patent_status}
                             color={statusColor[row.patent_status]} />
+    },
+    {
+      key: 'doi_or_link', label: 'Link', sortable: false,
+      render: row => row.doi_or_link ? (
+        <a href={row.doi_or_link} target="_blank" rel="noopener noreferrer"
+           className="text-primary-600 hover:underline text-xs">View Link</a>
+      ) : '—'
     },
     {
       key: 'status', label: 'Status', sortable: false,
@@ -263,6 +272,11 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
             <div className="md:col-span-2">
               <FormInput label="Details (optional)" type="textarea" value={form.details}
                 onChange={set('details')} />
+            </div>
+            <div className="md:col-span-2">
+              <FormInput label="DOI / Link" value={form.doi_or_link}
+                onChange={set('doi_or_link')} placeholder="https://..."
+                required error={errors.doi_or_link} />
             </div>
           </div>
 

@@ -23,7 +23,6 @@ function StatCard({ label, value, color = 'blue' }) {
 }
 
 const modules = [
-    { label: 'Exams Conducted', path: 'exams', endpoint: '/records/exams/' },
     { label: 'School Activities', path: 'school-activities', endpoint: '/records/school-activities/' },
     { label: 'Student Activities', path: 'student-activities', endpoint: '/records/student-activities/' },
     { label: 'FDP / Workshop / GL', path: 'fdp', endpoint: '/records/fdp/' },
@@ -37,14 +36,12 @@ export default function DashboardHome() {
     const { user } = useAuth()
     const [counts, setCounts] = useState({})
     const [schools, setSchools] = useState([])
-    const { exportFile: exportRecords,   exporting: exportingRecords }   = useExport('/export/all/',           'MIS_Dashboard.xlsx')
-    const { exportFile: exportAcademics, exporting: exportingAcademics } = useExport('/export/academics/all/', 'Academics_All.xlsx')
+    const { exportFile: exportRecords, exporting: exportingRecords } = useExport('/export/all/', 'MIS_Dashboard.xlsx')
 
     useEffect(() => {
         api.get('/records/dashboard-counts/').then(res => {
             const data = res.data
             setCounts({
-                'exams': data.exams,
                 'school-activities': data.school_activities,
                 'student-activities': data.student_activities,
                 'fdp': data.fdp,
@@ -63,34 +60,21 @@ export default function DashboardHome() {
                 title={`Welcome, ${user?.full_name}`}
                 subtitle={schools.map(s => s.name).join(', ') || 'Loading schools...'}
                 action={
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => exportAcademics()}
-                            disabled={!!exportingAcademics}
-                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700
-                                       text-white text-sm font-medium rounded-lg
-                                       transition-colors disabled:opacity-50
-                                       disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            {exportingAcademics ? 'Exporting...' : '⬇ Academics'}
-                        </button>
-                        <button
-                            onClick={() => exportRecords()}
-                            disabled={!!exportingRecords}
-                            className="px-4 py-2 bg-green-600 hover:bg-green-700
-                                       text-white text-sm font-medium rounded-lg
-                                       transition-colors disabled:opacity-50
-                                       disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            {exportingRecords ? 'Exporting...' : '⬇ Records'}
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => exportRecords()}
+                        disabled={!!exportingRecords}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700
+                                   text-white text-sm font-medium rounded-lg
+                                   transition-colors disabled:opacity-50
+                                   disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                        {exportingRecords ? 'Exporting...' : '⬇ Export All'}
+                    </button>
                 }
             />
 
             {/* Module counts */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <StatCard label="Exams" value={counts['exams']} color="blue" />
                 <StatCard label="School Acts" value={counts['school-activities']} color="green" />
                 <StatCard label="Student Acts" value={counts['student-activities']} color="purple" />
                 <StatCard label="FDP/WS/GL" value={counts['fdp']} color="orange" />
