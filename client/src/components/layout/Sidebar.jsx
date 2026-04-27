@@ -63,6 +63,8 @@ const roleNavLinks = {
         { label: 'Dashboard', path: '/coordinator' },
         { label: '— Export', path: null },
         { label: 'Data Export', path: '/coordinator/export' },
+        { label: '— Chronicle', path: null },
+        { label: 'VC Chronicle', path: '/coordinator/vc-chronicle' },
     ],
 }
 
