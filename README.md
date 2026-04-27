@@ -161,27 +161,29 @@ graph TD
         
         faculty[Faculty / User] -->|Creates| own_records[Own Records]
         faculty -->|Requests Update/Delete| edit_requests[Audit Requests]
+        
+        mis_coord[MIS Coordinator] -->|Read-Only & Aggregated Export| school_records
     end
     
     delete_auth[Delete Auth Reviewer] -->|Reviews| edit_requests
     delete_auth -->|Approves/Rejects| DB_updates[Database Updates]
 ```
 
-| Action | master | super_admin | admin | faculty | delete_auth |
-|---|---|---|---|---|---|
-| Create campuses | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Create schools | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Create users | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Assign users to schools | ✅ | ❌ | ❌ | ❌ | ❌ |
-| View all campus records | ❌ | ✅ | ❌ | ❌ | ❌ |
-| View campus users | ❌ | ✅ | ❌ | ❌ | ❌ |
-| View school faculties | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Manage clubs & committees | ❌ | ❌ | ✅ | ❌ | ❌ |
-| View own school records | ❌ | ✅ | ✅ | ✅ | ❌ |
-| Create records | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Request update/delete | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Action | master | super_admin | admin | faculty | delete_auth | mis_coordinator |
+|---|---|---|---|---|---|---|
+| Create campuses | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Create schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Create users | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Assign users to schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View all campus records | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View campus users | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View school faculties | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Manage clubs & committees | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| View own school records | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Create records | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| Request update/delete | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ |
 
 ---
 
@@ -600,6 +602,7 @@ GET    /api/export/publications/
 GET    /api/export/patents/
 GET    /api/export/certifications/
 GET    /api/export/placements/
+GET    /api/export/coordinator/         → MIS Coordinator aggregated multi-format export
 GET    /api/export/all/
 ```
 

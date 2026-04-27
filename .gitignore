@@ -50,3 +50,9 @@ htmlcov/
 # Pycache everywhere
 **/__pycache__/*.pem
 *.pem
+
+# Exports directory
+server/exports/
+
+# Backups
+server/backups/
