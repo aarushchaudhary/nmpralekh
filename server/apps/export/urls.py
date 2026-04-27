@@ -12,6 +12,9 @@ urlpatterns = [
     path('placements/',           views.ExportPlacementsView.as_view(),        name='export_placements'),
     path('all/',                  views.ExportAllView.as_view(),               name='export_all'),
 
+    # coordinator export
+    path('coordinator/',          views.CoordinatorExportView.as_view(),       name='export_coordinator'),
+
     # export management
     path('history/',              views.ExportHistoryView.as_view(),          name='export_history'),
     path('download/<int:pk>/',    views.ExportDownloadView.as_view(),         name='export_download'),

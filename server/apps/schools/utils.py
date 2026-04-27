@@ -13,6 +13,7 @@ def get_user_school_ids(user):
             ).values_list('id', flat=True)
         return School.objects.none().values_list('id', flat=True)
 
+    # admin, user, mis_coordinator — scoped via UserSchoolMapping
     return UserSchoolMapping.objects.filter(
         user=user
     ).values_list('school_id', flat=True)

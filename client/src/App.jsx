@@ -10,6 +10,7 @@ import AdminDashboard from './pages/admin/Dashboard'
 import FacultyDashboard from './pages/faculty/Dashboard'
 import SuperAdminDashboard from './pages/superadmin/Dashboard'
 import DeleteAuthDashboard from './pages/deleteauth/Dashboard'
+import CoordinatorDashboard from './pages/coordinator/Dashboard'
 
 function RoleRedirect() {
   const user = JSON.parse(localStorage.getItem('user') || 'null')
@@ -20,6 +21,7 @@ function RoleRedirect() {
     user: '/faculty',
     super_admin: '/superadmin',
     delete_auth: '/deleteauth',
+    mis_coordinator: '/coordinator',
   }
   return <Navigate to={routes[user.role] || '/login'} replace />
 }
@@ -66,6 +68,13 @@ export default function App() {
           <Route path="/deleteauth/*" element={
             <ProtectedRoute roles={['delete_auth']}>
               <DeleteAuthDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* MIS Coordinator */}
+          <Route path="/coordinator/*" element={
+            <ProtectedRoute roles={['mis_coordinator']}>
+              <CoordinatorDashboard />
             </ProtectedRoute>
           } />
         </Routes>

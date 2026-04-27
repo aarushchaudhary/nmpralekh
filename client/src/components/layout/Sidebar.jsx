@@ -59,6 +59,11 @@ const roleNavLinks = {
         { label: 'Pending Requests', path: '/deleteauth/pending' },
         { label: 'History', path: '/deleteauth/history' },
     ],
+    mis_coordinator: [
+        { label: 'Dashboard', path: '/coordinator' },
+        { label: '— Export', path: null },
+        { label: 'Data Export', path: '/coordinator/export' },
+    ],
 }
 
 export default function Sidebar({ isOpen, onClose }) {

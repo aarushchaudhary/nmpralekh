@@ -16,6 +16,7 @@ export default function LoginPage() {
     user: '/faculty',
     super_admin: '/superadmin',
     delete_auth: '/deleteauth',
+    mis_coordinator: '/coordinator',
   }
 
   const handleSubmit = async (e) => {

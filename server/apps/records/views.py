@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from apps.accounts.permissions import IsAdminOrUser, IsAdminOrUserOrSuperAdmin
+from apps.accounts.permissions import IsAdminOrUser, IsAdminOrUserOrSuperAdmin, IsAdminOrUserOrSuperAdminOrCoordinator
 from apps.schools.utils import get_user_school_ids
 from apps.records.cache_utils import get_dashboard_counts
 from apps.audit.models import AuditRequest
@@ -117,7 +117,7 @@ class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
 # ─────────────────────────────────────────────
 class SchoolActivityListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = SchoolActivitySerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
     def get_queryset(self):
         qs = self.get_base_queryset(SchoolActivity)
@@ -128,7 +128,7 @@ class SchoolActivityListCreateView(SchoolScopedMixin, generics.ListCreateAPIView
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdmin()]
+        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
 
 
 class SchoolActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -160,7 +160,7 @@ class SchoolActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroy
 # ─────────────────────────────────────────────
 class StudentActivityListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = StudentActivitySerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
     def get_queryset(self):
         qs = self.get_base_queryset(StudentActivity)
@@ -171,7 +171,7 @@ class StudentActivityListCreateView(SchoolScopedMixin, generics.ListCreateAPIVie
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdmin()]
+        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
 
 
 class StudentActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -203,7 +203,7 @@ class StudentActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestro
 # ─────────────────────────────────────────────
 class FDPListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = FacultyFDPWorkshopGLSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
     def get_queryset(self):
         qs = self.get_base_queryset(FacultyFDPWorkshopGL)
@@ -212,7 +212,7 @@ class FDPListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdmin()]
+        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
 
 
 class FDPDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -265,7 +265,7 @@ class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class PublicationListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = FacultyPublicationSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
     def get_queryset(self):
         user       = self.request.user
@@ -283,7 +283,7 @@ class PublicationListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdmin()]
+        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
 
 
 class PublicationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -334,7 +334,7 @@ class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class PatentListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = PatentSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
     def get_queryset(self):
         user       = self.request.user
@@ -352,7 +352,7 @@ class PatentListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdmin()]
+        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
 
 
 class PatentDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -384,7 +384,7 @@ class PatentDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView)
 # ─────────────────────────────────────────────
 class CertificationListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = CertificationSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
     def get_queryset(self):
         user       = self.request.user
@@ -400,7 +400,7 @@ class CertificationListCreateView(SchoolScopedMixin, generics.ListCreateAPIView)
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdmin()]
+        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
 
 
 class CertificationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -432,7 +432,7 @@ class CertificationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyA
 # ─────────────────────────────────────────────
 class PlacementListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = PlacementActivitySerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
     def get_queryset(self):
         qs = self.get_base_queryset(PlacementActivity)
@@ -441,7 +441,7 @@ class PlacementListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdmin()]
+        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
 
 
 class PlacementDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):

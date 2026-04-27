@@ -29,11 +29,12 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     ROLES = [
-        ('master',      'Master'),
-        ('super_admin', 'Super Admin'),
-        ('admin',       'Admin'),
-        ('user',        'User'),
-        ('delete_auth', 'Delete Auth'),
+        ('master',          'Master'),
+        ('super_admin',     'Super Admin'),
+        ('admin',           'Admin'),
+        ('user',            'User'),
+        ('delete_auth',     'Delete Auth'),
+        ('mis_coordinator', 'MIS Coordinator'),
     ]
 
     username    = models.CharField(max_length=100, unique=True)

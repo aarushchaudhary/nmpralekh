@@ -14,6 +14,7 @@ const roleOptions = [
     { value: 'admin', label: 'Admin' },
     { value: 'user', label: 'Faculty' },
     { value: 'delete_auth', label: 'Delete Auth' },
+    { value: 'mis_coordinator', label: 'MIS Coordinator' },
 ]
 
 const roleBadgeColor = {
@@ -22,6 +23,7 @@ const roleBadgeColor = {
     admin: 'green',
     user: 'gray',
     delete_auth: 'yellow',
+    mis_coordinator: 'teal',
 }
 
 const emptyForm = {

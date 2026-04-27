@@ -40,10 +40,11 @@ export default function Assignments() {
 
         api.get('/users/').then(res => {
             const users = res.data?.results ?? res.data
+            const roleLabel = { user: 'Faculty', admin: 'Admin', mis_coordinator: 'MIS Coordinator' }
             setUserOptions(users
-                .filter(u => u.is_active && ['admin', 'user'].includes(u.role)
+                .filter(u => u.is_active && ['admin', 'user', 'mis_coordinator'].includes(u.role)
                     && String(u.campus) === String(selectedCampus))
-                .map(u => ({ value: u.id, label: `${u.full_name} (${u.role === 'user' ? 'Faculty' : 'Admin'})` }))
+                .map(u => ({ value: u.id, label: `${u.full_name} (${roleLabel[u.role] || u.role})` }))
             )
         })
 

@@ -89,3 +89,36 @@ class IsAnyRole(BasePermission):
             request.user and
             request.user.is_authenticated
         )
+
+
+class IsMISCoordinator(BasePermission):
+    """Only MIS Coordinator can access"""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.role == 'mis_coordinator'
+        )
+
+
+class IsMISCoordinatorReadOnly(BasePermission):
+    """MIS Coordinator — read-only (GET, HEAD, OPTIONS)"""
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.user.role != 'mis_coordinator':
+            return False
+        return request.method in ('GET', 'HEAD', 'OPTIONS')
+
+
+class IsAdminOrUserOrSuperAdminOrCoordinator(BasePermission):
+    """Admin, faculty, super admin, or MIS coordinator (read-only) — for record viewing"""
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.user.role in ['admin', 'user', 'super_admin']:
+            return True
+        # coordinator gets read-only access
+        if request.user.role == 'mis_coordinator':
+            return request.method in ('GET', 'HEAD', 'OPTIONS')
+        return False
