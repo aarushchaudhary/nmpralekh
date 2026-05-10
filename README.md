@@ -125,17 +125,19 @@ nmpralekh/
 │   │       └── tasks.py            # Celery async export tasks
 │   ├── config/
 │   │   ├── settings.py
+│   │   ├── settings.example.py     # Template — copy to settings.py, fill secrets
 │   │   ├── urls.py
 │   │   ├── wsgi.py
+│   │   ├── wsgi.example.py         # Template — includes deployment notes
 │   │   ├── celery.py
 │   │   └── pagination.py           # StandardPagination (25/page)
-│   ├── gunicorn.conf.py            # Production server config
+│   ├── gunicorn.conf.py            # Production server config (gthread, 9w × 2t)
 │   ├── manage.py
 │   ├── requirements.txt
-│   └── .env                        # Never commit — see .env.example
+│   └── .env                        # Never commit — use .env.example as reference
 │
-├── start.sh                        # Start all services in one command
-├── server.sh                       # Start Django only
+├── start.sh                        # Start all services in one command (Gunicorn)
+├── server.sh                       # Start Gunicorn only
 ├── client.sh                       # Start React only
 ├── celery.sh                       # Start Celery only
 └── README.md
@@ -451,6 +453,42 @@ DB_PORT=6432
 
 ---
 
+## Gunicorn Configuration
+
+The project uses **Gunicorn** with `gthread` workers as its production WSGI server. The config lives in `server/gunicorn.conf.py`.
+
+### Why WSGI / Gunicorn and not ASGI / Uvicorn?
+
+The entire codebase is synchronous Django — every view, ORM call, and Celery task uses sync code. ASGI would run those sync views inside a thread pool anyway, adding overhead with no benefit. Move to ASGI only if you add Django Channels (WebSockets) or rewrite critical views as `async def`.
+
+### Thread math and pgBouncer
+
+```
+workers  = (CPU cores × 2) + 1   →  9 on a 4-core machine
+threads  = 2                      →  lowered from 8 (was exhausting the pool)
+─────────────────────────────────────────────────────
+total DB connections = 9 × 2 = 18  ←  fits inside pgBouncer's pool of 20
+```
+
+> **Why not 8 threads?** 9 workers × 8 threads = 72 concurrent DB connections against a pgBouncer pool capped at 20 → connection exhaustion under load.
+
+### Key settings
+
+| Setting | Value | Reason |
+|---|---|---|
+| `worker_class` | `gthread` | Thread-based — good for I/O-bound Django |
+| `threads` | `2` | Keeps total connections ≤ pgBouncer pool |
+| `timeout` | `120` | Covers slow Excel export generation |
+| `max_requests` | `1000` | Recycles workers to prevent memory leaks |
+| `max_requests_jitter` | `100` | Staggers restarts to avoid thundering-herd |
+| `worker_tmp_dir` | `/dev/shm` | RAM-based tmp — faster heartbeat checks |
+| `preload_app` | `True` | Forks after import — faster startup, less RAM |
+| `graceful_timeout` | `30` | Lets in-flight requests finish on shutdown |
+| `limit_request_line` | `4096` | Rejects oversized request lines |
+| `limit_request_fields`| `100` | Caps HTTP header count |
+
+---
+
 ## Running Locally
 
 ### Option A — Single command
@@ -471,13 +509,15 @@ sudo systemctl start redis
 sudo systemctl start pgbouncer
 ```
 
-**Terminal 2 — Django**
+**Terminal 2 — Backend (Gunicorn)**
 ```bash
 cd ~/nmpralekh
 source venv/bin/activate
 cd server
-python manage.py runserver
+gunicorn -c gunicorn.conf.py config.wsgi:application
 ```
+
+> **Development note:** If you need Django's auto-reload while working on the backend, you can still use `python manage.py runserver` locally. Use Gunicorn for any staging or production-like testing.
 
 **Terminal 3 — Celery**
 ```bash
@@ -662,15 +702,101 @@ pending_audit_id → FK to pending change request
 ## Performance
 
 ```
-Concurrent users     →  500 (dev) / 1500+ (Gunicorn 9 workers)
+Concurrent users     →  500 (dev) / 1500+ (Gunicorn 9 workers × 2 threads)
 Response time        →  <50ms cached / <150ms uncached
 Dashboard loads      →  <5ms (Redis cached 60 seconds)
 Export row limit     →  5000 rows per file
 Pagination           →  25 records per page server-side
 DB indexes           →  On school, date, created_by, status columns
-Connection pooling   →  CONN_MAX_AGE = 0 (Managed by pgBouncer)
+Connection pooling   →  CONN_MAX_AGE = 0 (pgBouncer transaction mode)
+                        9 workers × 2 threads = 18 connections (pool cap: 20)
 Rate limiting        →  60/min anonymous, 300/min authenticated
 ```
+
+---
+
+## Load Testing (Locust)
+
+The project ships with a Locust test script at `server/locustfile.py` that simulates realistic multi-role traffic against the API.
+
+### Install Locust
+
+Locust is **not** in `requirements.txt` (it is a dev-only tool). Install it separately inside the virtualenv:
+
+```bash
+source venv/bin/activate
+pip install locust
+```
+
+### Set up tokens
+
+The script authenticates each virtual user by injecting a pre-captured JWT into the `access_token` cookie. Before running, replace the placeholder values at the top of `server/locustfile.py` with real tokens captured from your browser (DevTools → Application → Cookies):
+
+```python
+TOKENS = {
+    "master":          "MASTER_JWT_TOKEN",
+    "super_admin":     "SUPER_ADMIN_JWT_TOKEN",
+    "admin":           "ADMIN_JWT_TOKEN",
+    "faculty":         "FACULTY_JWT_TOKEN",
+    "delete_auth":     "DELETE_AUTH_JWT_TOKEN",
+    "mis_coordinator": "MIS_COORDINATOR_JWT_TOKEN",
+}
+```
+
+### User classes and weights
+
+| Class | Weight | Role simulated | Endpoints hit |
+|---|---|---|---|
+| `MasterUser` | 1 | master | `/api/schools/campuses/`, `/api/schools/`, `/api/users/` |
+| `SuperAdminUser` | 10 | super_admin | `/api/records/dashboard-counts/`, `/api/users/campus-users/`, `/api/export/all/` |
+| `AdminUser` | 15 | admin | `/api/records/dashboard-counts/`, `/api/records/clubs/`, `/api/users/school-faculties/` |
+| `FacultyUser` | 60 | faculty | `/api/records/publications/`, `/api/records/patents/`, `/api/records/certifications/` |
+| `DeleteAuthUser` | 5 | delete_auth | `/api/audit/`, `/api/audit/history/` |
+| `MISCoordinatorUser` | 10 | mis_coordinator | `/api/export/coordinator/` |
+
+Weights reflect realistic traffic: faculty make up ~60 % of users. `wait_time = between(600, 1800)` (10–30 min) simulates actual human think time.
+
+### Running the tests
+
+**Option A — via helper script (recommended)**
+
+```bash
+cd ~/nmpralekh
+chmod +x locust.sh
+./locust.sh
+```
+
+Then open the Locust UI at **http://localhost:8089** and configure user count and spawn rate.
+
+**Option B — manual**
+
+```bash
+source venv/bin/activate
+cd server
+locust -f locustfile.py --host=http://127.0.0.1:8000
+```
+
+**Option C — headless (CI/scripted runs)**
+
+```bash
+locust -f locustfile.py \
+  --host=http://127.0.0.1:8000 \
+  --headless \
+  --users 500 \
+  --spawn-rate 10 \
+  --run-time 5m
+```
+
+### Interpreting results
+
+| Metric | Healthy target |
+|---|---|
+| Median response time | < 150 ms |
+| 95th percentile | < 500 ms |
+| Failure rate | < 1 % |
+| Gunicorn worker CPU | < 80 % sustained |
+
+> **Note:** The test script disables SSL verification (`urllib3.disable_warnings`) because the dev server uses a self-signed certificate via `django-sslserver`. Remove that line when testing against a properly signed staging environment.
 
 ---
 

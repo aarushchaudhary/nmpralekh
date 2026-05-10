@@ -1,28 +1,38 @@
 import multiprocessing
 
 # Number of workers — (2 x CPU) + 1
-workers     = multiprocessing.cpu_count() * 2 + 1
+# On a 4-core server, this equals 9 workers
+workers = multiprocessing.cpu_count() * 2 + 1
 
-# Use gthread for better concurrency
+# Worker type
 worker_class = 'gthread'
-threads      = 8
+
+# THREADS — CORRECTED
+# Lowered from 8 to 2 to stay within pgBouncer's 20-connection pool.
+# (9 workers * 2 threads = 18 total DB connections, leaving a buffer of 2).
+threads = 2
 
 # Connection settings
-bind         = '0.0.0.0:8000'
-timeout      = 120
-keepalive    = 5
+bind = '0.0.0.0:8000'
+timeout = 120
+keepalive = 5
 
 # Logging
-accesslog    = '-'
-errorlog     = '-'
-loglevel     = 'info'
+accesslog = '-'
+errorlog = '-'
+loglevel = 'info'
 
-# Restart workers after this many requests to prevent memory leaks
-max_requests          = 1000
-max_requests_jitter   = 100
+# Memory Management
+max_requests = 1000
+max_requests_jitter = 100
+worker_tmp_dir = '/dev/shm'
 
 # Preload app for faster worker spawning
-preload_app  = True
+preload_app = True
 
-# Worker memory limit — auto-restart if a worker leaks memory
-worker_tmp_dir = '/dev/shm'
+# NEW: Graceful shutdown and security limits
+# Allows current requests 30s to finish before killing the worker
+graceful_timeout = 30
+# Security hardening for large headers/requests
+limit_request_line = 4096
+limit_request_fields = 100
