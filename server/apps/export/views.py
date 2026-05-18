@@ -416,6 +416,13 @@ class ExportDownloadView(APIView):
         except GeneratedExport.DoesNotExist:
             return Response({'detail': 'Export not found'}, status=404)
 
+        # SECURITY FIX: Ensure the path is strictly within the exports directory
+        from django.conf import settings
+        EXPORT_BASE = os.path.join(settings.BASE_DIR, 'exports')
+        real_path = os.path.realpath(export.filepath)
+        if not real_path.startswith(os.path.realpath(EXPORT_BASE)):
+            return Response({'detail': 'Invalid file path'}, status=400)
+
         if not os.path.exists(export.filepath):
             return Response(
                 {'detail': 'File no longer exists on server'},

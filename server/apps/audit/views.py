@@ -67,12 +67,30 @@ class AuditApproveView(APIView):
 
                 elif audit.action == 'UPDATE':
                     new_data = audit.new_data
-                    for field, value in new_data.items():
-                        if hasattr(record, field) and field not in [
-                            'id', 'created_by', 'created_at',
-                            'is_deleted', 'pending_audit'
-                        ]:
-                            setattr(record, field, value)
+
+                    ALLOWED_FIELDS = {
+                        'school_activities': ['name', 'date', 'details', 'is_school_wide', 'school_id'],
+                        'student_activities': ['name', 'date', 'details', 'club', 'club_name',
+                                               'conducted_by', 'activity_type', 'school_id'],
+                        'faculty_fdp_workshop_gl': ['faculty_name', 'date_start', 'date_end',
+                                                    'name', 'details', 'type', 'organizing_body', 'school_id'],
+                        'faculty_publications': ['author_name', 'author_type', 'title_of_paper',
+                                                 'journal_or_conference_name', 'date', 'venue',
+                                                 'publication', 'doi_or_link', 'is_own_work', 'school_id'],
+                        'patents': ['applicant_name', 'applicant_type', 'title_of_patent', 'details',
+                                    'date_of_publication', 'journal_number', 'patent_status',
+                                    'doi_or_link', 'is_own_work', 'school_id'],
+                        'certifications': ['date', 'name', 'title_of_course', 'details', 'agency',
+                                           'credly_or_proof_link', 'person_type', 'school_id'],
+                        'placement_activities': ['name', 'date', 'details', 'company_name',
+                                                 'placecom_name', 'school_id'],
+                    }
+
+                    allowed = ALLOWED_FIELDS.get(audit.table_name, [])
+                    for field in allowed:
+                        if field in new_data:
+                            setattr(record, field, new_data[field])
+
                     record.pending_audit = None
                     record.save()
 

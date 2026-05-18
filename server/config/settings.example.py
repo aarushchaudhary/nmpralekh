@@ -109,7 +109,7 @@ DATABASES = {
         'USER':     config('DB_USER',     default='your_db_user'),
         'PASSWORD': config('DB_PASSWORD', default='your_db_password'),
         'HOST':     config('DB_HOST',     default='127.0.0.1'),
-        'PORT':     config('DB_PORT',     default='5432'),
+        'PORT':     config('DB_PORT', default='6432'),   # 6432 = pgBouncer; use 5432 for direct Postgres
         # Set CONN_MAX_AGE=0 when using pgBouncer in transaction pooling mode.
         'CONN_MAX_AGE': 0,
         'OPTIONS': {
@@ -228,8 +228,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # -----------------------------------------------------------------------------
 CELERY_BROKER_URL     = config('REDIS_URL', default='redis://127.0.0.1:6379/0')
 CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://127.0.0.1:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_EXPIRES           = 3600   # task results expire after 1 hour
+CELERY_TASK_SERIALIZER          = 'json'
+CELERY_RESULT_SERIALIZER        = 'json'
+CELERY_ACCEPT_CONTENT           = ['json']
+CELERY_TASK_TRACK_STARTED       = True
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 200  # recycle workers to prevent memory leaks
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1    # don't prefetch; better for long-running tasks
 
 # -----------------------------------------------------------------------------
 # CELERY BEAT
@@ -246,3 +251,10 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 CELERY_TIMEZONE = 'Asia/Kolkata'
+
+# -----------------------------------------------------------------------------
+# SECURITY HEADERS
+# -----------------------------------------------------------------------------
+SECURE_BROWSER_XSS_FILTER   = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS             = 'DENY'
