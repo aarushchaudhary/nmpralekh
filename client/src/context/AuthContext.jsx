@@ -6,6 +6,9 @@ const AuthContext = createContext(null)
 // use a plain axios instance for auth checks — bypasses interceptors
 const authApi = axios.create({
   baseURL:         '/api',
+  // CRITICAL: withCredentials MUST be true for the browser to send the
+  // httponly secure cookies (access_token/refresh_token) cross-origin.
+  // DO NOT REMOVE THIS line or auth will fail silently.
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 })

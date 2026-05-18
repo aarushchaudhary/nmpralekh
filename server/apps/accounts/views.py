@@ -58,7 +58,7 @@ class LoginView(APIView):
             max_age  = 60 * 30,
             httponly = True,
             secure   = is_secure,
-            samesite = 'Lax',
+            samesite = 'None', # cross-origin: browser blocks 'Lax' cookies on separate domains
         )
         response.set_cookie(
             'refresh_token',
@@ -66,7 +66,7 @@ class LoginView(APIView):
             max_age  = 60 * 60 * 24 * 7,
             httponly = True,
             secure   = is_secure,
-            samesite = 'Lax',
+            samesite = 'None', # cross-origin: browser blocks 'Lax' cookies on separate domains
         )
         return response
 
@@ -114,7 +114,7 @@ class RefreshTokenView(APIView):
                 max_age  = 60 * 30,
                 httponly = True,
                 secure   = is_secure,
-                samesite = 'Lax',
+                samesite = 'None', # cross-origin: browser blocks 'Lax' cookies on separate domains
             )
             return response
         except Exception:

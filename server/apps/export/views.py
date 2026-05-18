@@ -2,6 +2,7 @@ import os
 import re
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.cell import WriteOnlyCell
 from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -16,13 +17,16 @@ from apps.records.models import (
 )
 
 
-def style_header_row(ws, headers):
-    """Applies bold + blue background to header row"""
-    for col_num, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col_num, value=header)
+def append_styled_headers(ws, headers):
+    """Appends a bold + blue background header row in write-only mode"""
+    styled_row = []
+    for header in headers:
+        cell = WriteOnlyCell(ws, value=header)
         cell.font      = Font(bold=True, color='FFFFFF')
         cell.fill      = PatternFill('solid', fgColor='1F4E79')
         cell.alignment = Alignment(horizontal='center')
+        styled_row.append(cell)
+    ws.append(styled_row)
 
 
 def get_scoped_queryset(model, user):
@@ -80,14 +84,14 @@ class ExportSchoolActivitiesView(APIView):
         date_to   = request.query_params.get('date_to')
         apply_filters = build_apply_filters(school_id, date_from, date_to)
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = 'School Activity'
+        wb = openpyxl.Workbook(write_only=True)
+        ws = wb.create_sheet(title='School Activity')
 
         headers = ['School', 'Name', 'Date', 'Details', 'School Wide']
-        style_header_row(ws, headers)
+        append_styled_headers(ws, headers)
 
-        for act in apply_filters(get_scoped_queryset(SchoolActivity, request.user)):
+        queryset = apply_filters(get_scoped_queryset(SchoolActivity, request.user))
+        for act in queryset.iterator():
             ws.append([
                 act.school.name,
                 act.name,
@@ -113,14 +117,14 @@ class ExportStudentActivitiesView(APIView):
         date_to   = request.query_params.get('date_to')
         apply_filters = build_apply_filters(school_id, date_from, date_to)
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = 'Student Activity'
+        wb = openpyxl.Workbook(write_only=True)
+        ws = wb.create_sheet(title='Student Activity')
 
         headers = ['School', 'Name', 'Date', 'Details', 'Conducted By', 'Type']
-        style_header_row(ws, headers)
+        append_styled_headers(ws, headers)
 
-        for act in apply_filters(get_scoped_queryset(StudentActivity, request.user)):
+        queryset = apply_filters(get_scoped_queryset(StudentActivity, request.user))
+        for act in queryset.iterator():
             ws.append([
                 act.school.name,
                 act.name,
@@ -147,14 +151,14 @@ class ExportFDPView(APIView):
         date_to   = request.query_params.get('date_to')
         apply_filters = build_apply_filters(school_id, date_from, date_to)
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = 'Faculty FDP, Workshop, GL'
+        wb = openpyxl.Workbook(write_only=True)
+        ws = wb.create_sheet(title='Faculty FDP, Workshop, GL')
 
         headers = ['School', 'Faculty Name', 'Date Start', 'Date End', 'Name', 'Details', 'Type', 'Organizing Body']
-        style_header_row(ws, headers)
+        append_styled_headers(ws, headers)
 
-        for fdp in apply_filters(get_scoped_queryset(FacultyFDPWorkshopGL, request.user)):
+        queryset = apply_filters(get_scoped_queryset(FacultyFDPWorkshopGL, request.user))
+        for fdp in queryset.iterator():
             ws.append([
                 fdp.school.name,
                 fdp.faculty_name,
@@ -183,15 +187,15 @@ class ExportPublicationsView(APIView):
         date_to   = request.query_params.get('date_to')
         apply_filters = build_apply_filters(school_id, date_from, date_to)
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = 'Faculty Publication'
+        wb = openpyxl.Workbook(write_only=True)
+        ws = wb.create_sheet(title='Faculty Publication')
 
         headers = ['School', 'Author Name', 'Author Type', 'Title of Paper',
                    'Journal/Conference', 'Date', 'Venue', 'Publication', 'DOI/Link']
-        style_header_row(ws, headers)
+        append_styled_headers(ws, headers)
 
-        for pub in apply_filters(get_scoped_queryset(FacultyPublication, request.user)):
+        queryset = apply_filters(get_scoped_queryset(FacultyPublication, request.user))
+        for pub in queryset.iterator():
             ws.append([
                 pub.school.name,
                 pub.author_name,
@@ -221,15 +225,15 @@ class ExportPatentsView(APIView):
         date_to   = request.query_params.get('date_to')
         apply_filters = build_apply_filters(school_id, date_from, date_to)
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = 'PATENT'
+        wb = openpyxl.Workbook(write_only=True)
+        ws = wb.create_sheet(title='PATENT')
 
         headers = ['School', 'Applicant Name', 'Applicant Type', 'Title of Patent',
                    'Details', 'Date of Publication', 'Journal Number', 'Status']
-        style_header_row(ws, headers)
+        append_styled_headers(ws, headers)
 
-        for patent in apply_filters(get_scoped_queryset(Patent, request.user)):
+        queryset = apply_filters(get_scoped_queryset(Patent, request.user))
+        for patent in queryset.iterator():
             ws.append([
                 patent.school.name,
                 patent.applicant_name,
@@ -258,15 +262,15 @@ class ExportCertificationsView(APIView):
         date_to   = request.query_params.get('date_to')
         apply_filters = build_apply_filters(school_id, date_from, date_to)
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = 'CERTIFICATES'
+        wb = openpyxl.Workbook(write_only=True)
+        ws = wb.create_sheet(title='CERTIFICATES')
 
         headers = ['School', 'Date', 'Name', 'Title of Course',
                    'Details', 'Agency', 'Proof Link', 'Person Type']
-        style_header_row(ws, headers)
+        append_styled_headers(ws, headers)
 
-        for cert in apply_filters(get_scoped_queryset(Certification, request.user)):
+        queryset = apply_filters(get_scoped_queryset(Certification, request.user))
+        for cert in queryset.iterator():
             ws.append([
                 cert.school.name,
                 str(cert.date),
@@ -295,14 +299,14 @@ class ExportPlacementsView(APIView):
         date_to   = request.query_params.get('date_to')
         apply_filters = build_apply_filters(school_id, date_from, date_to)
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = 'Placement Activities'
+        wb = openpyxl.Workbook(write_only=True)
+        ws = wb.create_sheet(title='Placement Activities')
 
         headers = ['School', 'Name', 'Date', 'Details', 'Company Name']
-        style_header_row(ws, headers)
+        append_styled_headers(ws, headers)
 
-        for placement in apply_filters(get_scoped_queryset(PlacementActivity, request.user)):
+        queryset = apply_filters(get_scoped_queryset(PlacementActivity, request.user))
+        for placement in queryset.iterator():
             ws.append([
                 placement.school.name,
                 placement.name,
@@ -681,13 +685,14 @@ class CoordinatorExportView(APIView):
         return self._export_excel(modules)
 
     def _export_excel(self, modules):
-        wb = openpyxl.Workbook()
-        wb.remove(wb.active)
+        # write_only=True streams XML directly to disk instead of building a DOM in RAM
+        wb = openpyxl.Workbook(write_only=True)
 
         for mod in modules:
-            ws = wb.create_sheet(title=mod['name'][:31])  # Excel limit
-            style_header_row(ws, mod['headers'])
-            for record in mod['qs'][:5000]:
+            ws = wb.create_sheet(title=mod['name'][:31])  # Excel sheet-name limit
+            append_styled_headers(ws, mod['headers'])
+            # .iterator() prevents Django from loading all 5,000 rows into memory at once
+            for record in mod['qs'][:5000].iterator():
                 try:
                     ws.append(mod['row_fn'](record))
                 except Exception:
