@@ -258,3 +258,12 @@ CELERY_TIMEZONE = 'Asia/Kolkata'
 SECURE_BROWSER_XSS_FILTER   = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS             = 'DENY'
+
+# Force HTTPS redirect in production (don't force it in local development)
+SECURE_SSL_REDIRECT = not DEBUG
+
+# HSTS settings (1 year = 31536000 seconds)
+if not DEBUG:
+    SECURE_HSTS_SECONDS            = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD            = True

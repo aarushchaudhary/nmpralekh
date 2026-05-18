@@ -4,6 +4,8 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.cell import WriteOnlyCell
 from django.http import HttpResponse
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
@@ -78,6 +80,7 @@ def build_apply_filters(school_id, date_from, date_to):
 class ExportSchoolActivitiesView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
         school_id = request.query_params.get('school_id')
         date_from = request.query_params.get('date_from')
@@ -111,6 +114,7 @@ class ExportSchoolActivitiesView(APIView):
 class ExportStudentActivitiesView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
         school_id = request.query_params.get('school_id')
         date_from = request.query_params.get('date_from')
@@ -145,6 +149,7 @@ class ExportStudentActivitiesView(APIView):
 class ExportFDPView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
         school_id = request.query_params.get('school_id')
         date_from = request.query_params.get('date_from')
@@ -181,6 +186,7 @@ class ExportFDPView(APIView):
 class ExportPublicationsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
         school_id = request.query_params.get('school_id')
         date_from = request.query_params.get('date_from')
@@ -219,6 +225,7 @@ class ExportPublicationsView(APIView):
 class ExportPatentsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
         school_id = request.query_params.get('school_id')
         date_from = request.query_params.get('date_from')
@@ -256,6 +263,7 @@ class ExportPatentsView(APIView):
 class ExportCertificationsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
         school_id = request.query_params.get('school_id')
         date_from = request.query_params.get('date_from')
@@ -293,6 +301,7 @@ class ExportCertificationsView(APIView):
 class ExportPlacementsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
         school_id = request.query_params.get('school_id')
         date_from = request.query_params.get('date_from')
@@ -328,6 +337,8 @@ from .tasks import build_campus_workbook
 class ExportAllView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
+    # Heaviest endpoint — cap at 5 exports per minute per user
+    @method_decorator(ratelimit(key='user', rate='5/m', method='GET', block=True))
     def get(self, request):
         school_ids = list(get_user_school_ids(request.user))
 
@@ -667,6 +678,8 @@ class CoordinatorExportView(APIView):
         from rest_framework.renderers import JSONRenderer
         return (JSONRenderer(), JSONRenderer.media_type)
 
+    # Heaviest endpoint — cap at 5 exports per minute per user
+    @method_decorator(ratelimit(key='user', rate='5/m', method='GET', block=True))
     def get(self, request):
         date_from = request.query_params.get('date_from')
         date_to   = request.query_params.get('date_to')
