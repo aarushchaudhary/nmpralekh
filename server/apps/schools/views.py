@@ -13,6 +13,7 @@ from apps.schools.serializers import (
 )
 from apps.schools.utils import get_user_school_ids
 from apps.accounts.permissions import IsMaster, IsMasterOrSuperAdmin, IsAnyRole
+from config.pagination import StandardPagination
 
 
 class CampusListCreateView(generics.ListCreateAPIView):
@@ -43,24 +44,28 @@ class CampusDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response({'detail': 'Campus deactivated'})
 
 
-class CampusSchoolsView(APIView):
+class CampusSchoolsView(generics.ListAPIView):
     """All schools belonging to a specific campus"""
     permission_classes = [IsMaster]
+    serializer_class   = SchoolSerializer
+    pagination_class   = StandardPagination
 
-    def get(self, request, pk):
-        schools = School.objects.filter(campus_id=pk, is_active=True)
-        return Response(SchoolSerializer(schools, many=True).data)
+    def get_queryset(self):
+        return School.objects.filter(campus_id=self.kwargs['pk'], is_active=True)
 
 
-class CampusUsersView(APIView):
+class CampusUsersView(generics.ListAPIView):
     """All users belonging to a specific campus"""
     permission_classes = [IsMaster]
+    pagination_class   = StandardPagination
 
-    def get(self, request, pk):
-        from apps.accounts.models import User
+    def get_serializer_class(self):
         from apps.accounts.serializers import UserSerializer
-        users = User.objects.filter(campus_id=pk, is_active=True)
-        return Response(UserSerializer(users, many=True).data)
+        return UserSerializer
+
+    def get_queryset(self):
+        from apps.accounts.models import User
+        return User.objects.filter(campus_id=self.kwargs['pk'], is_active=True)
 
 
 class SchoolListCreateView(generics.ListCreateAPIView):
@@ -124,32 +129,33 @@ class UserSchoolMappingDetailView(generics.RetrieveDestroyAPIView):
     serializer_class = UserSchoolMappingSerializer
 
 
-class MySchoolsView(APIView):
+class MySchoolsView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class   = SchoolSerializer
+    pagination_class   = StandardPagination
 
-    def get(self, request):
-        user       = request.user
+    def get_queryset(self):
+        user       = self.request.user
         school_ids = get_user_school_ids(user)
-        schools    = School.objects.filter(
-                         id__in=school_ids,
-                         is_active=True
-                     )
-        return Response(SchoolSerializer(schools, many=True).data)
+        return School.objects.filter(id__in=school_ids, is_active=True)
 
 
-class SchoolFacultyView(APIView):
+class SchoolFacultyView(generics.ListAPIView):
     permission_classes = [IsAdminOrUser]
+    pagination_class   = StandardPagination
 
-    def get(self, request):
-        school_ids   = get_user_school_ids(request.user)
-        faculty_ids  = UserSchoolMapping.objects.filter(
-                           school_id__in=school_ids
-                       ).values_list('user_id', flat=True)
-        from apps.accounts.models import User
+    def get_serializer_class(self):
         from apps.accounts.serializers import UserSerializer
-        faculty      = User.objects.filter(
-                           id__in=faculty_ids,
-                           role='user',
-                           is_active=True
-                       )
-        return Response(UserSerializer(faculty, many=True).data)
+        return UserSerializer
+
+    def get_queryset(self):
+        from apps.accounts.models import User
+        school_ids  = get_user_school_ids(self.request.user)
+        faculty_ids = UserSchoolMapping.objects.filter(
+                          school_id__in=school_ids
+                      ).values_list('user_id', flat=True)
+        return User.objects.filter(
+            id__in=faculty_ids,
+            role='user',
+            is_active=True
+        )

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db.models import Prefetch
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -180,7 +181,12 @@ class SchoolFacultiesView(generics.ListAPIView):
             id__in=faculty_user_ids,
             role='user',
             is_active=True
-        ).order_by('full_name')
+        ).order_by('full_name').prefetch_related(
+            Prefetch(
+                'userschoolmapping_set',
+                queryset=UserSchoolMapping.objects.select_related('school')
+            )
+        )
 
         # Custom school_code filter
         school_code = self.request.query_params.get('school_code')
@@ -214,7 +220,12 @@ class CampusUsersView(generics.ListAPIView):
             is_active=True
         ).exclude(
             role='master'
-        ).order_by('role', 'full_name')
+        ).order_by('role', 'full_name').prefetch_related(
+            Prefetch(
+                'userschoolmapping_set',
+                queryset=UserSchoolMapping.objects.select_related('school')
+            )
+        )
 
         # Custom school_code filter
         school_code = self.request.query_params.get('school_code')
