@@ -10,6 +10,15 @@ source ~/nmpralekh/venv/bin/activate || {
     exit 1
 }
 
+# --- Pre-flight: ensure django-celery-beat migrations are applied ----------
+echo "Running django_celery_beat migrations..."
+python manage.py migrate django_celery_beat || {
+    echo "ERROR: django_celery_beat migrations failed. Aborting Celery startup."
+    exit 1
+}
+echo "Migrations applied successfully."
+# ---------------------------------------------------------------------------
+
 # Start Celery worker in background
 celery -A config worker --loglevel=info --concurrency=4 &
 WORKER_PID=$!

@@ -2,7 +2,7 @@ import os
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from datetime import date, datetime
-from celery import shared_task
+from celery import shared_task, group
 from django.conf import settings
 
 EXPORT_DIR = os.path.join(settings.BASE_DIR, 'exports')
@@ -136,57 +136,80 @@ def build_campus_workbook(school_ids):
     return wb, total_records
 
 
-@shared_task(name='apps.export.tasks.generate_nightly_exports')
-def generate_nightly_exports():
+@shared_task(
+    bind=True,
+    name='apps.export.tasks.export_single_campus',
+    max_retries=3,
+    default_retry_delay=60,
+    autoretry_for=(Exception,),
+)
+def export_single_campus(self, campus_id):
     """
-    Runs every night at 12:00 AM IST.
-    Generates one Excel file per active campus.
+    Exports a single active campus to an Excel workbook and saves the
+    resulting file + database record.  Retried automatically up to 3 times
+    (with a 60-second delay) on any exception.
     """
     from apps.schools.models import Campus, School
     from apps.export.models import GeneratedExport
 
     ensure_export_dir()
-    today     = date.today().strftime('%Y-%m-%d')
-    generated = []
+    today = date.today().strftime('%Y-%m-%d')
 
-    campuses = Campus.objects.filter(is_active=True)
+    campus = Campus.objects.get(pk=campus_id)
+    school_ids = list(
+        School.objects.filter(
+            campus=campus, is_active=True
+        ).values_list('id', flat=True)
+    )
 
-    for campus in campuses:
-        school_ids = list(
-            School.objects.filter(
-                campus=campus, is_active=True
-            ).values_list('id', flat=True)
-        )
+    if not school_ids:
+        return f'No active schools for campus {campus.name} — skipped'
 
-        if not school_ids:
-            continue
+    wb, total_records = build_campus_workbook(school_ids)
 
-        try:
-            wb, total_records = build_campus_workbook(school_ids)
+    filename = f'{campus.code}_MIS_Export_{today}.xlsx'
+    filepath = os.path.join(EXPORT_DIR, filename)
+    wb.save(filepath)
 
-            filename = f'{campus.code}_MIS_Export_{today}.xlsx'
-            filepath = os.path.join(EXPORT_DIR, filename)
-            wb.save(filepath)
+    file_size_kb = os.path.getsize(filepath) // 1024
 
-            file_size_kb = os.path.getsize(filepath) // 1024
+    export = GeneratedExport.objects.create(
+        campus       = campus,
+        export_type  = 'nightly',
+        filename     = filename,
+        filepath     = filepath,
+        file_size_kb = file_size_kb,
+        record_count = total_records,
+    )
 
-            # save record to database
-            export = GeneratedExport.objects.create(
-                campus       = campus,
-                export_type  = 'nightly',
-                filename     = filename,
-                filepath     = filepath,
-                file_size_kb = file_size_kb,
-                record_count = total_records,
-            )
+    return {
+        'export_id':   export.id,
+        'campus':      campus.name,
+        'filename':    filename,
+        'records':     total_records,
+    }
 
-            generated.append(export.id)
 
-        except Exception as e:
-            print(f'Export failed for {campus.name}: {e}')
-            continue
+@shared_task(name='apps.export.tasks.generate_nightly_exports')
+def generate_nightly_exports():
+    """
+    Runs every night at 12:00 AM IST.
+    Dispatches one export_single_campus task per active campus in parallel
+    using celery.group so that a failure in one campus does not affect others.
+    """
+    from apps.schools.models import Campus
 
-    return f'Generated {len(generated)} campus exports for {today}'
+    campus_ids = list(
+        Campus.objects.filter(is_active=True).values_list('id', flat=True)
+    )
+
+    if not campus_ids:
+        return 'No active campuses found — nothing to export'
+
+    job = group(export_single_campus.s(cid) for cid in campus_ids)
+    job.apply_async()
+
+    return f'Dispatched export jobs for {len(campus_ids)} campus(es)'
 
 
 @shared_task(name='apps.export.tasks.generate_manual_export')
