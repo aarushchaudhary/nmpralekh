@@ -1,9 +1,11 @@
 import os
+import re
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
 
 from apps.accounts.permissions import IsAdminOrUserOrSuperAdmin
 from apps.schools.utils import get_user_school_ids
@@ -31,8 +33,21 @@ def get_scoped_queryset(model, user):
     ).select_related('school')
 
 
+def validate_export_params(school_id, date_from, date_to):
+    """Validates export query parameters to prevent parameter injection."""
+    if school_id and not str(school_id).isdigit():
+        raise ValidationError("Invalid school_id")
+    date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+    if date_from and not date_pattern.match(date_from):
+        raise ValidationError("Invalid date_from format")
+    if date_to and not date_pattern.match(date_to):
+        raise ValidationError("Invalid date_to format")
+
+
 def build_apply_filters(school_id, date_from, date_to):
     """Returns a reusable filter function"""
+    validate_export_params(school_id, date_from, date_to)
+
     def apply_filters(qs):
         from django.core.exceptions import FieldError
         try:

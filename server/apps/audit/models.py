@@ -69,6 +69,7 @@ class AuditRequest(models.Model):
             models.Index(fields=['table_name', 'record_id']),
             models.Index(fields=['requested_by']),
             models.Index(fields=['requested_at']),
+            models.Index(fields=['status', 'school'], name='audit_status_school_idx'),
         ]
 
     def __str__(self):

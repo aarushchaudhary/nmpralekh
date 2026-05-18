@@ -50,6 +50,7 @@ class SchoolActivity(models.Model):
             models.Index(fields=['school', 'is_deleted']),
             models.Index(fields=['date']),
             models.Index(fields=['created_by']),
+            models.Index(fields=['school', 'is_deleted', 'date'], name='sact_school_deleted_date_idx'),
         ]
 
     def __str__(self):
@@ -85,8 +86,17 @@ class StudentActivity(models.Model):
                                        on_delete=models.SET_NULL,
                                        related_name='student_activities',
                                        help_text='Select from registered clubs')
-    club_name       = models.CharField(max_length=255, null=True, blank=True,
-                                       help_text='Auto-filled from club, or manual entry')
+    # DELIBERATE DENORMALIZATION: club_name stores a snapshot of the club's name
+    # at the time of entry, or a free-text value when no Club FK is selected.
+    # Updates to Club.name will NOT cascade here by design — this field acts as
+    # a stable audit trail / fallback for free-text entries.
+    club_name       = models.CharField(
+        max_length=255, null=True, blank=True,
+        help_text=(
+            'Denormalised snapshot of club name (fallback for free-text entries). '
+            'Changes to Club.name are intentionally NOT cascaded to this field.'
+        )
+    )
     conducted_by    = models.CharField(max_length=255, null=True, blank=True,
                                        help_text='Free text if club not in list')
     activity_type   = models.CharField(max_length=20, choices=TYPE_CHOICES,
@@ -107,6 +117,7 @@ class StudentActivity(models.Model):
             models.Index(fields=['school', 'is_deleted']),
             models.Index(fields=['date']),
             models.Index(fields=['created_by']),
+            models.Index(fields=['school', 'is_deleted', 'date'], name='stact_school_deleted_date_idx'),
         ]
 
     def __str__(self):
@@ -191,6 +202,8 @@ class FacultyPublication(models.Model):
             models.Index(fields=['date']),
             models.Index(fields=['created_by']),
             models.Index(fields=['author_type']),
+            models.Index(fields=['school', 'is_deleted', 'date'], name='pub_school_deleted_date_idx'),
+            models.Index(fields=['created_by', 'is_deleted'], name='pub_created_by_deleted_idx'),
         ]
 
     def __str__(self):
