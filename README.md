@@ -503,16 +503,19 @@ DB_PORT=6432
 
 ```
 
-## Redis Configuration (Memory Limits)
 
-To prevent Redis from growing unbounded and potentially overwhelming the server, configure a strict memory cap and an eviction policy.
+## Redis Configuration (Optimization & Limits)
+
+To prevent Redis from growing unbounded and to ensure it can handle a high volume of concurrent users (e.g., 10,000+), you must configure strict memory caps, an eviction policy, and connection limits.
 
 ### Step 1 — Edit redis.conf
 
+Open the Redis configuration file:
 ```bash
 sudo nano /etc/redis/redis.conf
 ```
 
+**1a. Set Memory Limits:**
 Search for the `# maxmemory <bytes>` section and add (or uncomment):
 
 ```conf
@@ -522,18 +525,49 @@ maxmemory-policy allkeys-lru
 
 *(This limits Redis to 256 MB of RAM. Once full, it evicts the least recently used keys.)*
 
-### Step 2 — Apply the changes
+**1b. Set Connection Limits:**
+Search for the `# maxclients 10000` section and update it to allow a safe buffer for web workers and Celery:
 
-**Option A — Restart the service (persistent):**
+```conf
+maxclients 20000
+```
+
+### Step 2 — Increase System File Descriptor Limits
+
+Linux limits the number of file descriptors (network connections) a service can open. To allow Redis to actually accept 20,000 clients, you must increase this limit at the system level.
+
+Open the Redis service override file:
+
 ```bash
+sudo systemctl edit redis
+```
+
+Add the following lines at the **very top** of the file (do not use a `#` at the beginning):
+
+```ini
+[Service]
+LimitNOFILE=65536
+```
+
+Save and exit the editor.
+
+### Step 3 — Apply the changes
+
+Reload the systemd daemon to recognize the new file limit, then restart Redis to apply all configurations:
+
+```bash
+sudo systemctl daemon-reload
 sudo systemctl restart redis
 ```
 
-**Option B — Apply live without a restart:**
+*(Optional) If you only want to apply the memory limits live without a restart, you can use:*
+
 ```bash
 redis-cli CONFIG SET maxmemory 256mb
 redis-cli CONFIG SET maxmemory-policy allkeys-lru
+# Note: maxclients and LimitNOFILE require a restart to take effect safely.
 ```
+
 
 ---
 
