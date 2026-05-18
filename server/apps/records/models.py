@@ -165,6 +165,8 @@ class FacultyFDPWorkshopGL(models.Model):
             models.Index(fields=['date_start']),
             models.Index(fields=['type']),
             models.Index(fields=['created_by']),
+            models.Index(fields=['school', 'is_deleted', 'date_start'],
+                         name='fdp_school_deleted_date_idx'),
         ]
 
     def __str__(self):
@@ -247,6 +249,8 @@ class Patent(models.Model):
             models.Index(fields=['date_of_publication']),
             models.Index(fields=['created_by']),
             models.Index(fields=['patent_status']),
+            models.Index(fields=['school', 'is_deleted', 'date_of_publication'],
+                         name='patent_school_deleted_date_idx'),
         ]
 
     def __str__(self):
@@ -282,6 +286,8 @@ class Certification(models.Model):
             models.Index(fields=['date']),
             models.Index(fields=['created_by']),
             models.Index(fields=['agency']),
+            models.Index(fields=['school', 'is_deleted', 'date'],
+                         name='cert_school_deleted_date_idx'),
         ]
 
     def __str__(self):
@@ -313,6 +319,8 @@ class PlacementActivity(models.Model):
             models.Index(fields=['school', 'is_deleted']),
             models.Index(fields=['date']),
             models.Index(fields=['created_by']),
+            models.Index(fields=['school', 'is_deleted', 'date'],
+                         name='plcmt_school_del_date_idx'),
         ]
 
     def __str__(self):

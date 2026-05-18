@@ -69,21 +69,21 @@ class AuditApproveView(APIView):
                     new_data = audit.new_data
 
                     ALLOWED_FIELDS = {
-                        'school_activities': ['name', 'date', 'details', 'is_school_wide', 'school_id'],
+                        'school_activities': ['name', 'date', 'details', 'is_school_wide'],
                         'student_activities': ['name', 'date', 'details', 'club', 'club_name',
-                                               'conducted_by', 'activity_type', 'school_id'],
+                                               'conducted_by', 'activity_type'],
                         'faculty_fdp_workshop_gl': ['faculty_name', 'date_start', 'date_end',
-                                                    'name', 'details', 'type', 'organizing_body', 'school_id'],
+                                                    'name', 'details', 'type', 'organizing_body'],
                         'faculty_publications': ['author_name', 'author_type', 'title_of_paper',
                                                  'journal_or_conference_name', 'date', 'venue',
-                                                 'publication', 'doi_or_link', 'is_own_work', 'school_id'],
+                                                 'publication', 'doi_or_link', 'is_own_work'],
                         'patents': ['applicant_name', 'applicant_type', 'title_of_patent', 'details',
                                     'date_of_publication', 'journal_number', 'patent_status',
-                                    'doi_or_link', 'is_own_work', 'school_id'],
+                                    'doi_or_link', 'is_own_work'],
                         'certifications': ['date', 'name', 'title_of_course', 'details', 'agency',
-                                           'credly_or_proof_link', 'person_type', 'school_id'],
+                                           'credly_or_proof_link', 'person_type'],
                         'placement_activities': ['name', 'date', 'details', 'company_name',
-                                                 'placecom_name', 'school_id'],
+                                                 'placecom_name'],
                     }
 
                     allowed = ALLOWED_FIELDS.get(audit.table_name, [])

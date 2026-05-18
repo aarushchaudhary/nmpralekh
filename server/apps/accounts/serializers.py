@@ -28,7 +28,7 @@ class UserVisibilitySerializer(serializers.ModelSerializer):
 
     def get_school_code(self, obj):
         # Use prefetched data to avoid N+1 DB queries per user
-        mappings = obj.userschoolmapping_set.all()
+        mappings = obj.school_mappings.all()
         codes = [m.school.code for m in mappings if m.school]
         return ', '.join(codes) if codes else ''
 

@@ -183,7 +183,7 @@ class SchoolFacultiesView(generics.ListAPIView):
             is_active=True
         ).order_by('full_name').prefetch_related(
             Prefetch(
-                'userschoolmapping_set',
+                'school_mappings',
                 queryset=UserSchoolMapping.objects.select_related('school')
             )
         )
@@ -222,7 +222,7 @@ class CampusUsersView(generics.ListAPIView):
             role='master'
         ).order_by('role', 'full_name').prefetch_related(
             Prefetch(
-                'userschoolmapping_set',
+                'school_mappings',
                 queryset=UserSchoolMapping.objects.select_related('school')
             )
         )

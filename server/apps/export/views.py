@@ -3,12 +3,16 @@ import re
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.cell import WriteOnlyCell
+from celery.result import AsyncResult
+from django.conf import settings
+from django.core.cache import cache
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
 from apps.accounts.permissions import IsAdminOrUserOrSuperAdmin
 from apps.schools.utils import get_user_school_ids
@@ -357,11 +361,6 @@ class ExportStatusView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get(self, request, task_id):
-        from celery.result import AsyncResult
-        from django.core.cache import cache
-        from django.http import HttpResponse
-        from rest_framework.response import Response
-        
         result    = AsyncResult(task_id)
         cache_key = f'export_{task_id}'
         file_data = cache.get(cache_key)
@@ -381,7 +380,6 @@ class ExportStatusView(APIView):
         return Response({'status': 'processing'})
 
 
-from rest_framework.response import Response
 from apps.export.models import GeneratedExport
 from apps.export.tasks import (
     generate_nightly_exports,
@@ -508,7 +506,6 @@ class ExportTaskStatusView(APIView):
     permission_classes = [IsMaster]
 
     def get(self, request, task_id):
-        from celery.result import AsyncResult
         result = AsyncResult(task_id)
 
         if result.successful():
