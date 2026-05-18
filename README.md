@@ -503,6 +503,38 @@ DB_PORT=6432
 
 ```
 
+## Redis Configuration (Memory Limits)
+
+To prevent Redis from growing unbounded and potentially overwhelming the server, configure a strict memory cap and an eviction policy.
+
+### Step 1 — Edit redis.conf
+
+```bash
+sudo nano /etc/redis/redis.conf
+```
+
+Search for the `# maxmemory <bytes>` section and add (or uncomment):
+
+```conf
+maxmemory 256mb
+maxmemory-policy allkeys-lru
+```
+
+*(This limits Redis to 256 MB of RAM. Once full, it evicts the least recently used keys.)*
+
+### Step 2 — Apply the changes
+
+**Option A — Restart the service (persistent):**
+```bash
+sudo systemctl restart redis
+```
+
+**Option B — Apply live without a restart:**
+```bash
+redis-cli CONFIG SET maxmemory 256mb
+redis-cli CONFIG SET maxmemory-policy allkeys-lru
+```
+
 ---
 
 ## Gunicorn Configuration

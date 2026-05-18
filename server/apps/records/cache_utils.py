@@ -5,18 +5,19 @@ from apps.records.models import (
     Patent, Certification, PlacementActivity
 )
 
+DASHBOARD_CACHE_VERSION = 'v1'
+
+def get_cache_key(school_ids, role):
+    school_key = '-'.join(str(s) for s in sorted(school_ids))
+    return f'dashboard:{DASHBOARD_CACHE_VERSION}:{role}:{school_key}'
 
 def get_dashboard_counts(school_ids, role):
-    """
-    Returns record counts for dashboard.
-    Cached per school set and role for 60 seconds.
-    """
-    cache_key = f'dashboard_counts_{role}_{hash(tuple(sorted(school_ids)))}'
-    counts    = cache.get(cache_key)
+    cache_key = get_cache_key(school_ids, role)
+    counts = cache.get(cache_key)
 
     if counts is None:
         filters = {'school_id__in': school_ids, 'is_deleted': False}
-        counts  = {
+        counts = {
             'school_activities':   SchoolActivity.objects.filter(**filters).count(),
             'student_activities':  StudentActivity.objects.filter(**filters).count(),
             'fdp':                 FacultyFDPWorkshopGL.objects.filter(**filters).count(),
@@ -29,7 +30,8 @@ def get_dashboard_counts(school_ids, role):
 
     return counts
 
-
-def invalidate_dashboard_cache(school_id):
-    """Call this whenever a record is created or deleted"""
-    cache.delete_many(cache.keys(f'dashboard_counts_*'))
+def invalidate_dashboard_cache(school_ids, role=None):
+    # explicit key deletion, no wildcard scan
+    roles = [role] if role else ['admin', 'user', 'super_admin', 'mis_coordinator']
+    keys = [get_cache_key(school_ids, r) for r in roles]
+    cache.delete_many(keys)

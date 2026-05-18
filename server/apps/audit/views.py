@@ -9,6 +9,7 @@ from apps.audit.models import AuditRequest
 from apps.audit.serializers import AuditRequestSerializer
 from apps.accounts.permissions import IsDeleteAuth, IsMasterOrSuperAdmin
 from apps.schools.utils import get_user_school_ids
+from apps.records.cache_utils import invalidate_dashboard_cache
 
 
 class AuditRequestListView(generics.ListAPIView):
@@ -80,6 +81,10 @@ class AuditApproveView(APIView):
                 audit.reviewed_by = request.user
                 audit.reviewed_at = timezone.now()
                 audit.save()
+
+                # Invalidate the dashboard cache for this school
+                if hasattr(record, 'school_id'):
+                    invalidate_dashboard_cache([record.school_id])
 
         except Exception as e:
             return Response(

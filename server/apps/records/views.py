@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from apps.accounts.permissions import IsAdminOrUser, IsAdminOrUserOrSuperAdmin, IsAdminOrUserOrSuperAdminOrCoordinator
 from apps.schools.utils import get_user_school_ids
-from apps.records.cache_utils import get_dashboard_counts
+from apps.records.cache_utils import get_dashboard_counts, invalidate_dashboard_cache
 from apps.audit.models import AuditRequest
 from apps.records.models import (
     Club,
@@ -72,6 +72,16 @@ class SchoolScopedMixin:
         )
 
 
+class InvalidateDashboardCacheMixin:
+    """
+    Mixin to invalidate the dashboard cache whenever a new record is created.
+    """
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        if hasattr(instance, 'school_id'):
+            invalidate_dashboard_cache([instance.school_id])
+
+
 # ─────────────────────────────────────────────
 # CLUBS & COMMITTEES
 # ─────────────────────────────────────────────
@@ -117,7 +127,7 @@ class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
 # ─────────────────────────────────────────────
 # SCHOOL ACTIVITIES
 # ─────────────────────────────────────────────
-class SchoolActivityListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
+class SchoolActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = SchoolActivitySerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
@@ -160,7 +170,7 @@ class SchoolActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroy
 # ─────────────────────────────────────────────
 # STUDENT ACTIVITIES
 # ─────────────────────────────────────────────
-class StudentActivityListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
+class StudentActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = StudentActivitySerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
@@ -203,7 +213,7 @@ class StudentActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestro
 # ─────────────────────────────────────────────
 # FACULTY FDP / WORKSHOP / GL
 # ─────────────────────────────────────────────
-class FDPListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
+class FDPListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = FacultyFDPWorkshopGLSerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
@@ -265,7 +275,7 @@ class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset           = PublicationAuthor.objects.all()
 
 
-class PublicationListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
+class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = FacultyPublicationSerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
@@ -334,7 +344,7 @@ class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset           = PatentApplicant.objects.all()
 
 
-class PatentListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
+class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = PatentSerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
@@ -384,7 +394,7 @@ class PatentDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView)
 # ─────────────────────────────────────────────
 # CERTIFICATIONS
 # ─────────────────────────────────────────────
-class CertificationListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
+class CertificationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = CertificationSerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
@@ -432,7 +442,7 @@ class CertificationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyA
 # ─────────────────────────────────────────────
 # PLACEMENT ACTIVITIES
 # ─────────────────────────────────────────────
-class PlacementListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
+class PlacementListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = PlacementActivitySerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
 
