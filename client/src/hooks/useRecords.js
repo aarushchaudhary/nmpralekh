@@ -37,23 +37,23 @@ export default function useRecords(endpoint) {
 
   useEffect(() => { fetch() }, [fetch])
 
-  const create = async (payload) => {
+  const create = useCallback(async (payload) => {
     const res = await api.post(endpoint, payload)
     await fetch()
     return res.data
-  }
+  }, [endpoint, fetch])
 
-  const update = async (id, payload) => {
+  const update = useCallback(async (id, payload) => {
     const res = await api.put(`${endpoint}${id}/`, payload)
     await fetch()
     return res.data
-  }
+  }, [endpoint, fetch])
 
-  const remove = async (id) => {
+  const remove = useCallback(async (id) => {
     const res = await api.delete(`${endpoint}${id}/`)
     await fetch()
     return res.data
-  }
+  }, [endpoint, fetch])
 
   const goToPage = (page) => setCurrentPage(page)
 

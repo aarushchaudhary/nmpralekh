@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 
 import LoginPage from './pages/auth/LoginPage'
@@ -13,8 +13,16 @@ import DeleteAuthDashboard from './pages/deleteauth/Dashboard'
 import CoordinatorDashboard from './pages/coordinator/Dashboard'
 
 function RoleRedirect() {
-  const user = JSON.parse(localStorage.getItem('user') || 'null')
+  const { user, loading } = useAuth()
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+      <div style={{ width: 40, height: 40, border: '3px solid #e5e7eb', borderTopColor: '#4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  )
+
   if (!user) return <Navigate to="/login" replace />
+
   const routes = {
     master: '/master',
     admin: '/admin',
