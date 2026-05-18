@@ -1,6 +1,7 @@
 import os
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.cell import WriteOnlyCell
 from datetime import date, datetime
 from celery import shared_task, group
 from django.conf import settings
@@ -12,24 +13,33 @@ def ensure_export_dir():
     os.makedirs(EXPORT_DIR, exist_ok=True)
 
 
-def style_header(ws, headers):
-    for col_num, header in enumerate(headers, 1):
-        cell            = ws.cell(row=1, column=col_num, value=header)
-        cell.font       = Font(bold=True, color='FFFFFF')
-        cell.fill       = PatternFill('solid', fgColor='1F4E79')
-        cell.alignment  = Alignment(horizontal='center')
+def _append_styled_headers(ws, headers):
+    """Write a bold + blue header row in write-only mode."""
+    styled_row = []
+    for header in headers:
+        cell           = WriteOnlyCell(ws, value=header)
+        cell.font      = Font(bold=True, color='FFFFFF')
+        cell.fill      = PatternFill('solid', fgColor='1F4E79')
+        cell.alignment = Alignment(horizontal='center')
+        styled_row.append(cell)
+    ws.append(styled_row)
 
 
 def build_campus_workbook(school_ids):
-    """Builds a complete workbook for given school IDs"""
+    """
+    Builds a streaming write-only workbook for the given school IDs.
+    Uses write_only=True so openpyxl never holds the full DOM in RAM,
+    and .iterator() so Django streams DB rows one-by-one.
+    """
     from apps.records.models import (
         SchoolActivity, StudentActivity,
         FacultyFDPWorkshopGL, FacultyPublication,
         Patent, Certification, PlacementActivity
     )
 
-    wb = openpyxl.Workbook()
-    wb.remove(wb.active)
+    # write_only=True: rows are written directly to the ZIP stream,
+    # never accumulated in memory as a full DOM tree.
+    wb = openpyxl.Workbook(write_only=True)
     total_records = 0
 
     sheets = [
@@ -123,9 +133,11 @@ def build_campus_workbook(school_ids):
 
     for sheet_title, queryset, headers, row_fn in sheets:
         ws = wb.create_sheet(title=sheet_title)
-        style_header(ws, headers)
+        _append_styled_headers(ws, headers)
         count = 0
-        for record in queryset:
+        # .iterator() streams rows from Postgres one-by-one instead of
+        # loading the entire result set into a Python list.
+        for record in queryset.iterator():
             try:
                 ws.append(row_fn(record))
                 count += 1

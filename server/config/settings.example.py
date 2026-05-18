@@ -267,3 +267,8 @@ if not DEBUG:
     SECURE_HSTS_SECONDS            = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD            = True
+
+# Tell Django to trust the X-Forwarded-Proto header set by nginx / Cloudflare.
+# Without this, Django sees all requests as HTTP even when the browser is on
+# HTTPS, which breaks SECURE_SSL_REDIRECT and HSTS enforcement in production.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
