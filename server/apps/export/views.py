@@ -356,29 +356,6 @@ class ExportAllView(APIView):
         return response
 
 
-class ExportStatusView(APIView):
-    """Frontend polls this every 2 seconds until ready"""
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
-
-    def get(self, request, task_id):
-        result    = AsyncResult(task_id)
-        cache_key = f'export_{task_id}'
-        file_data = cache.get(cache_key)
-
-        if file_data:
-            # file is ready — send it
-            response = HttpResponse(
-                file_data,
-                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-            response['Content-Disposition'] = 'attachment; filename=MIS_Dashboard.xlsx'
-            return response
-
-        if result.failed():
-            return Response({'status': 'failed'}, status=500)
-
-        return Response({'status': 'processing'})
-
 
 from apps.export.models import GeneratedExport
 from apps.export.tasks import (
@@ -388,32 +365,41 @@ from apps.export.tasks import (
 from apps.accounts.permissions import IsMaster
 
 
-class ExportHistoryView(APIView):
+from rest_framework import generics, serializers as drf_serializers
+from config.pagination import StandardPagination
+
+
+class ExportHistorySerializer(drf_serializers.ModelSerializer):
+    campus       = drf_serializers.CharField(source='campus.name', default='All')
+    campus_code  = drf_serializers.CharField(source='campus.code', default='ALL')
+    generated_by = drf_serializers.CharField(
+                       source='generated_by.full_name', default='System'
+                   )
+    generated_at     = drf_serializers.DateTimeField()
+    date_range_from  = drf_serializers.DateField()
+    date_range_to    = drf_serializers.DateField()
+
+    class Meta:
+        model  = GeneratedExport
+        fields = [
+            'id', 'campus', 'campus_code', 'export_type',
+            'filename', 'generated_by', 'generated_at',
+            'file_size_kb', 'record_count',
+            'date_range_from', 'date_range_to',
+        ]
+
+
+class ExportHistoryView(generics.ListAPIView):
     permission_classes = [IsMaster]
+    serializer_class   = ExportHistorySerializer
+    pagination_class   = StandardPagination
 
-    def get(self, request):
-        exports   = GeneratedExport.objects.select_related(
-                        'campus', 'generated_by'
-                    )
-        campus_id = request.query_params.get('campus_id')
+    def get_queryset(self):
+        qs        = GeneratedExport.objects.select_related('campus', 'generated_by')
+        campus_id = self.request.query_params.get('campus_id')
         if campus_id:
-            exports = exports.filter(campus_id=campus_id)
-
-        data = [{
-            'id':             e.id,
-            'campus':         e.campus.name if e.campus else 'All',
-            'campus_code':    e.campus.code if e.campus else 'ALL',
-            'export_type':    e.export_type,
-            'filename':       e.filename,
-            'generated_by':   e.generated_by.full_name if e.generated_by else 'System',
-            'generated_at':   e.generated_at.isoformat(),
-            'file_size_kb':   e.file_size_kb,
-            'record_count':   e.record_count,
-            'date_range_from': str(e.date_range_from) if e.date_range_from else None,
-            'date_range_to':   str(e.date_range_to)   if e.date_range_to   else None,
-        } for e in exports]
-
-        return Response(data)
+            qs = qs.filter(campus_id=campus_id)
+        return qs
 
 
 class ExportDownloadView(APIView):
@@ -466,13 +452,27 @@ class TriggerManualExportView(APIView):
                 status=400
             )
 
-        from apps.schools.models import School
+        from apps.schools.models import Campus, School
+        try:
+            campus = Campus.objects.get(pk=campus_id, is_active=True)
+        except Campus.DoesNotExist:
+            return Response(
+                {'detail': 'Campus not found or is inactive'},
+                status=404
+            )
+
         school_ids = list(
             School.objects.filter(
-                campus_id=campus_id,
+                campus=campus,
                 is_active=True
             ).values_list('id', flat=True)
         )
+
+        if not school_ids:
+            return Response(
+                {'detail': 'No active schools found in this campus'},
+                status=400
+            )
 
         task = generate_manual_export.delay(
             campus_id  = campus_id,

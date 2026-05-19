@@ -78,11 +78,12 @@ class SchoolListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        qs   = School.objects.filter(is_active=True).order_by('name')
 
-        # master sees all schools
+        # master sees ALL schools (including deactivated — so they can reactivate)
         if user.role == 'master':
-            return qs
+            return School.objects.all().order_by('name')
+
+        qs = School.objects.filter(is_active=True).order_by('name')
 
         # super_admin sees only their campus schools
         if user.role == 'super_admin':
@@ -132,7 +133,9 @@ class UserSchoolMappingDetailView(generics.RetrieveDestroyAPIView):
 class MySchoolsView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class   = SchoolSerializer
-    pagination_class   = StandardPagination
+    # No pagination_class — users have at most a handful of schools.
+    # Pagination wraps the response in {count, results, ...} which breaks
+    # every consumer that calls schools.map() directly.
 
     def get_queryset(self):
         user       = self.request.user

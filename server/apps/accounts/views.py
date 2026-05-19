@@ -24,7 +24,8 @@ from django_ratelimit.decorators import ratelimit
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = []
-    throttle_classes   = [AnonRateThrottle]
+    # throttle_classes omitted — django-ratelimit handles IP throttling at 10/m
+    # (stricter than AnonRateThrottle's default 60/m, so AnonRateThrottle was a no-op)
 
     @method_decorator(ratelimit(key='ip', rate='10/m', method='POST', block=True))
     def post(self, request):

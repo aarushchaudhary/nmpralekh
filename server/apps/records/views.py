@@ -36,13 +36,17 @@ def create_audit_request(user, table_name, record, action, new_data=None):
         value = getattr(record, field.name)
         old_data[field.name] = str(value) if value is not None else None
 
+    # Explicitly cast to plain dict — request.data can be a QueryDict (form-encoded)
+    # which stores multiple values per key; JSONField needs a plain dict.
+    safe_new_data = dict(new_data) if new_data else None
+
     with transaction.atomic():
         audit = AuditRequest.objects.create(
             table_name   = table_name,
             record_id    = record.id,
             action       = action,
             old_data     = old_data,
-            new_data     = new_data,
+            new_data     = safe_new_data,
             requested_by = user,
             school       = getattr(record, 'school', None),
             status       = 'pending'

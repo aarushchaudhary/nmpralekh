@@ -10,6 +10,7 @@ from apps.audit.serializers import AuditRequestSerializer
 from apps.accounts.permissions import IsDeleteAuth, IsMasterOrSuperAdmin
 from apps.schools.utils import get_user_school_ids
 from apps.records.cache_utils import invalidate_dashboard_cache
+from config.pagination import StandardPagination
 
 
 class AuditRequestListView(generics.ListAPIView):
@@ -157,6 +158,7 @@ class AuditRejectView(APIView):
 class AuditHistoryView(generics.ListAPIView):
     serializer_class   = AuditRequestSerializer
     permission_classes = [IsMasterOrSuperAdmin | IsDeleteAuth]
+    pagination_class   = StandardPagination  # server-side pagination — history can grow to thousands of rows
 
     def get_queryset(self):
         user = self.request.user
