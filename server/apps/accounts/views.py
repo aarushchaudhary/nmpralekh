@@ -135,7 +135,7 @@ class MeView(APIView):
 
 class UserListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsMaster]
-    queryset = User.objects.all().order_by('-id')
+    queryset = User.objects.all().select_related('campus').order_by('-id')
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -145,7 +145,7 @@ class UserListCreateView(generics.ListCreateAPIView):
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsMaster]
-    queryset = User.objects.all()
+    queryset = User.objects.all().select_related('campus')
 
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:

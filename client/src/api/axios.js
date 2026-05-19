@@ -8,6 +8,21 @@ const api = axios.create({
   },
 })
 
+function getCsrfToken() {
+    return document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1]
+}
+
+// attach CSRF token to every mutating request
+api.interceptors.request.use(config => {
+    if (['post', 'put', 'patch', 'delete'].includes(config.method)) {
+        config.headers['X-CSRFToken'] = getCsrfToken()
+    }
+    return config
+})
+
 let isRefreshing = false  // prevents multiple simultaneous refresh calls
 
 api.interceptors.response.use(

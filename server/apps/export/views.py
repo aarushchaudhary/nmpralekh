@@ -682,6 +682,11 @@ class CoordinatorExportView(APIView):
         date_to   = request.query_params.get('date_to')
         fmt       = request.query_params.get('format', 'excel').lower()
 
+        try:
+            validate_export_params(None, date_from, date_to)
+        except ValidationError as e:
+            return Response({'detail': str(e.detail[0])}, status=400)
+
         if fmt not in ('excel', 'json'):
             return Response(
                 {'detail': 'format must be "excel" or "json"'},

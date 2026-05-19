@@ -22,7 +22,6 @@ staticfiles/
 
 # Environment Variables — never commit
 .env
-.env.*
 server/.env
 client/.env
 client/.env.local

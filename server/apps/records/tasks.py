@@ -50,17 +50,18 @@ def perform_db_backup(scope=None, date_from=None, date_to=None):
 
     # Build a secure .pgpass file so the password is never exposed via
     # /proc/<pid>/environ (the PGPASSWORD risk on Linux).
-    pgpass_fd, pgpass_path = tempfile.mkstemp(suffix='.pgpass')
+    private_tmp = tempfile.mkdtemp()
+    os.chmod(private_tmp, 0o700)
+    pgpass_path = os.path.join(private_tmp, '.pgpass')
+
     try:
         # Write hostname:port:database:username:password
         pgpass_line = (
             f"{db['HOST']}:{db['PORT']}:{db['NAME']}:{db['USER']}:{db['PASSWORD']}\n"
         )
-        os.write(pgpass_fd, pgpass_line.encode())
-        os.close(pgpass_fd)
-
-        # PostgreSQL requires the file to be readable only by the owner
-        os.chmod(pgpass_path, stat.S_IRUSR | stat.S_IWUSR)  # 0600
+        with open(pgpass_path, 'w') as f:
+            os.chmod(pgpass_path, 0o600)
+            f.write(pgpass_line)
 
         env = os.environ.copy()
         env.pop('PGPASSWORD', None)          # ensure legacy variable is absent
@@ -78,8 +79,6 @@ def perform_db_backup(scope=None, date_from=None, date_to=None):
         return f"Backup failed: {str(e)}"
 
     finally:
-        # Always remove the temporary credentials file from disk
-        try:
-            os.unlink(pgpass_path)
-        except OSError:
-            pass
+        # Always remove the temporary directory and credentials file from disk
+        import shutil
+        shutil.rmtree(private_tmp, ignore_errors=True)
