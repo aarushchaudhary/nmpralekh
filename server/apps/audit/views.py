@@ -57,6 +57,12 @@ class AuditApproveView(APIView):
                     'placement_activities':  ('records', 'PlacementActivity'),
                 }
 
+                if audit.table_name not in table_model_map:
+                    return Response(
+                        {'detail': f'Approval not supported for table: {audit.table_name}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
                 app_label, model_name = table_model_map[audit.table_name]
                 Model  = apps.get_model(app_label, model_name)
                 record = Model.objects.get(pk=audit.record_id)
@@ -138,14 +144,15 @@ class AuditRejectView(APIView):
                 'placement_activities':    ('records', 'PlacementActivity'),
             }
 
-            try:
-                app_label, model_name = table_model_map[audit.table_name]
-                Model  = apps.get_model(app_label, model_name)
-                record = Model.objects.get(pk=audit.record_id)
-                record.pending_audit = None
-                record.save()
-            except Exception:
-                pass
+            if audit.table_name in table_model_map:
+                try:
+                    app_label, model_name = table_model_map[audit.table_name]
+                    Model  = apps.get_model(app_label, model_name)
+                    record = Model.objects.get(pk=audit.record_id)
+                    record.pending_audit = None
+                    record.save()
+                except Exception:
+                    pass
 
             audit.status      = 'rejected'
             audit.reviewed_by = request.user

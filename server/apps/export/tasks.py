@@ -226,10 +226,11 @@ def generate_nightly_exports():
 
 @shared_task(name='apps.export.tasks.generate_manual_export')
 def generate_manual_export(campus_id, school_ids,
-                            filters={}, user_id=None):
+                            filters=None, user_id=None):
     """
     Triggered manually by master admin from the portal.
     """
+    filters = filters or {}
     from apps.schools.models import Campus
     from apps.export.models import GeneratedExport
     from apps.accounts.models import User
