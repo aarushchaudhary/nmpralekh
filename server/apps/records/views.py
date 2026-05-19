@@ -522,12 +522,28 @@ class BackupConfigurationView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+from rest_framework.exceptions import ValidationError
+import re
+
 class TriggerManualBackupView(APIView):
     permission_classes = [IsMaster]
 
     def post(self, request):
-        scope = request.data.get('backup_scope', 'full')
+        scope     = request.data.get('backup_scope', 'full')
         date_from = request.data.get('date_from')
-        date_to = request.data.get('date_to')
-        perform_db_backup.delay(scope=scope, date_from=date_from, date_to=date_to)
+        date_to   = request.data.get('date_to')
+
+        if scope not in ('full', 'date_range'):
+            return Response({'detail': 'scope must be full or date_range'},
+                            status=400)
+
+        date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+        if date_from and not date_pattern.match(str(date_from)):
+            return Response({'detail': 'Invalid date_from'}, status=400)
+        if date_to and not date_pattern.match(str(date_to)):
+            return Response({'detail': 'Invalid date_to'}, status=400)
+
+        perform_db_backup.delay(
+            scope=scope, date_from=date_from, date_to=date_to
+        )
         return Response({"message": "Backup task has been added to the queue."})

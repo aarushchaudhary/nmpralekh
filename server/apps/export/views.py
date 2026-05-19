@@ -6,7 +6,7 @@ from openpyxl.cell import WriteOnlyCell
 from celery.result import AsyncResult
 from django.conf import settings
 from django.core.cache import cache
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework.views import APIView
@@ -424,18 +424,19 @@ class ExportDownloadView(APIView):
                 status=404
             )
 
-        with open(export.filepath, 'rb') as f:
-            response = HttpResponse(
-                f.read(),
-                content_type=(
-                    'application/vnd.openxmlformats-officedocument'
-                    '.spreadsheetml.sheet'
-                )
+        # don't use context manager — Django closes the file after streaming
+        f = open(export.filepath, 'rb')
+        response = FileResponse(
+            f,
+            content_type=(
+                'application/vnd.openxmlformats-officedocument'
+                '.spreadsheetml.sheet'
             )
-            response['Content-Disposition'] = (
-                f'attachment; filename="{export.filename}"'
-            )
-            return response
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="{export.filename}"'
+        )
+        return response
 
 
 class TriggerManualExportView(APIView):
