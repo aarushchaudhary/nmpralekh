@@ -5,7 +5,7 @@ cd ~/nmpralekh/server || {
     exit 1
 }
 
-source ~/nmpralekh/venv/bin/activate || {
+source venv/bin/activate || {
     echo "Failed to activate virtual environment"
     exit 1
 }

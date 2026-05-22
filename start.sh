@@ -9,8 +9,8 @@ echo "Starting pgBouncer..."
 sudo systemctl start pgbouncer
 
 echo "Starting Django with Gunicorn..."
-source "$PROJECT_ROOT/venv/bin/activate"
 cd "$PROJECT_ROOT/server"
+source venv/bin/activate
 # Changed from 'python manage.py runserver' to Gunicorn with your config
 gunicorn -c gunicorn.conf.py config.wsgi:application &
 GUNICORN_PID=$!

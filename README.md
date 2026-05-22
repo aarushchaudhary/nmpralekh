@@ -133,7 +133,8 @@ nmpralekh/
 │   │   └── pagination.py           # StandardPagination (25/page)
 │   ├── gunicorn.conf.py            # Production server config (gthread, 9w × 2t)
 │   ├── manage.py
-│   ├── requirements.txt
+│   ├── requirements.txt            # Python dependencies
+│   ├── venv/                       # Virtual environment
 │   └── .env                        # Never commit — use .env.example as reference
 │
 ├── start.sh                        # Start all services in one command (Gunicorn)
@@ -842,6 +843,7 @@ The project ships with a Locust test script at `server/locustfile.py` that simul
 Locust is **not** in `requirements.txt` (it is a dev-only tool). Install it separately inside the virtualenv:
 
 ```bash
+cd server
 source venv/bin/activate
 pip install locust
 ```

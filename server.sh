@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Activate virtual environment
-source venv/bin/activate
-
 # Go to server directory
 cd server
+
+# Activate virtual environment
+source venv/bin/activate
 
 # Run Gunicorn instead of the Django dev server
 # -c points to your configuration file
