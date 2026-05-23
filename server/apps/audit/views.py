@@ -16,6 +16,7 @@ from config.pagination import StandardPagination
 class AuditRequestListView(generics.ListAPIView):
     serializer_class   = AuditRequestSerializer
     permission_classes = [IsDeleteAuth]
+    pagination_class   = StandardPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -29,15 +30,23 @@ class AuditRequestListView(generics.ListAPIView):
 class AuditRequestDetailView(generics.RetrieveAPIView):
     serializer_class   = AuditRequestSerializer
     permission_classes = [IsDeleteAuth]
-    queryset           = AuditRequest.objects.all()
+
+    def get_queryset(self):
+        school_ids = get_user_school_ids(self.request.user)
+        return AuditRequest.objects.filter(school_id__in=school_ids)
 
 
 class AuditApproveView(APIView):
     permission_classes = [IsDeleteAuth]
 
     def post(self, request, pk):
+        school_ids = get_user_school_ids(request.user)
         try:
-            audit = AuditRequest.objects.get(pk=pk, status='pending')
+            audit = AuditRequest.objects.get(
+                pk=pk,
+                status='pending',
+                school_id__in=school_ids,
+            )
         except AuditRequest.DoesNotExist:
             return Response(
                 {'detail': 'Audit request not found or already reviewed'},
@@ -124,8 +133,13 @@ class AuditRejectView(APIView):
     permission_classes = [IsDeleteAuth]
 
     def post(self, request, pk):
+        school_ids = get_user_school_ids(request.user)
         try:
-            audit = AuditRequest.objects.get(pk=pk, status='pending')
+            audit = AuditRequest.objects.get(
+                pk=pk,
+                status='pending',
+                school_id__in=school_ids,
+            )
         except AuditRequest.DoesNotExist:
             return Response(
                 {'detail': 'Audit request not found or already reviewed'},

@@ -139,14 +139,21 @@ export default function PendingRequests() {
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState(null)
     const [message, setMessage] = useState(null)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [totalCount, setTotalCount] = useState(0)
 
     const fetchRequests = useCallback(() => {
         setLoading(true)
-        api.get('/audit/')
-            .then(res => setRequests(res.data?.results ?? res.data))
+        api.get('/audit/', { params: { page: currentPage, page_size: 25 } })
+            .then(res => {
+                setRequests(res.data?.results ?? res.data)
+                setTotalPages(res.data?.total_pages ?? 1)
+                setTotalCount(res.data?.count ?? (res.data?.results ?? res.data).length)
+            })
             .catch(() => { })
             .finally(() => setLoading(false))
-    }, [])
+    }, [currentPage])
 
     useEffect(() => { fetchRequests() }, [fetchRequests])
 
@@ -230,7 +237,7 @@ export default function PendingRequests() {
             ) : (
                 <div className="space-y-4">
                     <p className="text-sm text-gray-500">
-                        {requests.length} pending request{requests.length !== 1 ? 's' : ''}
+                        {totalCount} pending request{totalCount !== 1 ? 's' : ''}
                     </p>
                     {requests.map(req => (
                         <AuditCard
@@ -241,6 +248,31 @@ export default function PendingRequests() {
                             loading={actionLoading}
                         />
                     ))}
+
+                    {/* Pagination controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 pt-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200
+                                           disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                            >
+                                Previous
+                            </button>
+                            <span className="text-xs text-gray-500">
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200
+                                           disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
