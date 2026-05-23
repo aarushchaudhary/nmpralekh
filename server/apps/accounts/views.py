@@ -52,23 +52,24 @@ class LoginView(APIView):
         refresh  = RefreshToken.for_user(user)
         response = Response({'user': UserSerializer(user).data})
 
-        is_secure = not settings.DEBUG
-
+        # SameSite=None cookies MUST have Secure=True per browser spec.
+        # Browsers silently drop SameSite=None cookies that lack the Secure flag,
+        # causing instant logout. The Vite dev server runs HTTPS so this is safe.
         response.set_cookie(
             'access_token',
             str(refresh.access_token),
             max_age  = 60 * 30,
             httponly = True,
-            secure   = is_secure,
-            samesite = 'None', # cross-origin: browser blocks 'Lax' cookies on separate domains
+            secure   = True,
+            samesite = 'None',
         )
         response.set_cookie(
             'refresh_token',
             str(refresh),
             max_age  = 60 * 60 * 24 * 7,
             httponly = True,
-            secure   = is_secure,
-            samesite = 'None', # cross-origin: browser blocks 'Lax' cookies on separate domains
+            secure   = True,
+            samesite = 'None',
         )
         return response
 
@@ -109,15 +110,14 @@ class RefreshTokenView(APIView):
             refresh  = RefreshToken(refresh_token)
             response = Response({'detail': 'Token refreshed'})
 
-            is_secure = not settings.DEBUG
-
+            # SameSite=None requires Secure=True — see LoginView for explanation.
             response.set_cookie(
                 'access_token',
                 str(refresh.access_token),
                 max_age  = 60 * 30,
                 httponly = True,
-                secure   = is_secure,
-                samesite = 'None', # cross-origin: browser blocks 'Lax' cookies on separate domains
+                secure   = True,
+                samesite = 'None',
             )
             return response
         except Exception:
