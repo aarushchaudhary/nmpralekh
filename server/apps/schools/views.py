@@ -51,7 +51,7 @@ class CampusSchoolsView(generics.ListAPIView):
     pagination_class   = StandardPagination
 
     def get_queryset(self):
-        return School.objects.filter(campus_id=self.kwargs['pk'], is_active=True)
+        return School.objects.filter(campus_id=self.kwargs['pk'], is_active=True).select_related('campus')
 
 
 class CampusUsersView(generics.ListAPIView):
@@ -65,7 +65,7 @@ class CampusUsersView(generics.ListAPIView):
 
     def get_queryset(self):
         from apps.accounts.models import User
-        return User.objects.filter(campus_id=self.kwargs['pk'], is_active=True)
+        return User.objects.filter(campus_id=self.kwargs['pk'], is_active=True).select_related('campus')
 
 
 class SchoolListCreateView(generics.ListCreateAPIView):
@@ -161,4 +161,4 @@ class SchoolFacultyView(generics.ListAPIView):
             id__in=faculty_ids,
             role='user',
             is_active=True
-        )
+        ).select_related('campus')

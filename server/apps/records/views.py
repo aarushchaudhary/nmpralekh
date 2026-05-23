@@ -125,7 +125,7 @@ class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         school_ids = get_user_school_ids(self.request.user)
-        return Club.objects.filter(school_id__in=school_ids)
+        return Club.objects.filter(school_id__in=school_ids).select_related('school', 'created_by')
 
 
 # ─────────────────────────────────────────────

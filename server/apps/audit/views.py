@@ -24,7 +24,10 @@ class AuditRequestListView(generics.ListAPIView):
         qs = AuditRequest.objects.filter(status='pending')
         # Only scope if user is not a superadmin (or decide if superadmin sees all)
         # get_user_school_ids correctly returns all if superadmin, so we just filter
-        return qs.filter(school_id__in=school_ids).select_related('requested_by', 'reviewed_by')
+        return qs.filter(school_id__in=school_ids).select_related(
+            'requested_by__campus',
+            'reviewed_by__campus',
+        )
 
 
 class AuditRequestDetailView(generics.RetrieveAPIView):
@@ -33,7 +36,10 @@ class AuditRequestDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         school_ids = get_user_school_ids(self.request.user)
-        return AuditRequest.objects.filter(school_id__in=school_ids)
+        return AuditRequest.objects.filter(school_id__in=school_ids).select_related(
+            'requested_by__campus',
+            'reviewed_by__campus',
+        )
 
 
 class AuditApproveView(APIView):
@@ -188,4 +194,7 @@ class AuditHistoryView(generics.ListAPIView):
             school_id__in=school_ids
         ).exclude(
             status='pending'
-        ).select_related('requested_by', 'reviewed_by').order_by('-reviewed_at')
+        ).select_related(
+            'requested_by__campus',
+            'reviewed_by__campus',
+        ).order_by('-reviewed_at')

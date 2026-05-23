@@ -1,3 +1,4 @@
+import logging
 import os
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -5,6 +6,8 @@ from openpyxl.cell import WriteOnlyCell
 from datetime import date, datetime
 from celery import shared_task, group
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 EXPORT_DIR = os.path.join(settings.BASE_DIR, 'exports')
 
@@ -141,7 +144,11 @@ def build_campus_workbook(school_ids):
             try:
                 ws.append(row_fn(record))
                 count += 1
-            except Exception:
+            except Exception as e:
+                logger.warning(
+                    f"Skipped record id={record.id} "
+                    f"in sheet '{sheet_title}' during export: {e}"
+                )
                 continue
         total_records += count
 
