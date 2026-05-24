@@ -75,6 +75,13 @@ class UserSchoolMappingCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'This user is already assigned to this school'
             )
+        # verify user and school belong to the same campus
+        if (data['user'].campus_id and
+                data['school'].campus_id and
+                data['user'].campus_id != data['school'].campus_id):
+            raise serializers.ValidationError(
+                'User and school must belong to the same campus'
+            )
         return data
 
     def create(self, validated_data):

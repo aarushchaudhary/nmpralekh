@@ -12,6 +12,7 @@ from django_ratelimit.decorators import ratelimit
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 
 from apps.accounts.permissions import IsAdminOrUserOrSuperAdmin
@@ -670,11 +671,6 @@ class CoordinatorExportView(APIView):
     Protected: IsMISCoordinator only
     """
     permission_classes = [IsMISCoordinator]
-
-    def perform_content_negotiation(self, request, force=False):
-        # Ignore DRF's format override so 'format=excel' doesn't cause 404
-        from rest_framework.renderers import JSONRenderer
-        return (JSONRenderer(), JSONRenderer.media_type)
 
     # Heaviest endpoint — cap at 5 exports per minute per user
     @method_decorator(ratelimit(key='user', rate='5/m', method='GET', block=True))

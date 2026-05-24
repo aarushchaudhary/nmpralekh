@@ -175,7 +175,10 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '60/minute',
         'user': '300/minute',
-    }
+    },
+    # Disable DRF's ?format= suffix routing — the 'format' param is used
+    # as a plain query param in CoordinatorExportView (excel vs json).
+    'URL_FORMAT_OVERRIDE': None,
 }
 
 

@@ -81,9 +81,9 @@ class SchoolListCreateView(generics.ListCreateAPIView):
 
         # master sees ALL schools (including deactivated — so they can reactivate)
         if user.role == 'master':
-            return School.objects.all().order_by('name')
+            return School.objects.all().select_related('campus').order_by('name')
 
-        qs = School.objects.filter(is_active=True).order_by('name')
+        qs = School.objects.filter(is_active=True).select_related('campus').order_by('name')
 
         # super_admin sees only their campus schools
         if user.role == 'super_admin':
@@ -96,7 +96,7 @@ class SchoolListCreateView(generics.ListCreateAPIView):
 
 class SchoolDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsMaster]
-    queryset = School.objects.all()
+    queryset = School.objects.all().select_related('campus')
 
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
@@ -112,6 +112,7 @@ class SchoolDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class UserSchoolMappingListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsMaster]
+    pagination_class   = StandardPagination
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -120,7 +121,9 @@ class UserSchoolMappingListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return UserSchoolMapping.objects.select_related(
-            'user', 'school', 'assigned_by'
+            'user__campus',    # UserSerializer accesses user.campus.name
+            'school__campus',  # SchoolSerializer accesses school.campus.name
+            'assigned_by',
         ).order_by('-assigned_at')
 
 
@@ -140,7 +143,7 @@ class MySchoolsView(generics.ListAPIView):
     def get_queryset(self):
         user       = self.request.user
         school_ids = get_user_school_ids(user)
-        return School.objects.filter(id__in=school_ids, is_active=True)
+        return School.objects.filter(id__in=school_ids, is_active=True).select_related('campus')
 
 
 class SchoolFacultyView(generics.ListAPIView):
