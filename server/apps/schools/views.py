@@ -1,3 +1,4 @@
+from django.db.models import Count, Q
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -25,7 +26,18 @@ class CampusListCreateView(generics.ListCreateAPIView):
         return CampusSerializer
 
     def get_queryset(self):
-        return Campus.objects.all().order_by('name')
+        return Campus.objects.annotate(
+            school_count=Count(
+                'schools',
+                filter=Q(schools__is_active=True),
+                distinct=True
+            ),
+            user_count=Count(
+                'users',
+                filter=Q(users__is_active=True),
+                distinct=True
+            ),
+        ).order_by('name')
 
 
 class CampusDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -129,8 +141,12 @@ class UserSchoolMappingListCreateView(generics.ListCreateAPIView):
 
 class UserSchoolMappingDetailView(generics.RetrieveDestroyAPIView):
     permission_classes = [IsMaster]
-    queryset = UserSchoolMapping.objects.all()
-    serializer_class = UserSchoolMappingSerializer
+    queryset           = UserSchoolMapping.objects.all().select_related(
+                             'user__campus',
+                             'school__campus',
+                             'assigned_by',
+                         )
+    serializer_class   = UserSchoolMappingSerializer
 
 
 class MySchoolsView(generics.ListAPIView):

@@ -73,7 +73,7 @@ class SchoolScopedMixin:
         return model.objects.filter(
             school_id__in=school_ids,
             is_deleted=False
-        )
+        ).select_related('school', 'created_by')
 
 
 class InvalidateDashboardCacheMixin:

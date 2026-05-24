@@ -4,8 +4,8 @@ from apps.accounts.serializers import UserSerializer
 
 
 class CampusSerializer(serializers.ModelSerializer):
-    school_count = serializers.SerializerMethodField()
-    user_count   = serializers.SerializerMethodField()
+    school_count = serializers.IntegerField(read_only=True)
+    user_count   = serializers.IntegerField(read_only=True)
 
     class Meta:
         model  = Campus
@@ -14,12 +14,6 @@ class CampusSerializer(serializers.ModelSerializer):
             'is_active', 'created_at',
             'school_count', 'user_count'
         ]
-
-    def get_school_count(self, obj):
-        return obj.schools.filter(is_active=True).count()
-
-    def get_user_count(self, obj):
-        return obj.users.filter(is_active=True).count()
 
 
 class CampusCreateSerializer(serializers.ModelSerializer):
