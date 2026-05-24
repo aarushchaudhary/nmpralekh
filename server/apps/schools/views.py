@@ -42,12 +42,25 @@ class CampusListCreateView(generics.ListCreateAPIView):
 
 class CampusDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsMaster]
-    queryset           = Campus.objects.all()
 
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
             return CampusCreateSerializer
         return CampusSerializer
+
+    def get_queryset(self):
+        return Campus.objects.annotate(
+            school_count=Count(
+                'schools',
+                filter=Q(schools__is_active=True),
+                distinct=True
+            ),
+            user_count=Count(
+                'users',
+                filter=Q(users__is_active=True),
+                distinct=True
+            ),
+        )
 
     def destroy(self, request, *args, **kwargs):
         campus           = self.get_object()

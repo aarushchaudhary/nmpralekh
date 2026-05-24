@@ -256,7 +256,13 @@ def generate_manual_export(campus_id, school_ids,
 
     file_size_kb = os.path.getsize(filepath) // 1024
 
-    user = User.objects.get(pk=user_id) if user_id else None
+    user = None
+    if user_id:
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            pass  # user deactivated between trigger and task execution
+                  # export still proceeds, generated_by will be null
 
     export = GeneratedExport.objects.create(
         campus          = campus,

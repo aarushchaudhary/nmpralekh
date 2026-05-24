@@ -1,16 +1,18 @@
+import os
 from locust import HttpUser, task, between, tag
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Replace these with real tokens captured from your browser cookies
+# Set tokens via environment variables — never paste real tokens into source.
+# e.g. export LOCUST_TOKEN_MASTER="eyJ..."
 TOKENS = {
-    "master": "MASTER_JWT_TOKEN",
-    "super_admin": "SUPER_ADMIN_JWT_TOKEN",
-    "admin": "ADMIN_JWT_TOKEN",
-    "faculty": "FACULTY_JWT_TOKEN",
-    "delete_auth": "DELETE_AUTH_JWT_TOKEN",
-    "mis_coordinator": "MIS_COORDINATOR_JWT_TOKEN"
+    "master":          os.environ.get("LOCUST_TOKEN_MASTER", ""),
+    "super_admin":     os.environ.get("LOCUST_TOKEN_SUPER_ADMIN", ""),
+    "admin":           os.environ.get("LOCUST_TOKEN_ADMIN", ""),
+    "faculty":         os.environ.get("LOCUST_TOKEN_FACULTY", ""),
+    "delete_auth":     os.environ.get("LOCUST_TOKEN_DELETE_AUTH", ""),
+    "mis_coordinator": os.environ.get("LOCUST_TOKEN_MIS_COORDINATOR", ""),
 }
 
 class BaseMISUser(HttpUser):
