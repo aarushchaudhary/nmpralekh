@@ -111,7 +111,16 @@ class AuditApproveView(APIView):
                     allowed = ALLOWED_FIELDS.get(audit.table_name, [])
                     for field in allowed:
                         if field in new_data:
-                            setattr(record, field, new_data[field])
+                            value = new_data[field]
+                            try:
+                                model_field = Model._meta.get_field(field)
+                                if model_field.is_relation and model_field.many_to_one:
+                                    # FK field — set via _id to avoid descriptor ValueError
+                                    setattr(record, f'{field}_id', value)
+                                else:
+                                    setattr(record, field, value)
+                            except Exception:
+                                setattr(record, field, value)
 
                     record.pending_audit = None
                     record.save()

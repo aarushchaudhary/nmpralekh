@@ -399,7 +399,8 @@ class ExportHistoryView(generics.ListAPIView):
         qs        = GeneratedExport.objects.select_related('campus', 'generated_by')
         campus_id = self.request.query_params.get('campus_id')
         if campus_id:
-            qs = qs.filter(campus_id=campus_id)
+            if str(campus_id).isdigit():
+                qs = qs.filter(campus_id=campus_id)
         return qs
 
 

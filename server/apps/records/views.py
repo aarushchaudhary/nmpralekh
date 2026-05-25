@@ -104,6 +104,8 @@ class ClubListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
         # optional query params for filtering
         school = self.request.query_params.get('school')
         if school:
+            if not str(school).isdigit():
+                return Club.objects.none()
             qs = qs.filter(school_id=school)
         club_type = self.request.query_params.get('type')
         if club_type:
