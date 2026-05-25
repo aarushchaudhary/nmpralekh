@@ -262,21 +262,43 @@ class PublicationAuthorListCreateView(generics.ListCreateAPIView):
     serializer_class   = PublicationAuthorSerializer
     permission_classes = [IsAdminOrUser]
 
-    def get_queryset(self):
+    def get_publication(self):
+        from rest_framework.exceptions import NotFound
+        school_ids     = get_user_school_ids(self.request.user)
         publication_id = self.kwargs['publication_id']
-        return PublicationAuthor.objects.filter(
-            publication_id=publication_id
-        )
+        try:
+            return FacultyPublication.objects.get(
+                pk=publication_id,
+                school_id__in=school_ids,
+                is_deleted=False
+            )
+        except FacultyPublication.DoesNotExist:
+            raise NotFound('Publication not found')
+
+    def get_queryset(self):
+        pub = self.get_publication()
+        return PublicationAuthor.objects.filter(publication=pub)
 
     def perform_create(self, serializer):
-        publication_id = self.kwargs['publication_id']
-        serializer.save(publication_id=publication_id)
+        pub = self.get_publication()
+        serializer.save(publication=pub)
 
 
 class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PublicationAuthorSerializer
     permission_classes = [IsAdminOrUser]
-    queryset           = PublicationAuthor.objects.all()
+
+    def get_queryset(self):
+        school_ids     = get_user_school_ids(self.request.user)
+        publication_id = self.kwargs['publication_id']
+        valid_pub_ids  = FacultyPublication.objects.filter(
+            school_id__in=school_ids,
+            is_deleted=False
+        ).values_list('id', flat=True)
+        return PublicationAuthor.objects.filter(
+            publication_id__in=valid_pub_ids,
+            publication_id=publication_id
+        )
 
 
 class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
@@ -333,19 +355,43 @@ class PatentApplicantListCreateView(generics.ListCreateAPIView):
     serializer_class   = PatentApplicantSerializer
     permission_classes = [IsAdminOrUser]
 
+    def get_patent(self):
+        from rest_framework.exceptions import NotFound
+        school_ids = get_user_school_ids(self.request.user)
+        patent_id  = self.kwargs['patent_id']
+        try:
+            return Patent.objects.get(
+                pk=patent_id,
+                school_id__in=school_ids,
+                is_deleted=False
+            )
+        except Patent.DoesNotExist:
+            raise NotFound('Patent not found')
+
     def get_queryset(self):
-        patent_id = self.kwargs['patent_id']
-        return PatentApplicant.objects.filter(patent_id=patent_id)
+        patent = self.get_patent()
+        return PatentApplicant.objects.filter(patent=patent)
 
     def perform_create(self, serializer):
-        patent_id = self.kwargs['patent_id']
-        serializer.save(patent_id=patent_id)
+        patent = self.get_patent()
+        serializer.save(patent=patent)
 
 
 class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PatentApplicantSerializer
     permission_classes = [IsAdminOrUser]
-    queryset           = PatentApplicant.objects.all()
+
+    def get_queryset(self):
+        school_ids = get_user_school_ids(self.request.user)
+        patent_id  = self.kwargs['patent_id']
+        valid_patent_ids = Patent.objects.filter(
+            school_id__in=school_ids,
+            is_deleted=False
+        ).values_list('id', flat=True)
+        return PatentApplicant.objects.filter(
+            patent_id__in=valid_patent_ids,
+            patent_id=patent_id
+        )
 
 
 class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
@@ -507,13 +553,19 @@ from .tasks import perform_db_backup
 class BackupConfigurationView(APIView):
     permission_classes = [IsMaster]
 
+    def _get_or_create_config(self):
+        config = BackupConfiguration.objects.first()
+        if not config:
+            config = BackupConfiguration.objects.create()
+        return config
+
     def get(self, request):
-        config, created = BackupConfiguration.objects.get_or_create(id=1)
+        config     = self._get_or_create_config()
         serializer = BackupConfigurationSerializer(config)
         return Response(serializer.data)
 
     def put(self, request):
-        config, created = BackupConfiguration.objects.get_or_create(id=1)
+        config     = self._get_or_create_config()
         serializer = BackupConfigurationSerializer(config, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save(updated_by=request.user)

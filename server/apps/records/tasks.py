@@ -15,6 +15,17 @@ def perform_db_backup(scope=None, date_from=None, date_to=None):
     scope: 'full' or 'date_range'
     date_from / date_to: used when scope='date_range' (YYYY-MM-DD strings)
     """
+    import re
+    date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+
+    # Guard against invalid inputs when called directly (bypassing the view)
+    if scope is not None and scope not in ('full', 'date_range'):
+        return f"Invalid scope: {scope}"
+    if date_from and not date_pattern.match(str(date_from)):
+        return f"Invalid date_from: {date_from}"
+    if date_to and not date_pattern.match(str(date_to)):
+        return f"Invalid date_to: {date_to}"
+
     config = BackupConfiguration.objects.first()
 
     # For automated runs, check if active
