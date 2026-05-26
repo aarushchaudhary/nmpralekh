@@ -269,11 +269,15 @@ class PublicationAuthorListCreateView(generics.ListCreateAPIView):
         school_ids     = get_user_school_ids(self.request.user)
         publication_id = self.kwargs['publication_id']
         try:
-            return FacultyPublication.objects.get(
+            qs = FacultyPublication.objects.filter(
                 pk=publication_id,
                 school_id__in=school_ids,
                 is_deleted=False
             )
+            # faculty can only manage authors on their own publications
+            if self.request.user.role == 'user':
+                qs = qs.filter(created_by=self.request.user)
+            return qs.get()
         except FacultyPublication.DoesNotExist:
             raise NotFound('Publication not found')
 
@@ -296,7 +300,11 @@ class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
         valid_pub_ids  = FacultyPublication.objects.filter(
             school_id__in=school_ids,
             is_deleted=False
-        ).values_list('id', flat=True)
+        )
+        # faculty can only manage authors on their own publications
+        if self.request.user.role == 'user':
+            valid_pub_ids = valid_pub_ids.filter(created_by=self.request.user)
+        valid_pub_ids = valid_pub_ids.values_list('id', flat=True)
         return PublicationAuthor.objects.filter(
             publication_id__in=valid_pub_ids,
             publication_id=publication_id
@@ -362,11 +370,15 @@ class PatentApplicantListCreateView(generics.ListCreateAPIView):
         school_ids = get_user_school_ids(self.request.user)
         patent_id  = self.kwargs['patent_id']
         try:
-            return Patent.objects.get(
+            qs = Patent.objects.filter(
                 pk=patent_id,
                 school_id__in=school_ids,
                 is_deleted=False
             )
+            # faculty can only manage applicants on their own patents
+            if self.request.user.role == 'user':
+                qs = qs.filter(created_by=self.request.user)
+            return qs.get()
         except Patent.DoesNotExist:
             raise NotFound('Patent not found')
 
@@ -389,7 +401,11 @@ class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
         valid_patent_ids = Patent.objects.filter(
             school_id__in=school_ids,
             is_deleted=False
-        ).values_list('id', flat=True)
+        )
+        # faculty can only manage applicants on their own patents
+        if self.request.user.role == 'user':
+            valid_patent_ids = valid_patent_ids.filter(created_by=self.request.user)
+        valid_patent_ids = valid_patent_ids.values_list('id', flat=True)
         return PatentApplicant.objects.filter(
             patent_id__in=valid_patent_ids,
             patent_id=patent_id
