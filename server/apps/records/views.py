@@ -339,7 +339,10 @@ class PublicationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPI
     permission_classes = [IsAdminOrUser]
 
     def get_queryset(self):
-        return self.get_base_queryset(FacultyPublication)
+        qs = self.get_base_queryset(FacultyPublication)
+        if self.request.user.role == 'user':
+            qs = qs.filter(created_by=self.request.user)
+        return qs
 
     def update(self, request, *args, **kwargs):
         record = self.get_object()
@@ -440,7 +443,10 @@ class PatentDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView)
     permission_classes = [IsAdminOrUser]
 
     def get_queryset(self):
-        return self.get_base_queryset(Patent)
+        qs = self.get_base_queryset(Patent)
+        if self.request.user.role == 'user':
+            qs = qs.filter(created_by=self.request.user)
+        return qs
 
     def update(self, request, *args, **kwargs):
         record = self.get_object()
@@ -488,7 +494,10 @@ class CertificationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyA
     permission_classes = [IsAdminOrUser]
 
     def get_queryset(self):
-        return self.get_base_queryset(Certification)
+        qs = self.get_base_queryset(Certification)
+        if self.request.user.role == 'user':
+            qs = qs.filter(created_by=self.request.user)
+        return qs
 
     def update(self, request, *args, **kwargs):
         record = self.get_object()
