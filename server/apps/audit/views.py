@@ -131,15 +131,18 @@ class AuditApproveView(APIView):
                 audit.reviewed_at = timezone.now()
                 audit.save()
 
-                # Invalidate the dashboard cache for this school
-                if hasattr(record, 'school_id'):
-                    invalidate_dashboard_cache([record.school_id])
-
         except Exception as e:
             return Response(
                 {'detail': f'Approval failed: {str(e)}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # outside transaction — best effort, Redis failure is non-critical
+        try:
+            if hasattr(record, 'school_id'):
+                invalidate_dashboard_cache([record.school_id])
+        except Exception:
+            pass
 
         return Response({'detail': 'Request approved and changes applied'})
 
