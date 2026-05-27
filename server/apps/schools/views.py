@@ -165,14 +165,17 @@ class UserSchoolMappingDetailView(generics.RetrieveDestroyAPIView):
 class MySchoolsView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class   = SchoolSerializer
-    # No pagination_class — users have at most a handful of schools.
-    # Pagination wraps the response in {count, results, ...} which breaks
-    # every consumer that calls schools.map() directly.
+    pagination_class   = None  # must be explicitly None — DEFAULT_PAGINATION_CLASS in settings
+                               # applies to any view that doesn't override this attribute.
+                               # useSchools.js calls res.data.map() directly, so the response
+                               # must be a plain array, not {count, results, ...}.
 
     def get_queryset(self):
         user       = self.request.user
         school_ids = get_user_school_ids(user)
-        return School.objects.filter(id__in=school_ids, is_active=True).select_related('campus')
+        return School.objects.filter(
+            id__in=school_ids, is_active=True
+        ).select_related('campus')
 
 
 class SchoolFacultyView(generics.ListAPIView):
