@@ -28,11 +28,20 @@ def _append_styled_headers(ws, headers):
     ws.append(styled_row)
 
 
-def build_campus_workbook(school_ids):
+def build_campus_workbook(school_ids, date_from=None, date_to=None):
     """
     Builds a streaming write-only workbook for the given school IDs.
     Uses write_only=True so openpyxl never holds the full DOM in RAM,
     and .iterator() so Django streams DB rows one-by-one.
+
+    Args:
+        school_ids: list of school PKs to include.
+        date_from:  optional lower bound (inclusive) applied to each sheet's
+                    primary date field.  Passed as a date/str understood by
+                    Django's ORM (``gte`` lookup).
+        date_to:    optional upper bound (inclusive) applied to each sheet's
+                    primary date field.  Passed as a date/str understood by
+                    Django's ORM (``lte`` lookup).
     """
     from apps.records.models import (
         SchoolActivity, StudentActivity,
@@ -45,11 +54,21 @@ def build_campus_workbook(school_ids):
     wb = openpyxl.Workbook(write_only=True)
     total_records = 0
 
+    # Build reusable date-range filter kwargs for each date-field name.
+    def _date_filters(field):
+        kwargs = {}
+        if date_from:
+            kwargs[f'{field}__gte'] = date_from
+        if date_to:
+            kwargs[f'{field}__lte'] = date_to
+        return kwargs
+
     sheets = [
         (
             'School Activities',
             SchoolActivity.objects.filter(
-                school_id__in=school_ids, is_deleted=False
+                school_id__in=school_ids, is_deleted=False,
+                **_date_filters('date')
             ).select_related('school'),
             ['School', 'Name', 'Date', 'Details', 'School Wide'],
             lambda r: [
@@ -60,7 +79,8 @@ def build_campus_workbook(school_ids):
         (
             'Student Activities',
             StudentActivity.objects.filter(
-                school_id__in=school_ids, is_deleted=False
+                school_id__in=school_ids, is_deleted=False,
+                **_date_filters('date')
             ).select_related('school'),
             ['School', 'Name', 'Date', 'Details', 'Conducted By', 'Type'],
             lambda r: [
@@ -72,7 +92,8 @@ def build_campus_workbook(school_ids):
         (
             'FDP Workshop GL',
             FacultyFDPWorkshopGL.objects.filter(
-                school_id__in=school_ids, is_deleted=False
+                school_id__in=school_ids, is_deleted=False,
+                **_date_filters('date_start')  # FDP uses date_start as primary date
             ).select_related('school'),
             ['School', 'Faculty', 'Name', 'Type',
              'Date Start', 'Date End', 'Organizing Body'],
@@ -86,7 +107,8 @@ def build_campus_workbook(school_ids):
         (
             'Publications',
             FacultyPublication.objects.filter(
-                school_id__in=school_ids, is_deleted=False
+                school_id__in=school_ids, is_deleted=False,
+                **_date_filters('date')
             ).select_related('school'),
             ['School', 'Author', 'Title', 'Journal',
              'Date', 'Venue', 'Publication'],
@@ -99,7 +121,8 @@ def build_campus_workbook(school_ids):
         (
             'Patents',
             Patent.objects.filter(
-                school_id__in=school_ids, is_deleted=False
+                school_id__in=school_ids, is_deleted=False,
+                **_date_filters('date_of_publication')  # Patent uses date_of_publication
             ).select_related('school'),
             ['School', 'Applicant', 'Title', 'Date',
              'Journal No', 'Status'],
@@ -112,7 +135,8 @@ def build_campus_workbook(school_ids):
         (
             'Certifications',
             Certification.objects.filter(
-                school_id__in=school_ids, is_deleted=False
+                school_id__in=school_ids, is_deleted=False,
+                **_date_filters('date')
             ).select_related('school'),
             ['School', 'Name', 'Course', 'Agency', 'Date', 'Link'],
             lambda r: [
@@ -124,7 +148,8 @@ def build_campus_workbook(school_ids):
         (
             'Placements',
             PlacementActivity.objects.filter(
-                school_id__in=school_ids, is_deleted=False
+                school_id__in=school_ids, is_deleted=False,
+                **_date_filters('date')
             ).select_related('school'),
             ['School', 'Name', 'Date', 'Details', 'Company'],
             lambda r: [
@@ -248,7 +273,11 @@ def generate_manual_export(campus_id, school_ids,
     today    = date.today().strftime('%Y-%m-%d')
     now      = datetime.now().strftime('%H%M%S')
 
-    wb, total_records = build_campus_workbook(school_ids)
+    wb, total_records = build_campus_workbook(
+        school_ids,
+        date_from=filters.get('date_from') or None,
+        date_to=filters.get('date_to')   or None,
+    )
 
     filename = f'{campus.code}_Manual_Export_{today}_{now}.xlsx'
     filepath = os.path.join(EXPORT_DIR, filename)
