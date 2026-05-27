@@ -30,6 +30,18 @@ def create_audit_request(user, table_name, record, action, new_data=None):
     Helper — snapshots old data and creates a pending audit request.
     Called on every UPDATE and DELETE instead of saving directly.
     """
+    # Prevent double submission — the UI enforces this via hidden Edit/Delete
+    # buttons, but a direct API call can bypass it. Without this guard a second
+    # AuditRequest is created, record.pending_audit is overwritten to point at
+    # the new one, and the first (now orphaned) request is still visible to
+    # reviewers; approving it would apply stale old_data back to the record.
+    if record.pending_audit_id is not None:
+        from rest_framework.exceptions import ValidationError
+        raise ValidationError(
+            'A change request is already pending for this record. '
+            'Please wait for it to be reviewed before submitting another.'
+        )
+
     # serialize current record to JSON for snapshot
     old_data = {}
     for field in record._meta.fields:
