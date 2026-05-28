@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'sslserver',
+    'drf_spectacular',
 
     # Local
     'apps.accounts',
@@ -182,6 +183,7 @@ REST_FRAMEWORK = {
     # Disable DRF's ?format= suffix routing — the 'format' param is used
     # as a plain query param in CoordinatorExportView (excel vs json).
     'URL_FORMAT_OVERRIDE': None,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 
@@ -235,6 +237,23 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # DEFAULT PRIMARY KEY
 # -----------------------------------------------------------------------------
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# -----------------------------------------------------------------------------
+# DEFAULT PRIMARY KEY
+# -----------------------------------------------------------------------------
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# -----------------------------------------------------------------------------
+# SPECTACULAR SETTINGS
+# -----------------------------------------------------------------------------
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'NMPralekh API',
+    'DESCRIPTION': 'API documentation for the NMPralekh MIS Dashboard Portal.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # This automatically documents your SimpleJWT token authentication
+    'SECURITY': [{'jwtAuth': []}],
+}
 
 # -----------------------------------------------------------------------------
 # CELERY
