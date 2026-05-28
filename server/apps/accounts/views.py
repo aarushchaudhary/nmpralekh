@@ -121,6 +121,11 @@ class RefreshTokenView(APIView):
             old_refresh.blacklist()
             user_id = old_refresh.payload.get('user_id')
             user    = User.objects.get(pk=user_id)
+            if not user.is_active:
+                return Response(
+                    {'detail': 'Account has been deactivated'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
             new_refresh = RefreshToken.for_user(user)
 
             response = Response({'detail': 'Token refreshed'})
