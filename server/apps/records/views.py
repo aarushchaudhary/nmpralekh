@@ -595,6 +595,8 @@ class DashboardCountsView(APIView):
 # ─────────────────────────────────────────────
 # DATABASE BACKUP
 # ─────────────────────────────────────────────
+import json
+from django_celery_beat.models import CrontabSchedule, PeriodicTask
 from apps.accounts.permissions import IsMaster
 from .models import BackupConfiguration
 from .serializers import BackupConfigurationSerializer
@@ -620,9 +622,52 @@ class BackupConfigurationView(APIView):
         serializer = BackupConfigurationSerializer(config, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save(updated_by=request.user)
-            # Logic to dynamically update django-celery-beat schedule goes here
+            self._update_beat_schedule(serializer.instance)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def _update_beat_schedule(self, config):
+        """Sync the BackupConfiguration fields to a django-celery-beat
+        PeriodicTask so Celery Beat picks up the schedule immediately."""
+        TASK_NAME = 'automated-database-backup'
+        TASK_PATH = 'apps.records.tasks.perform_db_backup'
+
+        if not config.is_active:
+            # Disable without deleting so the schedule survives a re-enable.
+            PeriodicTask.objects.filter(name=TASK_NAME).update(enabled=False)
+            return
+
+        if config.schedule_type == 'weekly':
+            # Model stores 0=Monday; Celery crontab uses 0=Sunday.
+            # Shift right by 1 with wrap-around: Monday(0)->1, …, Sunday(6)->0
+            day_of_week = str((config.schedule_day + 1) % 7) if config.schedule_day is not None else '1'
+            schedule, _ = CrontabSchedule.objects.get_or_create(
+                minute='0',
+                hour='2',
+                day_of_week=day_of_week,
+                day_of_month='*',
+                month_of_year='*',
+            )
+        else:
+            # Monthly — run on the 1st of each month at 2 AM.
+            schedule, _ = CrontabSchedule.objects.get_or_create(
+                minute='0',
+                hour='2',
+                day_of_week='*',
+                day_of_month='1',
+                month_of_year='*',
+            )
+
+        PeriodicTask.objects.update_or_create(
+            name=TASK_NAME,
+            defaults={
+                'crontab':  schedule,
+                'task':     TASK_PATH,
+                'args':     json.dumps([]),
+                'kwargs':   json.dumps({'scope': config.backup_scope}),
+                'enabled':  True,
+            },
+        )
 
 
 from rest_framework.exceptions import ValidationError
