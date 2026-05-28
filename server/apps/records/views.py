@@ -29,20 +29,18 @@ def create_audit_request(user, table_name, record, action, new_data=None):
     """
     Helper — snapshots old data and creates a pending audit request.
     Called on every UPDATE and DELETE instead of saving directly.
-    """
-    # Prevent double submission — the UI enforces this via hidden Edit/Delete
-    # buttons, but a direct API call can bypass it. Without this guard a second
-    # AuditRequest is created, record.pending_audit is overwritten to point at
-    # the new one, and the first (now orphaned) request is still visible to
-    # reviewers; approving it would apply stale old_data back to the record.
-    if record.pending_audit_id is not None:
-        from rest_framework.exceptions import ValidationError
-        raise ValidationError(
-            'A change request is already pending for this record. '
-            'Please wait for it to be reviewed before submitting another.'
-        )
 
-    # serialize current record to JSON for snapshot
+    Race-condition note: the double-submission guard MUST run inside
+    transaction.atomic() after a select_for_update() re-fetch.  Checking
+    record.pending_audit_id on the already-fetched object (TOCTOU) lets two
+    concurrent requests both read None, both pass, and both create an
+    AuditRequest — orphaning the first one.  select_for_update() acquires a
+    DB-level row lock so the second request blocks until the first transaction
+    commits, then re-reads the now-populated pending_audit_id and raises.
+    """
+    # snapshot old data from the in-memory object before acquiring the lock
+    # (field values haven't changed yet, and we avoid holding the lock longer
+    # than necessary)
     old_data = {}
     for field in record._meta.fields:
         value = getattr(record, field.name)
@@ -53,20 +51,34 @@ def create_audit_request(user, table_name, record, action, new_data=None):
     safe_new_data = dict(new_data) if new_data else None
 
     with transaction.atomic():
+        # Re-fetch with a row-level lock.  A concurrent request that reaches
+        # this line will block until our transaction commits, then read the
+        # updated pending_audit_id and raise ValidationError below.
+        locked_record = type(record).objects.select_for_update().get(
+            pk=record.pk
+        )
+
+        if locked_record.pending_audit_id is not None:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                'A change request is already pending for this record. '
+                'Please wait for it to be reviewed before submitting another.'
+            )
+
         audit = AuditRequest.objects.create(
             table_name   = table_name,
-            record_id    = record.id,
+            record_id    = locked_record.id,
             action       = action,
             old_data     = old_data,
             new_data     = safe_new_data,
             requested_by = user,
-            school       = getattr(record, 'school', None),
+            school       = getattr(locked_record, 'school', None),
             status       = 'pending'
         )
 
         # mark the record as having a pending change
-        record.pending_audit = audit
-        record.save()
+        locked_record.pending_audit = audit
+        locked_record.save()
 
     return audit
 
