@@ -93,10 +93,13 @@ class LogoutView(APIView):
 
 
 class RefreshTokenView(APIView):
-    """Called automatically when access token expires"""
+    """Called automatically when access token expires. Rotates the refresh token
+    on every use: the old token is blacklisted and a fresh one is issued, so a
+    stolen refresh token can only be used once before becoming invalid.
+    """
     authentication_classes = []
-    permission_classes = []
-    throttle_classes   = []
+    permission_classes     = []
+    throttle_classes       = []
 
     @method_decorator(ratelimit(key='ip', rate='30/m', method='POST', block=True))
     def post(self, request):
@@ -107,14 +110,35 @@ class RefreshTokenView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
         try:
-            refresh  = RefreshToken(refresh_token)
+            old_refresh = RefreshToken(refresh_token)
+
+            # Generate new access token from the existing refresh token.
+            new_access = str(old_refresh.access_token)
+
+            # Rotate: blacklist the old refresh token, then issue a new one.
+            # This enforces ROTATE_REFRESH_TOKENS / BLACKLIST_AFTER_ROTATION
+            # which only apply automatically to simplejwt's built-in view.
+            old_refresh.blacklist()
+            user_id = old_refresh.payload.get('user_id')
+            user    = User.objects.get(pk=user_id)
+            new_refresh = RefreshToken.for_user(user)
+
             response = Response({'detail': 'Token refreshed'})
 
             # SameSite=None requires Secure=True — see LoginView for explanation.
             response.set_cookie(
                 'access_token',
-                str(refresh.access_token),
+                new_access,
                 max_age  = 60 * 30,
+                httponly = True,
+                secure   = True,
+                samesite = 'None',
+            )
+            # Replace the old refresh-token cookie with the newly rotated token.
+            response.set_cookie(
+                'refresh_token',
+                str(new_refresh),
+                max_age  = 60 * 60 * 24 * 7,
                 httponly = True,
                 secure   = True,
                 samesite = 'None',
