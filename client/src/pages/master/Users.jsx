@@ -32,7 +32,7 @@ const emptyForm = {
 }
 
 export default function Users() {
-    const { data, loading, create, update, remove , totalPages, currentPage, goToPage} = useRecords('/users/')
+    const { data, loading, create, update, remove , totalPages, currentPage, goToPage, fetch} = useRecords('/users/')
 
     const [campusOptions, setCampusOptions] = useState([])
 
@@ -82,6 +82,8 @@ export default function Users() {
         if (!form.role) e.role = 'Role is required'
         if (!isEdit && !form.username?.trim()) e.username = 'Username is required'
         if (!isEdit && !form.password?.trim()) e.password = 'Password is required'
+        if (!isEdit && form.password && form.password.length < 8)
+            e.password = 'Password must be at least 8 characters'
 
 
 
@@ -122,6 +124,16 @@ export default function Users() {
         }
     }
 
+    const handleReactivate = async (row) => {
+        setSaving(true)
+        try {
+            await api.patch(`/users/${row.id}/`, { is_active: true })
+            fetch()
+        } finally {
+            setSaving(false)
+        }
+    }
+
     const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
 
     const columns = [
@@ -154,10 +166,15 @@ export default function Users() {
                     <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
                         Edit
                     </Button>
-                    {row.is_active && (
+                    {row.is_active ? (
                         <Button size="sm" variant="danger"
                             onClick={() => { setSelected(row); setShowConfirm(true) }}>
                             Deactivate
+                        </Button>
+                    ) : (
+                        <Button size="sm" variant="success"
+                            onClick={() => handleReactivate(row)}>
+                            Reactivate
                         </Button>
                     )}
                 </div>

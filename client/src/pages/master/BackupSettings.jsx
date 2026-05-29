@@ -21,6 +21,7 @@ export default function BackupSettings() {
   const [triggering, setTriggering] = useState(false)
   const [message,    setMessage]    = useState(null)
   const [lastRun,    setLastRun]    = useState(null)
+  const [dateErrors, setDateErrors] = useState({})
 
   // Automated backup config
   const [autoConfig, setAutoConfig] = useState({
@@ -33,6 +34,17 @@ export default function BackupSettings() {
   const [manualScope, setManualScope] = useState('full')
   const [dateFrom,    setDateFrom]    = useState('')
   const [dateTo,      setDateTo]      = useState('')
+
+  const validateDates = () => {
+    if (manualScope !== 'date_range') return true
+    const e = {}
+    if (!dateFrom) e.dateFrom = 'Start date is required'
+    if (!dateTo)   e.dateTo   = 'End date is required'
+    if (dateFrom && dateTo && dateTo < dateFrom)
+      e.dateTo = 'End date cannot be before start date'
+    setDateErrors(e)
+    return !Object.keys(e).length
+  }
 
   const showMessage = (text, type = 'success') => {
     setMessage({ text, type })
@@ -67,6 +79,7 @@ export default function BackupSettings() {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault()
+    if (!validateDates()) return
     setSaving(true)
     try {
       await api.put('/records/backup-config/', {
@@ -86,6 +99,7 @@ export default function BackupSettings() {
   }
 
   const handleTriggerBackup = async () => {
+    if (!validateDates()) return
     setTriggering(true)
     try {
       await api.post('/records/backup-manual/', {
@@ -236,14 +250,16 @@ export default function BackupSettings() {
                     name="date_from"
                     type="date"
                     value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
+                    onChange={(e) => { setDateFrom(e.target.value); setDateErrors({}) }}
+                    error={dateErrors.dateFrom}
                   />
                   <FormInput
                     label="To"
                     name="date_to"
                     type="date"
                     value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
+                    onChange={(e) => { setDateTo(e.target.value); setDateErrors({}) }}
+                    error={dateErrors.dateTo}
                   />
                 </div>
               )}

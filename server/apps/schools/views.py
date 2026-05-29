@@ -69,6 +69,19 @@ class CampusDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response({'detail': 'Campus deactivated'})
 
 
+class CampusReactivateView(APIView):
+    permission_classes = [IsMaster]
+
+    def post(self, request, pk):
+        try:
+            campus = Campus.objects.get(pk=pk)
+        except Campus.DoesNotExist:
+            return Response({'detail': 'Campus not found'}, status=status.HTTP_404_NOT_FOUND)
+        campus.is_active = True
+        campus.save()
+        return Response({'detail': 'Campus reactivated'})
+
+
 class CampusSchoolsView(generics.ListAPIView):
     """All schools belonging to a specific campus"""
     permission_classes = [IsMaster]
@@ -133,6 +146,19 @@ class SchoolDetailView(generics.RetrieveUpdateDestroyAPIView):
         school.is_active = False
         school.save()
         return Response({'detail': 'School deactivated successfully'})
+
+
+class SchoolReactivateView(APIView):
+    permission_classes = [IsMaster]
+
+    def post(self, request, pk):
+        try:
+            school = School.objects.get(pk=pk)
+        except School.DoesNotExist:
+            return Response({'detail': 'School not found'}, status=status.HTTP_404_NOT_FOUND)
+        school.is_active = True
+        school.save()
+        return Response({'detail': 'School reactivated successfully'})
 
 
 class UserSchoolMappingListCreateView(generics.ListCreateAPIView):

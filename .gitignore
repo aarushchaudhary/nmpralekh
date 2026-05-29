@@ -56,3 +56,6 @@ server/exports/
 
 # Backups
 server/backups/
+
+# Gunicorn ctl
+server/gunicorn.ctl

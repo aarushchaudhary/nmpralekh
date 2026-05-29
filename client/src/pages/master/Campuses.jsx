@@ -64,6 +64,14 @@ export default function Campuses() {
     } finally { setSaving(false) }
   }
 
+  const handleReactivate = async (row) => {
+    setSaving(true)
+    try {
+      await api.post(`/schools/campuses/${row.id}/reactivate/`)
+      fetch()
+    } finally { setSaving(false) }
+  }
+
   const columns = [
     { key: 'name',  label: 'Campus Name',
       render: row => <span className="font-medium">{row.name}</span> },
@@ -83,10 +91,15 @@ export default function Campuses() {
           <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
             Edit
           </Button>
-          {row.is_active && (
+          {row.is_active ? (
             <Button size="sm" variant="danger"
               onClick={() => { setSelected(row); setShowConfirm(true) }}>
               Deactivate
+            </Button>
+          ) : (
+            <Button size="sm" variant="success"
+              onClick={() => handleReactivate(row)}>
+              Reactivate
             </Button>
           )}
         </div>

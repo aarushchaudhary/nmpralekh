@@ -64,6 +64,8 @@ export default function FDPPage({ readOnly = false }) {
         if (!form.school) e.school = 'School is required'
         if (!form.faculty_name) e.faculty_name = 'Faculty name is required'
         if (!form.date_start) e.date_start = 'Start date is required'
+        if (form.date_end && form.date_end < form.date_start)
+            e.date_end = 'End date cannot be before start date'
         if (!form.name) e.name = 'Name is required'
         if (!form.details) e.details = 'Details are required'
         if (!form.type) e.type = 'Type is required'
@@ -174,7 +176,7 @@ export default function FDPPage({ readOnly = false }) {
                     <FormInput label="Date Start" type="date" value={form.date_start}
                         onChange={set('date_start')} required error={errors.date_start} />
                     <FormInput label="Date End (optional)" type="date" value={form.date_end}
-                        onChange={set('date_end')} />
+                        onChange={set('date_end')} error={errors.date_end} />
                     <div className="md:col-span-2">
                         <FormInput label="Name / Title" value={form.name} onChange={set('name')}
                             placeholder="e.g. Python for Data Science" required error={errors.name} />

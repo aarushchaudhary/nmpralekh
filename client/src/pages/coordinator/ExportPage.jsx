@@ -7,10 +7,16 @@ export default function ExportPage() {
     const [dateFrom, setDateFrom] = useState('')
     const [dateTo, setDateTo]     = useState('')
     const [format, setFormat]     = useState('excel')
+    const [dateError, setDateError] = useState('')
 
     const { exportFile, exporting } = useCoordinatorExport()
 
     const handleExport = () => {
+        if (dateFrom && dateTo && dateTo < dateFrom) {
+            setDateError('End date cannot be before start date')
+            return
+        }
+        setDateError('')
         exportFile({
             date_from: dateFrom || undefined,
             date_to:   dateTo   || undefined,
@@ -72,6 +78,11 @@ export default function ExportPage() {
                                 />
                             </div>
                         </div>
+
+                        {/* Date range error */}
+                        {dateError && (
+                            <p className="text-xs text-red-500 -mt-2">{dateError}</p>
+                        )}
 
                         {/* Hint */}
                         <p className="text-xs text-gray-400">

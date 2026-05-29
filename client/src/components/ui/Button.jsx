@@ -2,6 +2,7 @@ const variants = {
     primary: 'bg-primary-600 hover:bg-primary-700 text-white',
     secondary: 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200',
     danger: 'bg-red-500 hover:bg-red-600 text-white',
+    success: 'bg-green-600 hover:bg-green-700 text-white',
     ghost: 'hover:bg-gray-100 text-gray-600',
 }
 

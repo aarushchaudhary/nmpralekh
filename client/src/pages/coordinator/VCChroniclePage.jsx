@@ -10,13 +10,20 @@ export default function VCChroniclePage() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
     const [summaryData, setSummaryData] = useState(null);
+    const [error, setError] = useState('');
 
     const sanitizeUrl = (url) => {
         return url.replace(/\/+$/, '');
     };
 
+    const validateUrl = (url) => {
+        try { new URL(url); return true } catch { return false }
+    };
+
     const handleCheckStatus = async () => {
-        if (!baseUrl) return;
+        if (!baseUrl) { setError('Please enter an API Base URL'); return; }
+        if (!validateUrl(baseUrl)) { setError('Please enter a valid URL (e.g. https://api.example.com)'); return; }
+        setError('');
         setServerStatus('loading');
         const sanitizedUrl = sanitizeUrl(baseUrl);
 
@@ -26,24 +33,25 @@ export default function VCChroniclePage() {
                 setServerStatus('online');
             } else {
                 setServerStatus('offline');
-                alert('Server returned an error status.');
+                setError('Server returned an error status.');
             }
         } catch (error) {
             setServerStatus('offline');
-            alert('Failed to connect to the server. Check CORS or network.');
+            setError('Failed to connect to the server. Check CORS or network.');
         }
     };
 
     const handleFileUpload = async () => {
         if (!selectedFile) {
-            alert('Please select a JSON file.');
+            setError('Please select a JSON file.');
             return;
         }
         if (!selectedFile.name.endsWith('.json')) {
-            alert('Only .json files are allowed.');
+            setError('Only .json files are allowed.');
             return;
         }
 
+        setError('');
         setIsUploading(true);
         const sanitizedUrl = sanitizeUrl(baseUrl);
         const formData = new FormData();
@@ -58,10 +66,10 @@ export default function VCChroniclePage() {
             if (response.ok) {
                 await fetchSummary();
             } else {
-                alert('Failed to upload file.');
+                setError('Failed to upload file.');
             }
         } catch (error) {
-            alert('Error uploading file. Check CORS or network.');
+            setError('Error uploading file. Check CORS or network.');
         } finally {
             setIsUploading(false);
         }
@@ -81,10 +89,10 @@ export default function VCChroniclePage() {
                     setSummaryData(data);
                 }
             } else {
-                alert('Failed to fetch summary.');
+                setError('Failed to fetch summary.');
             }
         } catch (error) {
-            alert('Error fetching summary. Check CORS or network.');
+            setError('Error fetching summary. Check CORS or network.');
         }
     };
 
@@ -107,11 +115,15 @@ export default function VCChroniclePage() {
                                 label="API Base URL"
                                 type="url"
                                 value={baseUrl}
-                                onChange={(e) => setBaseUrl(e.target.value)}
+                                onChange={(e) => { setBaseUrl(e.target.value); setError('') }}
                                 placeholder="https://api.example.com"
                                 required
+                                error={error && !selectedFile ? error : undefined}
                             />
                         </div>
+                        {error && (
+                            <p className="text-xs text-red-500">{error}</p>
+                        )}
                         <div className="flex items-center gap-4">
                             <Button
                                 onClick={handleCheckStatus}

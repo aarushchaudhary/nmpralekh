@@ -12,7 +12,7 @@ import api from '../../api/axios'
 const empty = { campus: '', name: '', code: '' }
 
 export default function Schools() {
-    const { data, loading, create, update, remove , totalPages, currentPage, goToPage} = useRecords('/schools/')
+    const { data, loading, create, update, remove , totalPages, currentPage, goToPage, fetch} = useRecords('/schools/')
 
     const [campusOptions, setCampusOptions] = useState([])
 
@@ -91,6 +91,16 @@ export default function Schools() {
         }
     }
 
+    const handleReactivate = async (row) => {
+        setSaving(true)
+        try {
+            await api.post(`/schools/${row.id}/reactivate/`)
+            fetch()
+        } finally {
+            setSaving(false)
+        }
+    }
+
     const columns = [
         { key: 'campus_name', label: 'Campus' },
         { key: 'name', label: 'School Name' },
@@ -112,9 +122,13 @@ export default function Schools() {
                     <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
                         Edit
                     </Button>
-                    {row.is_active && (
+                    {row.is_active ? (
                         <Button size="sm" variant="danger" onClick={() => openDeactivate(row)}>
                             Deactivate
+                        </Button>
+                    ) : (
+                        <Button size="sm" variant="success" onClick={() => handleReactivate(row)}>
+                            Reactivate
                         </Button>
                     )}
                 </div>
