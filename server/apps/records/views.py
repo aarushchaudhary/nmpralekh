@@ -38,14 +38,6 @@ def create_audit_request(user, table_name, record, action, new_data=None):
     DB-level row lock so the second request blocks until the first transaction
     commits, then re-reads the now-populated pending_audit_id and raises.
     """
-    # snapshot old data from the in-memory object before acquiring the lock
-    # (field values haven't changed yet, and we avoid holding the lock longer
-    # than necessary)
-    old_data = {}
-    for field in record._meta.fields:
-        value = getattr(record, field.name)
-        old_data[field.name] = str(value) if value is not None else None
-
     # Explicitly cast to plain dict — request.data can be a QueryDict (form-encoded)
     # which stores multiple values per key; JSONField needs a plain dict.
     safe_new_data = dict(new_data) if new_data else None
@@ -64,6 +56,14 @@ def create_audit_request(user, table_name, record, action, new_data=None):
                 'A change request is already pending for this record. '
                 'Please wait for it to be reviewed before submitting another.'
             )
+
+        # Compute old_data from the locked record (guaranteed-fresh DB version).
+        # Using the pre-fetched `record` object would risk a stale snapshot if a
+        # concurrent operation modified the row between get_object() and the lock.
+        old_data = {}
+        for field in locked_record._meta.fields:
+            value = getattr(locked_record, field.name)
+            old_data[field.name] = str(value) if value is not None else None
 
         audit = AuditRequest.objects.create(
             table_name   = table_name,
@@ -596,6 +596,7 @@ class DashboardCountsView(APIView):
 # DATABASE BACKUP
 # ─────────────────────────────────────────────
 import json
+from django.conf import settings as django_settings
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 from apps.accounts.permissions import IsMaster
 from .models import BackupConfiguration
@@ -647,6 +648,7 @@ class BackupConfigurationView(APIView):
                 day_of_week=day_of_week,
                 day_of_month='*',
                 month_of_year='*',
+                timezone=django_settings.TIME_ZONE,
             )
         else:
             # Monthly — run on the 1st of each month at 2 AM.
@@ -656,6 +658,7 @@ class BackupConfigurationView(APIView):
                 day_of_week='*',
                 day_of_month='1',
                 month_of_year='*',
+                timezone=django_settings.TIME_ZONE,
             )
 
         PeriodicTask.objects.update_or_create(
