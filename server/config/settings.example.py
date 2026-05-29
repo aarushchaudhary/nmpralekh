@@ -136,6 +136,10 @@ CACHES = {
     }
 }
 
+# Exposed at the top level so throttles.py and other modules can connect
+# directly to Redis without going through Django's cache serialisation layer.
+REDIS_URL = config('REDIS_URL', default='redis://127.0.0.1:6379/1')
+
 
 # -----------------------------------------------------------------------------
 # CUSTOM USER MODEL — must match accounts app
@@ -172,13 +176,24 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'config.pagination.StandardPagination',
     'PAGE_SIZE': 25,
+    # Atomic fixed-window throttles backed by Redis INCR+EXPIRE via Lua.
+    # Single round-trip per request, no race conditions, O(1) memory per user.
+    # See apps/accounts/throttles.py for implementation details.
     'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
+        'apps.accounts.throttles.AnonRateThrottle',
+        'apps.accounts.throttles.UserRateThrottle',
     ],
+    # DEFAULT_THROTTLE_RATES is not used by our custom throttles (limits are
+    # set directly on each class), but kept here as a reference/documentation.
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '60/minute',
-        'user': '300/minute',
+        'anon':               '60/minute',    # AnonRateThrottle
+        'user':               '300/minute',   # UserRateThrottle
+        'login':              '10/minute',    # LoginThrottle (+ django-ratelimit)
+        'token_refresh':      '30/minute',    # TokenRefreshThrottle (+ django-ratelimit)
+        'export':             '10/hour',      # ExportRateThrottle
+        'coordinator_export': '5/minute',     # CoordinatorExportThrottle (+ django-ratelimit)
+        'dashboard':          '120/minute',   # DashboardThrottle
+        'audit':              '60/minute',    # AuditThrottle
     },
     # Disable DRF's ?format= suffix routing — the 'format' param is used
     # as a plain query param in CoordinatorExportView (excel vs json).
@@ -192,7 +207,7 @@ REST_FRAMEWORK = {
 # -----------------------------------------------------------------------------
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME':    timedelta(minutes=30),
-    'REFRESH_TOKEN_LIFETIME':   timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME':   timedelta(hours=6),   # hard session window — login expires after 6 h
     'ROTATE_REFRESH_TOKENS':    True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN':        True,
@@ -211,10 +226,19 @@ CSRF_COOKIE_HTTPONLY     = False
 # -----------------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = [
     'https://localhost:5173',   # local dev (Vite default)
+    'https://localhost:5174',   # local dev (Vite fallback when 5173 is in use)
     # 'https://mis.yourdomain.com',  # add your production frontend here
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Django 4+ cross-origin CSRF protection — must mirror CORS_ALLOWED_ORIGINS
+# for any origin that sends cookie-authenticated POST/PUT/PATCH/DELETE requests.
+CSRF_TRUSTED_ORIGINS = [
+    'https://localhost:5173',
+    'https://localhost:5174',
+    # 'https://mis.yourdomain.com',
+]
 
 
 # -----------------------------------------------------------------------------
@@ -232,11 +256,6 @@ USE_TZ        = True
 STATIC_URL  = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-
-# -----------------------------------------------------------------------------
-# DEFAULT PRIMARY KEY
-# -----------------------------------------------------------------------------
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # -----------------------------------------------------------------------------
 # DEFAULT PRIMARY KEY

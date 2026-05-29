@@ -520,11 +520,11 @@ sudo nano /etc/redis/redis.conf
 Search for the `# maxmemory <bytes>` section and add (or uncomment):
 
 ```conf
-maxmemory 256mb
+maxmemory 512mb
 maxmemory-policy allkeys-lru
 ```
 
-*(This limits Redis to 256 MB of RAM. Once full, it evicts the least recently used keys.)*
+*(This limits Redis to 512 MB of RAM. Once full, it evicts the least recently used keys.)*
 
 **1b. Set Connection Limits:**
 Search for the `# maxclients 10000` section and update it to allow a safe buffer for web workers and Celery:
