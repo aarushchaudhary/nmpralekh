@@ -107,6 +107,9 @@ export default function CertificationsPage({ readOnly = false, selfOnly = false 
 
     const canEdit = row => {
         if (selfOnly) return row.created_by === user?.id
+        if (row.created_by_is_active === false) {
+            return user?.role === 'super_admin'
+        }
         return !readOnly
     }
 

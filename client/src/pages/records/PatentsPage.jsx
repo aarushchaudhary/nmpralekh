@@ -139,6 +139,9 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
 
   const canEdit = row => {
     if (selfOnly) return row.created_by === user?.id
+    if (row.created_by_is_active === false) {
+      return user?.role === 'super_admin'
+    }
     return !readOnly
   }
 
@@ -232,7 +235,9 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
           <p className="text-sm text-blue-700">
             You can only view and manage your own patents.
-            Add co-applicants to link other inventors to your patent.
+            Add co-applicants to link other inventors — if a co-applicant is a
+            registered faculty member, search and select them so the patent
+            also appears on their dashboard.
           </p>
         </div>
       )}

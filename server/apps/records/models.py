@@ -328,7 +328,11 @@ class PlacementActivity(models.Model):
 
 
 class PublicationAuthor(models.Model):
-    """Links multiple faculty/students to a single publication"""
+    """Links multiple faculty/students to a single publication.
+    When author_type='faculty' and a registered user is selected,
+    the `user` FK is populated so the publication appears on that
+    faculty member's own dashboard too.
+    """
     publication = models.ForeignKey(
                       'FacultyPublication',
                       on_delete=models.CASCADE,
@@ -339,6 +343,15 @@ class PublicationAuthor(models.Model):
                       max_length=10,
                       choices=[('faculty', 'Faculty'), ('student', 'Student')],
                       default='faculty'
+                  )
+    # Optional link to a registered user (faculty / admin / super_admin).
+    # When set, the publication also shows in that user's record list.
+    user        = models.ForeignKey(
+                      User,
+                      on_delete=models.SET_NULL,
+                      null=True, blank=True,
+                      related_name='co_authored_publications',
+                      help_text='Linked registered user (faculty/admin/super_admin)'
                   )
     is_primary  = models.BooleanField(default=False,
                       help_text='Primary/corresponding author')
@@ -354,7 +367,11 @@ class PublicationAuthor(models.Model):
 
 
 class PatentApplicant(models.Model):
-    """Links multiple faculty/students to a single patent"""
+    """Links multiple faculty/students to a single patent.
+    When applicant_type='faculty' and a registered user is selected,
+    the `user` FK is populated so the patent appears on that
+    faculty member's own dashboard too.
+    """
     patent          = models.ForeignKey(
                           'Patent',
                           on_delete=models.CASCADE,
@@ -365,6 +382,15 @@ class PatentApplicant(models.Model):
                           max_length=10,
                           choices=[('faculty', 'Faculty'), ('student', 'Student')],
                           default='faculty'
+                      )
+    # Optional link to a registered user (faculty / admin / super_admin).
+    # When set, the patent also shows in that user's record list.
+    user            = models.ForeignKey(
+                          User,
+                          on_delete=models.SET_NULL,
+                          null=True, blank=True,
+                          related_name='co_applied_patents',
+                          help_text='Linked registered user (faculty/admin/super_admin)'
                       )
     is_primary      = models.BooleanField(default=False)
 

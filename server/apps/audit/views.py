@@ -8,6 +8,7 @@ from django.apps import apps
 from apps.audit.models import AuditRequest
 from apps.audit.serializers import AuditRequestSerializer
 from apps.accounts.permissions import IsDeleteAuth, IsMasterOrSuperAdmin
+from apps.accounts.throttles import AuditThrottle
 from apps.schools.utils import get_user_school_ids
 from apps.records.cache_utils import invalidate_dashboard_cache
 from config.pagination import StandardPagination
@@ -44,6 +45,7 @@ class AuditRequestDetailView(generics.RetrieveAPIView):
 
 class AuditApproveView(APIView):
     permission_classes = [IsDeleteAuth]
+    throttle_classes   = [AuditThrottle]  # 60/min per user — well above human review speed
 
     def post(self, request, pk):
         school_ids = get_user_school_ids(request.user)
@@ -149,6 +151,7 @@ class AuditApproveView(APIView):
 
 class AuditRejectView(APIView):
     permission_classes = [IsDeleteAuth]
+    throttle_classes   = [AuditThrottle]  # 60/min per user — well above human review speed
 
     def post(self, request, pk):
         school_ids = get_user_school_ids(request.user)

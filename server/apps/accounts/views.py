@@ -4,7 +4,6 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 
@@ -58,7 +57,7 @@ class LoginView(APIView):
         response.set_cookie(
             'access_token',
             str(refresh.access_token),
-            max_age  = 60 * 30,
+            max_age  = 60 * 30,          # 30 minutes — matches ACCESS_TOKEN_LIFETIME
             httponly = True,
             secure   = True,
             samesite = 'None',
@@ -66,7 +65,7 @@ class LoginView(APIView):
         response.set_cookie(
             'refresh_token',
             str(refresh),
-            max_age  = 60 * 60 * 24 * 7,
+            max_age  = 60 * 60 * 6,      # 6 hours — matches REFRESH_TOKEN_LIFETIME
             httponly = True,
             secure   = True,
             samesite = 'None',
@@ -134,7 +133,7 @@ class RefreshTokenView(APIView):
             response.set_cookie(
                 'access_token',
                 new_access,
-                max_age  = 60 * 30,
+                max_age  = 60 * 30,          # 30 minutes — matches ACCESS_TOKEN_LIFETIME
                 httponly = True,
                 secure   = True,
                 samesite = 'None',
@@ -143,7 +142,7 @@ class RefreshTokenView(APIView):
             response.set_cookie(
                 'refresh_token',
                 str(new_refresh),
-                max_age  = 60 * 60 * 24 * 7,
+                max_age  = 60 * 60 * 6,      # 6 hours — matches REFRESH_TOKEN_LIFETIME
                 httponly = True,
                 secure   = True,
                 samesite = 'None',

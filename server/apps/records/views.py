@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db import models as django_models
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -99,6 +100,14 @@ class SchoolScopedMixin:
             is_deleted=False
         ).select_related('school', 'created_by')
 
+    def check_object_permissions(self, request, obj):
+        super().check_object_permissions(request, obj)
+        if request.method in ['PUT', 'PATCH', 'DELETE']:
+            if hasattr(obj, 'created_by') and obj.created_by and not getattr(obj.created_by, 'is_active', True):
+                if request.user.role != 'super_admin':
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied("Records created by deactivated users can only be modified or deleted by a super admin.")
+
 
 class InvalidateDashboardCacheMixin:
     """
@@ -175,7 +184,7 @@ class SchoolActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMi
 
 class SchoolActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = SchoolActivitySerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
         return self.get_base_queryset(SchoolActivity)
@@ -218,7 +227,7 @@ class StudentActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedM
 
 class StudentActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = StudentActivitySerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
         return self.get_base_queryset(StudentActivity)
@@ -259,7 +268,7 @@ class FDPListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generi
 
 class FDPDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = FacultyFDPWorkshopGLSerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
         return self.get_base_queryset(FacultyFDPWorkshopGL)
@@ -349,7 +358,14 @@ class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin
                          'school', 'created_by'
                      ).prefetch_related('authors')
         if user.role == 'user':
-            qs = qs.filter(created_by=user)
+            # Faculty see publications they created OR ones where they are
+            # linked as a co-author via PublicationAuthor.user FK.
+            co_authored_ids = PublicationAuthor.objects.filter(
+                user=user
+            ).values_list('publication_id', flat=True)
+            qs = qs.filter(
+                django_models.Q(created_by=user) | django_models.Q(id__in=co_authored_ids)
+            )
         return qs
 
     def get_permissions(self):
@@ -360,7 +376,7 @@ class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin
 
 class PublicationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = FacultyPublicationSerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
         qs = self.get_base_queryset(FacultyPublication)
@@ -453,7 +469,14 @@ class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, gen
                          'school', 'created_by'
                      ).prefetch_related('applicants')
         if user.role == 'user':
-            qs = qs.filter(created_by=user)
+            # Faculty see patents they created OR ones where they are
+            # linked as a co-applicant via PatentApplicant.user FK.
+            co_applied_ids = PatentApplicant.objects.filter(
+                user=user
+            ).values_list('patent_id', flat=True)
+            qs = qs.filter(
+                django_models.Q(created_by=user) | django_models.Q(id__in=co_applied_ids)
+            )
         return qs
 
     def get_permissions(self):
@@ -464,7 +487,7 @@ class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, gen
 
 class PatentDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PatentSerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
         qs = self.get_base_queryset(Patent)
@@ -515,7 +538,7 @@ class CertificationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMix
 
 class CertificationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = CertificationSerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
         qs = self.get_base_queryset(Certification)
@@ -559,7 +582,7 @@ class PlacementListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, 
 
 class PlacementDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PlacementActivitySerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [IsAdminOrUserOrSuperAdmin]
 
     def get_queryset(self):
         return self.get_base_queryset(PlacementActivity)
@@ -582,14 +605,17 @@ class PlacementDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIVi
 
 
 from rest_framework.views import APIView
+from apps.accounts.throttles import DashboardThrottle
 
 class DashboardCountsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes  = [IsAuthenticated]
+    throttle_classes    = [DashboardThrottle]  # 120/min — Redis-cached endpoint, cache misses only
 
     def get(self, request):
         school_ids = list(get_user_school_ids(request.user))
         counts     = get_dashboard_counts(school_ids, request.user.role)
         return Response(counts)
+
 
 
 # ─────────────────────────────────────────────
@@ -698,3 +724,44 @@ class TriggerManualBackupView(APIView):
             scope=scope, date_from=date_from, date_to=date_to
         )
         return Response({"message": "Backup task has been added to the queue."})
+
+
+# ─────────────────────────────────────────────
+# FACULTY / STAFF USER SEARCH
+# Used by co-author / co-applicant picker in Publications & Patents
+# ─────────────────────────────────────────────
+from apps.accounts.models import User as AccountUser
+from rest_framework.filters import SearchFilter as DRFSearchFilter
+
+
+class FacultyUserSearchView(generics.ListAPIView):
+    """
+    Returns a lightweight list of faculty / admin / super_admin users
+    that can be linked as co-authors or co-applicants.
+    Accessible by any authenticated user.
+    Supports ?search= query param (matches full_name, username, email).
+    """
+    permission_classes = [IsAuthenticated]
+    filter_backends    = [DRFSearchFilter]
+    search_fields      = ['full_name', 'username', 'email']
+
+    def get_queryset(self):
+        return AccountUser.objects.filter(
+            is_active=True,
+            role__in=['user', 'admin', 'super_admin']
+        ).order_by('full_name').only('id', 'full_name', 'username', 'role')
+
+    def list(self, request, *args, **kwargs):
+        qs = self.filter_queryset(self.get_queryset())
+        # Limit to 20 results — this is a live-search, not a full list
+        qs = qs[:20]
+        data = [
+            {
+                'id':        u.id,
+                'full_name': u.full_name,
+                'username':  u.username,
+                'role':      u.role,
+            }
+            for u in qs
+        ]
+        return Response(data)

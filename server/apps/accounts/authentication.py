@@ -26,4 +26,8 @@ class CookieJWTAuthentication(JWTAuthentication):
         check = _csrf_middleware.process_view(request, None, (), {})
         if check is not None:
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied('CSRF Failed: %s' % check.reason)
+            # Django 4+ returns a plain HttpResponseForbidden for origin
+            # mismatches, which has no .reason attribute; CsrfFailure
+            # subclasses do.  Use getattr to handle both cases.
+            reason = getattr(check, 'reason', check.content.decode(errors='replace'))
+            raise PermissionDenied('CSRF Failed: %s' % reason)

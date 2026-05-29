@@ -38,6 +38,7 @@ class SchoolActivityCollaborationSerializer(serializers.ModelSerializer):
 class SchoolActivitySerializer(serializers.ModelSerializer):
     school_name    = serializers.CharField(source='school.name', read_only=True)
     collaborations = SchoolActivityCollaborationSerializer(many=True, read_only=True)
+    created_by_is_active = serializers.BooleanField(source='created_by.is_active', read_only=True)
 
     class Meta:
         model  = SchoolActivity
@@ -69,6 +70,7 @@ class StudentActivityCollaborationSerializer(serializers.ModelSerializer):
 class StudentActivitySerializer(serializers.ModelSerializer):
     school_name    = serializers.CharField(source='school.name',       read_only=True)
     collaborations = StudentActivityCollaborationSerializer(many=True,  read_only=True)
+    created_by_is_active = serializers.BooleanField(source='created_by.is_active', read_only=True)
 
     class Meta:
         model  = StudentActivity
@@ -96,6 +98,7 @@ class StudentActivitySerializer(serializers.ModelSerializer):
 
 class FacultyFDPWorkshopGLSerializer(serializers.ModelSerializer):
     school_name = serializers.CharField(source='school.name', read_only=True)
+    created_by_is_active = serializers.BooleanField(source='created_by.is_active', read_only=True)
 
     class Meta:
         model  = FacultyFDPWorkshopGL
@@ -113,14 +116,17 @@ class FacultyFDPWorkshopGLSerializer(serializers.ModelSerializer):
 
 
 class PublicationAuthorSerializer(serializers.ModelSerializer):
+    user_full_name = serializers.CharField(source='user.full_name', read_only=True)
+
     class Meta:
         model  = PublicationAuthor
-        fields = ['id', 'name', 'author_type', 'is_primary', 'order']
+        fields = ['id', 'name', 'author_type', 'user', 'user_full_name', 'is_primary', 'order']
 
 
 class FacultyPublicationSerializer(serializers.ModelSerializer):
     school_name = serializers.CharField(source='school.name', read_only=True)
     authors     = PublicationAuthorSerializer(many=True, read_only=True)
+    created_by_is_active = serializers.BooleanField(source='created_by.is_active', read_only=True)
     created_by_name = serializers.CharField(
                           source='created_by.full_name', read_only=True
                       )
@@ -143,14 +149,17 @@ class FacultyPublicationSerializer(serializers.ModelSerializer):
 
 
 class PatentApplicantSerializer(serializers.ModelSerializer):
+    user_full_name = serializers.CharField(source='user.full_name', read_only=True)
+
     class Meta:
         model  = PatentApplicant
-        fields = ['id', 'name', 'applicant_type', 'is_primary']
+        fields = ['id', 'name', 'applicant_type', 'user', 'user_full_name', 'is_primary']
 
 
 class PatentSerializer(serializers.ModelSerializer):
-    school_name    = serializers.CharField(source='school.name', read_only=True)
-    applicants     = PatentApplicantSerializer(many=True, read_only=True)
+    school_name = serializers.CharField(source='school.name', read_only=True)
+    applicants  = PatentApplicantSerializer(many=True, read_only=True)
+    created_by_is_active = serializers.BooleanField(source='created_by.is_active', read_only=True)
     created_by_name = serializers.CharField(
                           source='created_by.full_name', read_only=True
                       )
@@ -174,7 +183,8 @@ class PatentSerializer(serializers.ModelSerializer):
 
 
 class CertificationSerializer(serializers.ModelSerializer):
-    school_name     = serializers.CharField(source='school.name', read_only=True)
+    school_name = serializers.CharField(source='school.name', read_only=True)
+    created_by_is_active = serializers.BooleanField(source='created_by.is_active', read_only=True)
     created_by_name = serializers.CharField(
                           source='created_by.full_name', read_only=True
                       )
@@ -195,7 +205,8 @@ class CertificationSerializer(serializers.ModelSerializer):
 
 
 class PlacementActivitySerializer(serializers.ModelSerializer):
-    school_name   = serializers.CharField(source='school.name', read_only=True)
+    school_name = serializers.CharField(source='school.name', read_only=True)
+    created_by_is_active = serializers.BooleanField(source='created_by.is_active', read_only=True)
 
     class Meta:
         model  = PlacementActivity

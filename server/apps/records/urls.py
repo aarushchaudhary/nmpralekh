@@ -43,4 +43,7 @@ urlpatterns = [
     # Backup
     path('backup-config/',  views.BackupConfigurationView.as_view(),     name='backup-config'),
     path('backup-manual/',  views.TriggerManualBackupView.as_view(),     name='backup-manual'),
+
+    # Faculty user search (for co-author / co-applicant picker)
+    path('faculty-users/',  views.FacultyUserSearchView.as_view(),       name='faculty_user_search'),
 ]

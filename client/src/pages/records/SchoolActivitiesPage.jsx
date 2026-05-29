@@ -37,6 +37,13 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
         setSelected(null); setForm(empty); setErrors({}); setShowForm(true)
     }
 
+    const canEdit = row => {
+        if (row.created_by_is_active === false) {
+            return user?.role === 'super_admin'
+        }
+        return !readOnly
+    }
+
     const openEdit = row => {
         setSelected(row)
         setForm({
@@ -106,7 +113,7 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
         },
         {
             key: 'actions', label: '', sortable: false,
-            render: row => !readOnly && (
+            render: row => canEdit(row) && (
                 <div className="flex gap-2">
                     {row.pending_audit ? (
                         <span className="text-xs text-yellow-600 italic">

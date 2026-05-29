@@ -144,6 +144,9 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
   // for faculty selfOnly mode — they can edit their own only
   const canEdit = row => {
     if (selfOnly) return row.created_by === user?.id
+    if (row.created_by_is_active === false) {
+      return user?.role === 'super_admin'
+    }
     return !readOnly
   }
 
@@ -244,7 +247,9 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
           <p className="text-sm text-blue-700">
             You can only view and manage your own publications.
-            Add co-authors to link other faculty or students to your publication.
+            Add co-authors to link other contributors — if a co-author is a
+            registered faculty member, search and select them so the publication
+            also appears on their dashboard.
           </p>
         </div>
       )}
