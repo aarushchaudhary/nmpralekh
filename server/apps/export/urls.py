@@ -30,5 +30,7 @@ urlpatterns = [
     path('reports/',              views.MISReportListCreateView.as_view(),      name='reports_list_create'),
     path('reports/<int:pk>/send-admin/', views.MISReportSendAdminView.as_view(), name='reports_send_admin'),
     path('reports/<int:pk>/send-accumulator/', views.MISReportSendAccumulatorView.as_view(), name='reports_send_accumulator'),
+    path('reports/<int:pk>/send-superadmin/', views.MISReportSendSuperAdminView.as_view(), name='reports_send_superadmin'),
+    path('reports/<int:pk>/send-chronicle/', views.MISReportSendChronicleMasterView.as_view(), name='reports_send_chronicle'),
     path('reports/received/',     views.ReceivedMISReportsView.as_view(),       name='reports_received'),
 ]

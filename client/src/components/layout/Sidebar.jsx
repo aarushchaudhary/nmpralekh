@@ -14,7 +14,7 @@ const roleNavLinks = {
         { label: 'Manual Export', path: '/master/exports/manual' },
         { label: '— System', path: null },
         { label: 'Backup Settings', path: '/master/backup-settings' },
-        { label: 'Service Management', path: '/master/service-management' },
+        { label: 'Special Users', path: '/master/special-users' },
     ],
     super_admin: [
         { label: 'Dashboard', path: '/superadmin' },
@@ -28,6 +28,8 @@ const roleNavLinks = {
         { label: 'Patents', path: '/superadmin/patents' },
         { label: 'Certifications', path: '/superadmin/certifications' },
         { label: 'Placements', path: '/superadmin/placements' },
+        { label: '— Export', path: null },
+        { label: 'Received MIS Data', path: '/superadmin/received-mis-data' },
     ],
     admin: [
         { label: 'Dashboard', path: '/admin' },
@@ -82,6 +84,11 @@ const roleNavLinks = {
         { label: 'Error Tickets', path: '/service-dashboard/errors' },
         { label: 'User Feedback', path: '/service-dashboard/feedback' },
     ],
+    chronicle_master: [
+        { label: 'Dashboard', path: '/chronicle-dashboard' },
+        { label: '— MIS Data', path: null },
+        { label: 'Received MIS Data', path: '/chronicle-dashboard/received-mis-data' },
+    ],
 }
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -91,6 +98,8 @@ export default function Sidebar({ isOpen, onClose }) {
     let roleKey = user?.role
     if (user?.is_service_admin) {
         roleKey = 'service_admin'
+    } else if (user?.is_chronicle_master) {
+        roleKey = 'chronicle_master'
     }
     const links = roleNavLinks[roleKey] || []
 
@@ -118,7 +127,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 <div className="px-6 py-5 border-b border-gray-100">
                     <h1 className="text-lg font-bold text-primary-700">NMPralekh</h1>
                     <p className="text-xs text-gray-400 mt-0.5">
-                        {user?.is_service_admin ? 'Service Portal' : 'MIS Portal'}
+                        {user?.is_service_admin ? 'Service Portal' : user?.is_chronicle_master ? 'Chronicle Portal' : 'MIS Portal'}
                     </p>
                 </div>
 

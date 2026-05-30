@@ -15,6 +15,7 @@ import DeleteAuthDashboard from './pages/deleteauth/Dashboard'
 import CoordinatorDashboard from './pages/coordinator/Dashboard'
 import AccumulatorDashboard from './pages/accumulator/Dashboard'
 import ServiceDashboard from './pages/service/Dashboard'
+import ChronicleDashboard from './pages/chronicle/Dashboard'
 
 function RoleRedirect() {
   const { user, loading } = useAuth()
@@ -29,6 +30,7 @@ function RoleRedirect() {
   if (!user) return <Navigate to="/login" replace />
 
   if (user.is_service_admin) return <Navigate to="/service-dashboard" replace />
+  if (user.is_chronicle_master) return <Navigate to="/chronicle-dashboard" replace />
 
   const routes = {
     master: '/master',
@@ -107,6 +109,13 @@ export default function App() {
           <Route path="/service-dashboard/*" element={
             <ProtectedRoute isServiceRoute={true}>
               <ServiceDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Chronicle Master Dashboard */}
+          <Route path="/chronicle-dashboard/*" element={
+            <ProtectedRoute isChronicleRoute={true}>
+              <ChronicleDashboard />
             </ProtectedRoute>
           } />
           </Routes>

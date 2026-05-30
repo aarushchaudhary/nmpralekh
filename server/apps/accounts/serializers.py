@@ -11,7 +11,8 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'full_name',
             'role', 'is_active', 'campus', 'campus_name',
-            'created_at', 'last_login', 'is_service_admin'
+            'created_at', 'last_login', 'is_service_admin',
+            'is_chronicle_master'
         ]
 
 
@@ -31,6 +32,18 @@ class UserVisibilitySerializer(serializers.ModelSerializer):
         mappings = obj.school_mappings.all()
         codes = [m.school.code for m in mappings if m.school]
         return ', '.join(codes) if codes else ''
+
+class ChronicleAccumulatorSerializer(serializers.ModelSerializer):
+    coordinator_count = serializers.IntegerField(read_only=True)
+    campus_name = serializers.CharField(source='campus.name', read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'full_name',
+            'role', 'is_active', 'campus', 'campus_name',
+            'coordinator_count'
+        ]
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

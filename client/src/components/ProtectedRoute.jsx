@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-export default function ProtectedRoute({ children, roles, isServiceRoute = false }) {
+export default function ProtectedRoute({ children, roles, isServiceRoute = false, isChronicleRoute = false }) {
     const { user, loading } = useAuth()
 
     if (loading) {
@@ -18,9 +18,16 @@ export default function ProtectedRoute({ children, roles, isServiceRoute = false
         if (!user.is_service_admin) {
             return <Navigate to="/unauthorized" replace />
         }
+    } else if (isChronicleRoute) {
+        if (!user.is_chronicle_master) {
+            return <Navigate to="/unauthorized" replace />
+        }
     } else {
         if (user.is_service_admin) {
             return <Navigate to="/service-dashboard" replace />
+        }
+        if (user.is_chronicle_master) {
+            return <Navigate to="/chronicle-dashboard" replace />
         }
 
         if (roles && !roles.includes(user.role)) {

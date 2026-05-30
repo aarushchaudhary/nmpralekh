@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Count, Q
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,9 +11,10 @@ from django.contrib.auth import authenticate
 from apps.accounts.models import User
 from apps.accounts.serializers import (
     UserSerializer, UserVisibilitySerializer,
-    UserCreateSerializer, UserUpdateSerializer, LoginSerializer
+    UserCreateSerializer, UserUpdateSerializer, LoginSerializer,
+    ChronicleAccumulatorSerializer
 )
-from apps.accounts.permissions import IsMaster, IsAdmin, IsSuperAdmin, IsAnyRole, IsMISAccumulator
+from apps.accounts.permissions import IsMaster, IsAdmin, IsSuperAdmin, IsAnyRole, IsMISAccumulator, IsChronicleMaster
 from config.pagination import StandardPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
@@ -304,6 +305,25 @@ class AccumulatorCoordinatorsView(generics.ListAPIView):
             )
         )
 
+class ChronicleAccumulatorsView(generics.ListAPIView):
+    """Chronicle Master sees all MIS Accumulators and their coordinator counts"""
+    serializer_class   = ChronicleAccumulatorSerializer
+    permission_classes = [IsChronicleMaster]
+    pagination_class   = StandardPagination
+    filter_backends    = [DjangoFilterBackend, SearchFilter]
+    search_fields      = ['full_name', 'username', 'email']
+
+    def get_queryset(self):
+        return User.objects.filter(
+            role='mis_accumulator',
+            is_active=True
+        ).annotate(
+            coordinator_count=Count(
+                'campus__users',
+                filter=Q(campus__users__role='mis_coordinator', campus__users__is_active=True)
+            )
+        ).select_related('campus').order_by('full_name')
+
 class ServiceUserManagementView(APIView):
     permission_classes = [IsMaster]
     serializer_class = serializers.Serializer
@@ -345,3 +365,45 @@ class ServiceUserManagementView(APIView):
             return Response({"detail": "Password updated successfully."})
         except User.DoesNotExist:
             return Response({"detail": "Service user does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+class ChronicleMasterManagementView(APIView):
+    permission_classes = [IsMaster]
+    serializer_class = serializers.Serializer
+
+    def get(self, request):
+        exists = User.objects.filter(is_chronicle_master=True).exists()
+        return Response({"exists": exists})
+
+    def post(self, request):
+        if User.objects.filter(is_chronicle_master=True).exists():
+            return Response({"detail": "Chronicle Master already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        username = request.data.get("username")
+        email = request.data.get("email")
+        password = request.data.get("password", "").strip()
+        
+        if not username or not email or not password:
+            return Response({"detail": "Username, email, and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            full_name="Chronicle Master",
+            role="chronicle_master",
+            is_chronicle_master=True
+        )
+        return Response({"detail": "Chronicle Master created successfully."}, status=status.HTTP_201_CREATED)
+
+    def patch(self, request):
+        password = request.data.get("password", "").strip()
+        if not password:
+            return Response({"detail": "Password is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(is_chronicle_master=True)
+            user.set_password(password)
+            user.save()
+            return Response({"detail": "Password updated successfully."})
+        except User.DoesNotExist:
+            return Response({"detail": "Chronicle Master does not exist."}, status=status.HTTP_404_NOT_FOUND)

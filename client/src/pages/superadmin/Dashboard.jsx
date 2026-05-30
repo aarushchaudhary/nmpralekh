@@ -9,6 +9,7 @@ import PatentsPage from '../records/PatentsPage'
 import CertificationsPage from '../records/CertificationsPage'
 import PlacementsPage from '../records/PlacementsPage'
 import CampusUsersPage from './CampusUsersPage'
+import ReceivedMISDataPage from '../admin/ReceivedMISDataPage'
 
 export default function SuperAdminDashboard() {
   return (
@@ -23,6 +24,7 @@ export default function SuperAdminDashboard() {
         <Route path="patents" element={<PatentsPage readOnly />} />
         <Route path="certifications" element={<CertificationsPage readOnly />} />
         <Route path="placements" element={<PlacementsPage readOnly />} />
+        <Route path="received-mis-data" element={<ReceivedMISDataPage />} />
       </Routes>
     </Layout>
   )

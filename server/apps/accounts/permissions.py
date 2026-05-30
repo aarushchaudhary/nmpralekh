@@ -21,6 +21,15 @@ class IsMaster(BasePermission):
             not getattr(request.user, 'is_service_admin', False)
         )
 
+class IsChronicleMaster(BasePermission):
+    """Only chronicle master can access"""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            getattr(request.user, 'is_chronicle_master', False)
+        )
+
 
 class IsSuperAdmin(BasePermission):
     """Only super admin can access"""

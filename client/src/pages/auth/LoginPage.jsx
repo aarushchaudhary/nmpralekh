@@ -18,6 +18,7 @@ export default function LoginPage() {
     delete_auth: '/deleteauth',
     mis_coordinator: '/coordinator',
     mis_accumulator: '/accumulator',
+    chronicle_master: '/chronicle-dashboard',
   }
 
   const handleSubmit = async (e) => {
@@ -28,6 +29,8 @@ export default function LoginPage() {
       const user = await login(username, password)
       if (user.is_service_admin) {
         navigate('/service-dashboard')
+      } else if (user.is_chronicle_master) {
+        navigate('/chronicle-dashboard')
       } else {
         navigate(roleRoutes[user.role] || '/login')
       }

@@ -8,7 +8,7 @@ import Assignments from './Assignments'
 import ExportHistory from './ExportHistory'
 import ManualExport from './ManualExport'
 import BackupSettings from './BackupSettings'
-import ServiceManagement from './ServiceManagement'
+import SpecialUsers from './SpecialUsers'
 
 export default function MasterDashboard() {
   return (
@@ -22,7 +22,7 @@ export default function MasterDashboard() {
         <Route path="exports" element={<ExportHistory />} />
         <Route path="exports/manual" element={<ManualExport />} />
         <Route path="backup-settings" element={<BackupSettings />} />
-        <Route path="service-management" element={<ServiceManagement />} />
+        <Route path="special-users" element={<SpecialUsers />} />
       </Routes>
     </Layout>
   )

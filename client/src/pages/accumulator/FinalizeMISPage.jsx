@@ -67,7 +67,23 @@ export default function FinalizeMISPage() {
             setSubmitting(false)
         }
     }
+    const handleSendSuperAdmin = async (id) => {
+        try {
+            await api.post(`/export/reports/${id}/send-superadmin/`)
+            fetchMyReports()
+        } catch (err) {
+            alert(err.response?.data?.detail || "Failed to send to Super Admin")
+        }
+    }
 
+    const handleSendChronicle = async (id) => {
+        try {
+            await api.post(`/export/reports/${id}/send-chronicle/`)
+            fetchMyReports()
+        } catch (err) {
+            alert(err.response?.data?.detail || "Failed to send to Chronicle Master")
+        }
+    }
     // Filter logic for received reports
     const handleApplyFilters = () => {
         setActiveSchool(inputSchool)
@@ -228,9 +244,27 @@ export default function FinalizeMISPage() {
                                         <span>Created: {new Date(report.created_at).toLocaleDateString()}</span>
                                     </div>
                                 </div>
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                    ✓ Saved in System
-                                </span>
+                                <div className="flex flex-col items-end gap-2">
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                        ✓ Saved in System
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => handleSendSuperAdmin(report.id)}
+                                            disabled={report.sent_to_super_admin}
+                                            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 disabled:opacity-50 transition-colors"
+                                        >
+                                            {report.sent_to_super_admin ? 'Sent to Super Admin' : 'Send to Super Admin'}
+                                        </button>
+                                        <button 
+                                            onClick={() => handleSendChronicle(report.id)}
+                                            disabled={report.sent_to_chronicle_master}
+                                            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                                        >
+                                            {report.sent_to_chronicle_master ? 'Sent to Chronicle Master' : 'Send to Chronicle Master'}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             
                             <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap border border-gray-100" style={{ maxHeight: '300px', overflowY: 'auto' }}>

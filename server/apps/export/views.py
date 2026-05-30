@@ -850,6 +850,34 @@ class MISReportSendAccumulatorView(APIView):
             req.save()
 
         return Response({'detail': 'Sent to Accumulator successfully and requests fulfilled.'})
+
+class MISReportSendSuperAdminView(APIView):
+    permission_classes = [IsMISAccumulator]
+
+    def post(self, request, pk):
+        try:
+            report = MISReport.objects.get(pk=pk, coordinator=request.user)
+        except MISReport.DoesNotExist:
+            return Response({'detail': 'Report not found'}, status=404)
+        
+        report.sent_to_super_admin = True
+        report.sent_to_super_admin_at = timezone.now()
+        report.save()
+        return Response({'detail': 'Sent to Super Admin successfully.'})
+
+class MISReportSendChronicleMasterView(APIView):
+    permission_classes = [IsMISAccumulator]
+
+    def post(self, request, pk):
+        try:
+            report = MISReport.objects.get(pk=pk, coordinator=request.user)
+        except MISReport.DoesNotExist:
+            return Response({'detail': 'Report not found'}, status=404)
+        
+        report.sent_to_chronicle_master = True
+        report.sent_to_chronicle_master_at = timezone.now()
+        report.save()
+        return Response({'detail': 'Sent to Chronicle Master successfully.'})
 class ReceivedMISReportsView(generics.ListAPIView):
     serializer_class = MISReportSerializer
     pagination_class = StandardPagination
@@ -875,4 +903,15 @@ class ReceivedMISReportsView(generics.ListAPIView):
                 sent_to_admin=True,
                 coordinator__school_mappings__school_id__in=admin_schools
             ).distinct()
+        elif user.role == 'super_admin':
+            # Super Admins see reports from accumulators in their campus
+            return MISReport.objects.filter(
+                sent_to_super_admin=True,
+                coordinator__campus=user.campus
+            )
+        elif user.role == 'chronicle_master':
+            # Chronicle Master sees all reports sent to them
+            return MISReport.objects.filter(
+                sent_to_chronicle_master=True
+            )
         return MISReport.objects.none()

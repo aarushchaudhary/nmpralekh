@@ -26,6 +26,8 @@ const roleBadgeColor = {
     delete_auth: 'yellow',
     mis_coordinator: 'teal',
     mis_accumulator: 'orange',
+    service_admin: 'blue',
+    chronicle_master: 'blue',
 }
 
 const emptyForm = {

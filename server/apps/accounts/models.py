@@ -36,6 +36,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('delete_auth',     'Delete Auth'),
         ('mis_coordinator', 'MIS Coordinator'),
         ('mis_accumulator', 'MIS Accumulator'),
+        ('chronicle_master', 'Chronicle Master'),
         ('service_admin',   'Service Admin'),
     ]
 
@@ -52,6 +53,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active   = models.BooleanField(default=True)
     is_staff    = models.BooleanField(default=False)
     is_service_admin = models.BooleanField(default=False)
+    is_chronicle_master = models.BooleanField(default=False)
     created_by  = models.ForeignKey(
                     'self',
                     null=True,

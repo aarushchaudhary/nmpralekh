@@ -79,6 +79,12 @@ class MISReport(models.Model):
     sent_to_accumulator = models.BooleanField(default=False)
     sent_to_accumulator_at = models.DateTimeField(null=True, blank=True)
     
+    sent_to_super_admin = models.BooleanField(default=False)
+    sent_to_super_admin_at = models.DateTimeField(null=True, blank=True)
+    
+    sent_to_chronicle_master = models.BooleanField(default=False)
+    sent_to_chronicle_master_at = models.DateTimeField(null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

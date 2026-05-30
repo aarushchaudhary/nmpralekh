@@ -46,14 +46,22 @@ class MISReportSerializer(serializers.ModelSerializer):
             'name', 'data_content', 'date_from', 'date_to',
             'sent_to_admin', 'sent_to_admin_at',
             'sent_to_accumulator', 'sent_to_accumulator_at',
+            'sent_to_super_admin', 'sent_to_super_admin_at',
+            'sent_to_chronicle_master', 'sent_to_chronicle_master_at',
             'created_at'
         ]
         read_only_fields = [
+            'id', 'coordinator_name', 'coordinator_school_name',
             'coordinator', 'sent_to_admin', 'sent_to_admin_at',
-            'sent_to_accumulator', 'sent_to_accumulator_at', 'created_at'
+            'sent_to_accumulator', 'sent_to_accumulator_at',
+            'sent_to_super_admin', 'sent_to_super_admin_at',
+            'sent_to_chronicle_master', 'sent_to_chronicle_master_at',
+            'created_at'
         ]
 
     def get_coordinator_school_name(self, obj):
+        if obj.coordinator.role == 'mis_accumulator' and obj.coordinator.campus:
+            return obj.coordinator.campus.name
         mappings = obj.coordinator.school_mappings.all()
         names = [m.school.name for m in mappings if m.school]
         return ', '.join(names) if names else 'Unknown School'
