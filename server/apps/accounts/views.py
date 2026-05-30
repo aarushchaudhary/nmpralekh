@@ -290,6 +290,9 @@ class AccumulatorCoordinatorsView(generics.ListAPIView):
     def get_queryset(self):
         from apps.schools.models import UserSchoolMapping
         
+        if getattr(self, "swagger_fake_view", False):
+            return User.objects.none()
+
         campus_id = self.request.user.campus_id
         if not campus_id:
             return User.objects.none()

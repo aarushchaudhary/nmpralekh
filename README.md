@@ -181,27 +181,31 @@ graph TD
         mis_accumulator[MIS Accumulator] -->|Receives & Combines| mis_coord
     end
     
+    subgraph University Coordination
+        chronicle_master[Chronicle Master] -->|Receives & Combines| mis_accumulator
+    end
+    
     delete_auth[Delete Auth Reviewer] -->|Reviews| edit_requests
     delete_auth -->|Approves/Rejects| DB_updates[Database Updates]
 ```
 
-| Action | master | super_admin | admin | faculty | delete_auth | mis_coordinator | mis_accumulator | service_admin |
-|---|---|---|---|---|---|---|---|---|
-| Create campuses | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Create schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Create users | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Assign users to schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View all campus records | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View campus users | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View school faculties | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Manage clubs & committees | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View own school records | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
-| Create records | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Request update/delete | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
-| Finalize MIS Reports | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Manage errors & bug reports| ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Action | master | super_admin | admin | faculty | delete_auth | mis_coordinator | mis_accumulator | chronicle_master | service_admin |
+|---|---|---|---|---|---|---|---|---|---|
+| Create campuses | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Create schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Create users | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Assign users to schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View all campus records | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View campus users | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View school faculties | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Manage clubs & committees | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View own school records | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Create records | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Request update/delete | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Finalize MIS Reports | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Manage errors & bug reports| ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -704,12 +708,16 @@ GET    /api/users/
 POST   /api/users/
 PUT    /api/users/<id>/
 DELETE /api/users/<id>/
+GET/POST /api/users/master/chronicle-master/
+GET/POST /api/users/master/service-user/
 ```
 
 ### User Visibility
 ```
-GET    /api/users/school-faculties/  → Admin: faculty in their school(s)
-GET    /api/users/campus-users/      → Super Admin: all users in campus
+GET    /api/users/school-faculties/        → Admin: faculty in their school(s)
+GET    /api/users/campus-users/            → Super Admin: all users in campus
+GET    /api/users/accumulator-coordinators/→ MIS Accumulator: MIS coordinators
+GET    /api/users/chronicle/accumulators/  → Chronicle Master: MIS accumulators
 ```
 Both endpoints support `?search=`, `?role=`, `?school_code=`, and server-side pagination.
 
@@ -793,6 +801,8 @@ GET    /api/export/reports/received/    → Accumulator lists reports sent by Co
 GET    /api/export/reports/admin/       → Admin lists final reports sent by Coordinators
 POST   /api/export/reports/<id>/send-accumulator/
 POST   /api/export/reports/<id>/send-admin/
+POST   /api/export/reports/<id>/send-superadmin/
+POST   /api/export/reports/<id>/send-chronicle/
 
 GET    /api/export/data-requests/       → Accumulator requests data from Coordinators
 ```

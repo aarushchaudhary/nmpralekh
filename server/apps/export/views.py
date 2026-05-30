@@ -811,6 +811,7 @@ class MISReportListCreateView(generics.ListCreateAPIView):
 
 class MISReportSendAdminView(APIView):
     permission_classes = [IsMISCoordinator]
+    serializer_class = serializers.Serializer
 
     def post(self, request, pk):
         try:
@@ -825,6 +826,7 @@ class MISReportSendAdminView(APIView):
 
 class MISReportSendAccumulatorView(APIView):
     permission_classes = [IsMISCoordinator]
+    serializer_class = serializers.Serializer
 
     def post(self, request, pk):
         try:
@@ -853,6 +855,7 @@ class MISReportSendAccumulatorView(APIView):
 
 class MISReportSendSuperAdminView(APIView):
     permission_classes = [IsMISAccumulator]
+    serializer_class = serializers.Serializer
 
     def post(self, request, pk):
         try:
@@ -867,6 +870,7 @@ class MISReportSendSuperAdminView(APIView):
 
 class MISReportSendChronicleMasterView(APIView):
     permission_classes = [IsMISAccumulator]
+    serializer_class = serializers.Serializer
 
     def post(self, request, pk):
         try:

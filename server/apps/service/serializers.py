@@ -102,12 +102,13 @@ class BugReportCreateSerializer(serializers.ModelSerializer):
 
 class BugReportListSerializer(serializers.ModelSerializer):
     user_name    = serializers.SerializerMethodField()
+    user_role    = serializers.SerializerMethodField()
     linked_ticket_title = serializers.SerializerMethodField()
 
     class Meta:
         model  = BugReport
         fields = [
-            'id', 'user_name', 'title', 'description',
+            'id', 'user_name', 'user_role', 'title', 'description',
             'url_path', 'severity', 'status',
             'submitted_at', 'updated_at',
             'linked_ticket', 'linked_ticket_title', 'admin_note',
@@ -116,6 +117,11 @@ class BugReportListSerializer(serializers.ModelSerializer):
     def get_user_name(self, obj):
         if obj.user:
             return obj.user.full_name
+        return 'Anonymous'
+
+    def get_user_role(self, obj):
+        if obj.user:
+            return obj.user.role
         return 'Unknown'
 
     def get_linked_ticket_title(self, obj):
