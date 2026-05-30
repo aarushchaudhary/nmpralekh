@@ -338,3 +338,93 @@ class ServiceDashboardStatsView(APIView):
             'services':        services,
             'db_size':         db_size,
         })
+
+
+class ApiStatusView(APIView):
+    """
+    GET /api/service/api-status/
+    Returns the status of major API groups (Online, Facing Issues, Offline).
+    """
+    permission_classes = [IsServiceAdmin]
+    serializer_class = serializers.Serializer
+
+    def get(self, request):
+        from django.db import connection
+        from django.urls import get_resolver
+        from django.urls.resolvers import URLPattern, URLResolver
+        import re
+
+        def extract_urls(resolver, prefix=''):
+            urls = []
+            for pattern in resolver.url_patterns:
+                if isinstance(pattern, URLResolver):
+                    pattern_str = str(pattern.pattern)
+                    urls.extend(extract_urls(pattern, prefix + pattern_str))
+                elif isinstance(pattern, URLPattern):
+                    path = prefix + str(pattern.pattern)
+                    if path.startswith('api/'):
+                        # Clean up regex syntax for display
+                        clean_path = '/' + path
+                        clean_path = re.sub(r'\^|\$', '', clean_path)
+                        clean_path = re.sub(r'\(\?P<([^>]+)>.*?\)', r'{\1}', clean_path)
+                        clean_path = re.sub(r'<([^>]+)>', r'{\1}', clean_path)
+                        urls.append(clean_path)
+            return urls
+            
+        all_api_urls = extract_urls(get_resolver())
+        
+        # Group them
+        groups = {}
+        for url in all_api_urls:
+            parts = [p for p in url.split('/') if p]
+            if len(parts) >= 2:
+                category = parts[1].title() + ' API'
+            else:
+                category = 'Core API'
+                
+            if category not in groups:
+                groups[category] = []
+            groups[category].append(url)
+
+        # Check if database is offline
+        db_offline = False
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+        except Exception:
+            db_offline = True
+
+        open_tickets = []
+        if not db_offline:
+            open_tickets = list(ErrorTicket.objects.filter(
+                status__in=['open', 'planning', 'fixing', 'testing']
+            ).values_list('api_endpoint', flat=True))
+
+        status_data = []
+        for category, urls in groups.items():
+            group_status = 'Offline' if db_offline else 'Online'
+            endpoints = []
+            
+            for url in sorted(list(set(urls))):
+                endpoint_status = 'Offline' if db_offline else 'Online'
+                
+                if not db_offline:
+                    static_part = url.split('{')[0]
+                    for ticket_ep in open_tickets:
+                        if ticket_ep and static_part and ticket_ep.startswith(static_part) and len(static_part) > 5:
+                            endpoint_status = 'Facing Issues'
+                            group_status = 'Facing Issues'
+                            break
+                            
+                endpoints.append({
+                    'path': url,
+                    'status': endpoint_status
+                })
+                
+            status_data.append({
+                'name': category,
+                'status': group_status,
+                'endpoints': endpoints
+            })
+
+        return Response(status_data)

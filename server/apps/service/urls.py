@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     # Stats dashboard
     path('stats/',                      views.ServiceDashboardStatsView.as_view(),  name='service_stats'),
+    path('api-status/',                 views.ApiStatusView.as_view(),              name='api_status'),
 
     # Error tickets (admin)
     path('tickets/',                    views.ErrorTicketListView.as_view(),        name='ticket_list'),

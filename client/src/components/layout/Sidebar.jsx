@@ -70,6 +70,7 @@ const roleNavLinks = {
     service_admin: [
         { label: 'Dashboard', path: '/service-dashboard' },
         { label: '— Monitoring', path: null },
+        { label: 'API Status', path: '/service-dashboard/api-status' },
         { label: 'Error Tickets', path: '/service-dashboard/errors' },
         { label: 'User Feedback', path: '/service-dashboard/feedback' },
     ],
