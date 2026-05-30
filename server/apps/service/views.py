@@ -4,8 +4,9 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import serializers
 
-from apps.accounts.permissions import IsMaster, IsAnyRole
+from apps.accounts.permissions import IsMaster, IsAnyRole, IsServiceAdmin
 from apps.service.models import ErrorTicket, ErrorOccurrence, BugReport
 from apps.service.serializers import (
     ErrorTicketListSerializer, ErrorTicketDetailSerializer,
@@ -34,6 +35,7 @@ class ReportErrorView(APIView):
       4. Always create one ErrorOccurrence row for the timeline.
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = serializers.Serializer
 
     def post(self, request):
         serializer = ReportErrorSerializer(data=request.data)
@@ -76,8 +78,8 @@ class ReportErrorView(APIView):
                 ErrorTicket.objects.filter(pk=ticket.pk).update(
                     occurrence_count=ticket.occurrence_count + 1,
                 )
-                # Reopen a previously resolved ticket if the error recurs
-                if ticket.status == 'resolved':
+                # Reopen a previously closed ticket if the error recurs
+                if ticket.status == 'closed':
                     ErrorTicket.objects.filter(pk=ticket.pk).update(
                         status='open',
                         resolved_at=None,
@@ -136,7 +138,7 @@ class ErrorTicketListView(generics.ListAPIView):
     Returns paginated, filterable list of error tickets.
     """
     serializer_class   = ErrorTicketListSerializer
-    permission_classes = [IsMaster]
+    permission_classes = [IsServiceAdmin]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -172,7 +174,7 @@ class ErrorTicketDetailView(generics.RetrieveAPIView):
     GET /api/service/tickets/<id>/
     """
     serializer_class   = ErrorTicketDetailSerializer
-    permission_classes = [IsMaster]
+    permission_classes = [IsServiceAdmin]
     queryset           = ErrorTicket.objects.select_related('resolved_by')
 
 
@@ -181,7 +183,8 @@ class ErrorTicketStatusView(APIView):
     POST /api/service/tickets/<id>/status/
     Update ticket status (open → investigating → resolved → wontfix).
     """
-    permission_classes = [IsMaster]
+    permission_classes = [IsServiceAdmin]
+    serializer_class = serializers.Serializer
 
     def post(self, request, pk):
         try:
@@ -194,7 +197,7 @@ class ErrorTicketStatusView(APIView):
         data = serializer.validated_data
 
         ticket.status = data['status']
-        if data['status'] in ('resolved', 'wontfix'):
+        if data['status'] == 'closed':
             ticket.resolved_by   = request.user
             ticket.resolved_at   = timezone.now()
             ticket.resolution_note = data.get('resolution_note', '')
@@ -211,7 +214,7 @@ class BugReportListView(generics.ListAPIView):
     GET /api/service/bug-reports/
     """
     serializer_class   = BugReportListSerializer
-    permission_classes = [IsMaster]
+    permission_classes = [IsServiceAdmin]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -236,7 +239,7 @@ class BugReportDetailView(generics.RetrieveUpdateAPIView):
     """
     GET / PATCH /api/service/bug-reports/<id>/
     """
-    permission_classes = [IsMaster]
+    permission_classes = [IsServiceAdmin]
     queryset           = BugReport.objects.select_related('user', 'linked_ticket')
 
     def get_serializer_class(self):
@@ -250,16 +253,21 @@ class ServiceDashboardStatsView(APIView):
     GET /api/service/stats/
     Quick stats card data for the service portal homepage.
     """
-    permission_classes = [IsMaster]
+    permission_classes = [IsServiceAdmin]
+    serializer_class = serializers.Serializer
 
     def get(self, request):
         from django.db.models import Count, Sum
+        import psutil
+        import shutil
+        from django.db import connection
+        from django.core.cache import cache
 
         total_tickets   = ErrorTicket.objects.count()
         open_tickets    = ErrorTicket.objects.filter(status='open').count()
-        investigating   = ErrorTicket.objects.filter(status='investigating').count()
+        investigating   = ErrorTicket.objects.filter(status__in=['planning', 'fixing', 'testing']).count()
         resolved_today  = ErrorTicket.objects.filter(
-            status='resolved',
+            status='closed',
             resolved_at__date=timezone.now().date()
         ).count()
         total_reports   = BugReport.objects.count()
@@ -270,10 +278,52 @@ class ServiceDashboardStatsView(APIView):
 
         # Top 5 most-impacted tickets
         top_tickets = ErrorTicket.objects.filter(
-            status__in=['open', 'investigating']
+            status__in=['open', 'planning', 'fixing', 'testing']
         ).order_by('-affected_users_count')[:5].values(
             'id', 'title', 'affected_users_count', 'occurrence_count', 'source'
         )
+
+        # System and Service Checks
+        db_status = 'offline'
+        db_size = 'Unknown'
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                db_status = 'online'
+                cursor.execute("SELECT pg_size_pretty(pg_database_size(current_database()))")
+                db_size = cursor.fetchone()[0]
+        except Exception:
+            pass
+
+        redis_status = 'offline'
+        try:
+            if cache.set('redis_check', 1, timeout=1):
+                redis_status = 'online'
+        except Exception:
+            pass
+
+        cpu_usage = psutil.cpu_percent(interval=0.1)
+        ram = psutil.virtual_memory()
+        disk = shutil.disk_usage('/')
+        
+        system_stats = {
+            'cpu': cpu_usage,
+            'ram_used': ram.used,
+            'ram_total': ram.total,
+            'ram_percent': ram.percent,
+            'disk_used': disk.used,
+            'disk_total': disk.total,
+            'disk_percent': round(disk.used / disk.total * 100, 1) if disk.total else 0,
+        }
+
+        services = [
+            {'name': 'Django', 'status': 'online'},
+            {'name': 'PostgreSQL', 'status': db_status},
+            {'name': 'PgBouncer', 'status': db_status},
+            {'name': 'Redis', 'status': redis_status},
+            {'name': 'Celery', 'status': 'online' if redis_status == 'online' else 'offline'},
+            {'name': 'Nginx', 'status': 'placeholder'},
+        ]
 
         return Response({
             'total_tickets':   total_tickets,
@@ -284,4 +334,7 @@ class ServiceDashboardStatsView(APIView):
             'open_reports':    open_reports,
             'critical_reports': critical_reports,
             'top_tickets':     list(top_tickets),
+            'system_stats':    system_stats,
+            'services':        services,
+            'db_size':         db_size,
         })

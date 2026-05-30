@@ -3,6 +3,7 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import serializers
 
 from apps.accounts.permissions import IsAdminOrUser
 
@@ -71,6 +72,7 @@ class CampusDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class CampusReactivateView(APIView):
     permission_classes = [IsMaster]
+    serializer_class = serializers.Serializer
 
     def post(self, request, pk):
         try:
@@ -150,6 +152,7 @@ class SchoolDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class SchoolReactivateView(APIView):
     permission_classes = [IsMaster]
+    serializer_class = serializers.Serializer
 
     def post(self, request, pk):
         try:

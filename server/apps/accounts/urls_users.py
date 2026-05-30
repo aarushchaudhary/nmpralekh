@@ -6,4 +6,5 @@ urlpatterns = [
     path('campus-users/',     views.CampusUsersView.as_view(),     name='campus_users'),
     path('',                  views.UserListCreateView.as_view(),  name='user_list_create'),
     path('<int:pk>/',         views.UserDetailView.as_view(),      name='user_detail'),
+    path('master/service-user/', views.ServiceUserManagementView.as_view(), name='service_user_management'),
 ]

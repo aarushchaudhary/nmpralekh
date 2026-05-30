@@ -125,7 +125,7 @@ class BugReportListSerializer(serializers.ModelSerializer):
 
 
 class TicketStatusUpdateSerializer(serializers.Serializer):
-    status          = serializers.ChoiceField(choices=['open', 'investigating', 'resolved', 'wontfix'])
+    status          = serializers.ChoiceField(choices=['open', 'planning', 'fixing', 'testing', 'closed'])
     resolution_note = serializers.CharField(required=False, allow_blank=True)
 
 

@@ -13,6 +13,7 @@ import FacultyDashboard from './pages/faculty/Dashboard'
 import SuperAdminDashboard from './pages/superadmin/Dashboard'
 import DeleteAuthDashboard from './pages/deleteauth/Dashboard'
 import CoordinatorDashboard from './pages/coordinator/Dashboard'
+import ServiceDashboard from './pages/service/Dashboard'
 
 function RoleRedirect() {
   const { user, loading } = useAuth()
@@ -25,6 +26,8 @@ function RoleRedirect() {
   )
 
   if (!user) return <Navigate to="/login" replace />
+
+  if (user.is_service_admin) return <Navigate to="/service-dashboard" replace />
 
   const routes = {
     master: '/master',
@@ -88,6 +91,13 @@ export default function App() {
           <Route path="/coordinator/*" element={
             <ProtectedRoute roles={['mis_coordinator']}>
               <CoordinatorDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Service Admin Dashboard */}
+          <Route path="/service-dashboard/*" element={
+            <ProtectedRoute isServiceRoute={true}>
+              <ServiceDashboard />
             </ProtectedRoute>
           } />
           </Routes>

@@ -25,7 +25,11 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const user = await login(username, password)
-      navigate(roleRoutes[user.role] || '/login')
+      if (user.is_service_admin) {
+        navigate('/service-dashboard')
+      } else {
+        navigate(roleRoutes[user.role] || '/login')
+      }
     } catch (err) {
       setError(
         err.response?.data?.detail || 'Invalid username or password'

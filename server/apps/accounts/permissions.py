@@ -2,13 +2,23 @@
 from rest_framework.permissions import BasePermission
 
 
-class IsMaster(BasePermission):
-    """Only master login can access"""
+class IsServiceAdmin(BasePermission):
+    """Only service admin can access"""
     def has_permission(self, request, view):
         return bool(
             request.user and
             request.user.is_authenticated and
-            request.user.role == 'master'
+            getattr(request.user, 'is_service_admin', False)
+        )
+
+class IsMaster(BasePermission):
+    """Only master login can access (excluding service admin)"""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.role == 'master' and
+            not getattr(request.user, 'is_service_admin', False)
         )
 
 
@@ -58,7 +68,8 @@ class IsMasterOrSuperAdmin(BasePermission):
         return bool(
             request.user and
             request.user.is_authenticated and
-            request.user.role in ['master', 'super_admin']
+            request.user.role in ['master', 'super_admin'] and
+            not getattr(request.user, 'is_service_admin', False)
         )
 
 

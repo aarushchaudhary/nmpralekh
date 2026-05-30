@@ -35,6 +35,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('user',            'User'),
         ('delete_auth',     'Delete Auth'),
         ('mis_coordinator', 'MIS Coordinator'),
+        ('service_admin',   'Service Admin'),
     ]
 
     username    = models.CharField(max_length=100, unique=True)
@@ -49,6 +50,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                   )
     is_active   = models.BooleanField(default=True)
     is_staff    = models.BooleanField(default=False)
+    is_service_admin = models.BooleanField(default=False)
     created_by  = models.ForeignKey(
                     'self',
                     null=True,

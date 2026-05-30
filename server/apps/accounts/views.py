@@ -4,6 +4,7 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 
@@ -23,6 +24,7 @@ from django_ratelimit.decorators import ratelimit
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = []
+    serializer_class = LoginSerializer
     # throttle_classes omitted — django-ratelimit handles IP throttling at 10/m
     # (stricter than AnonRateThrottle's default 60/m, so AnonRateThrottle was a no-op)
 
@@ -75,6 +77,7 @@ class LoginView(APIView):
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = serializers.Serializer
 
     def post(self, request):
         try:
@@ -99,6 +102,7 @@ class RefreshTokenView(APIView):
     authentication_classes = []
     permission_classes     = []
     throttle_classes       = []
+    serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='ip', rate='30/m', method='POST', block=True))
     def post(self, request):
@@ -157,6 +161,7 @@ class RefreshTokenView(APIView):
 
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
@@ -201,6 +206,9 @@ class SchoolFacultiesView(generics.ListAPIView):
     def get_queryset(self):
         from apps.schools.models import UserSchoolMapping
         from apps.schools.utils import get_user_school_ids
+        
+        if getattr(self, "swagger_fake_view", False):
+            return User.objects.none()
 
         school_ids = get_user_school_ids(self.request.user)
         faculty_user_ids = UserSchoolMapping.objects.filter(
@@ -240,6 +248,9 @@ class CampusUsersView(generics.ListAPIView):
 
     def get_queryset(self):
         from apps.schools.models import UserSchoolMapping
+        
+        if getattr(self, "swagger_fake_view", False):
+            return User.objects.none()
 
         campus_id = self.request.user.campus_id
         if not campus_id:
@@ -266,3 +277,45 @@ class CampusUsersView(generics.ListAPIView):
             qs = qs.filter(id__in=matching_ids)
 
         return qs
+
+class ServiceUserManagementView(APIView):
+    permission_classes = [IsMaster]
+    serializer_class = serializers.Serializer
+
+    def get(self, request):
+        exists = User.objects.filter(is_service_admin=True).exists()
+        return Response({"exists": exists})
+
+    def post(self, request):
+        if User.objects.filter(is_service_admin=True).exists():
+            return Response({"detail": "Service user already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        username = request.data.get("username")
+        email = request.data.get("email")
+        password = request.data.get("password", "").strip()
+        
+        if not username or not email or not password:
+            return Response({"detail": "Username, email, and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            full_name="Service Admin",
+            role="service_admin",
+            is_service_admin=True
+        )
+        return Response({"detail": "Service user created successfully."}, status=status.HTTP_201_CREATED)
+
+    def patch(self, request):
+        password = request.data.get("password", "").strip()
+        if not password:
+            return Response({"detail": "Password is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(is_service_admin=True)
+            user.set_password(password)
+            user.save()
+            return Response({"detail": "Password updated successfully."})
+        except User.DoesNotExist:
+            return Response({"detail": "Service user does not exist."}, status=status.HTTP_404_NOT_FOUND)

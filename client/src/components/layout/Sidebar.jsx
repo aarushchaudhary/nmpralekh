@@ -14,6 +14,7 @@ const roleNavLinks = {
         { label: 'Manual Export', path: '/master/exports/manual' },
         { label: '— System', path: null },
         { label: 'Backup Settings', path: '/master/backup-settings' },
+        { label: 'Service Management', path: '/master/service-management' },
     ],
     super_admin: [
         { label: 'Dashboard', path: '/superadmin' },
@@ -66,12 +67,23 @@ const roleNavLinks = {
         { label: '— Chronicle', path: null },
         { label: 'VC Chronicle', path: '/coordinator/vc-chronicle' },
     ],
+    service_admin: [
+        { label: 'Dashboard', path: '/service-dashboard' },
+        { label: '— Monitoring', path: null },
+        { label: 'Error Tickets', path: '/service-dashboard/errors' },
+        { label: 'User Feedback', path: '/service-dashboard/feedback' },
+    ],
 }
 
 export default function Sidebar({ isOpen, onClose }) {
     const { user, logout } = useAuth()
     const navigate = useNavigate()
-    const links = roleNavLinks[user?.role] || []
+    
+    let roleKey = user?.role
+    if (user?.is_service_admin) {
+        roleKey = 'service_admin'
+    }
+    const links = roleNavLinks[roleKey] || []
 
     const handleLogout = async () => {
         await logout()
@@ -96,7 +108,9 @@ export default function Sidebar({ isOpen, onClose }) {
                 {/* Logo */}
                 <div className="px-6 py-5 border-b border-gray-100">
                     <h1 className="text-lg font-bold text-primary-700">NMPralekh</h1>
-                    <p className="text-xs text-gray-400 mt-0.5">MIS Portal</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                        {user?.is_service_admin ? 'Service Portal' : 'MIS Portal'}
+                    </p>
                 </div>
 
                 {/* User info */}

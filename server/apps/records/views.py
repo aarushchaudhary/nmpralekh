@@ -3,6 +3,7 @@ from django.db import models as django_models
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import serializers
 
 from apps.accounts.permissions import IsAdminOrUser, IsAdminOrUserOrSuperAdmin, IsAdminOrUserOrSuperAdminOrCoordinator
 from apps.schools.utils import get_user_school_ids
@@ -610,6 +611,7 @@ from apps.accounts.throttles import DashboardThrottle
 class DashboardCountsView(APIView):
     permission_classes  = [IsAuthenticated]
     throttle_classes    = [DashboardThrottle]  # 120/min — Redis-cached endpoint, cache misses only
+    serializer_class    = serializers.Serializer
 
     def get(self, request):
         school_ids = list(get_user_school_ids(request.user))
@@ -632,6 +634,7 @@ from .tasks import perform_db_backup
 
 class BackupConfigurationView(APIView):
     permission_classes = [IsMaster]
+    serializer_class = BackupConfigurationSerializer
 
     def _get_or_create_config(self):
         config = BackupConfiguration.objects.first()
@@ -704,6 +707,7 @@ import re
 
 class TriggerManualBackupView(APIView):
     permission_classes = [IsMaster]
+    serializer_class = serializers.Serializer
 
     def post(self, request):
         scope     = request.data.get('backup_scope', 'full')
@@ -731,6 +735,7 @@ class TriggerManualBackupView(APIView):
 # Used by co-author / co-applicant picker in Publications & Patents
 # ─────────────────────────────────────────────
 from apps.accounts.models import User as AccountUser
+from apps.accounts.serializers import UserVisibilitySerializer
 from rest_framework.filters import SearchFilter as DRFSearchFilter
 
 
@@ -744,8 +749,11 @@ class FacultyUserSearchView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     filter_backends    = [DRFSearchFilter]
     search_fields      = ['full_name', 'username', 'email']
+    serializer_class = UserVisibilitySerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return AccountUser.objects.none()
         return AccountUser.objects.filter(
             is_active=True,
             role__in=['user', 'admin', 'super_admin']

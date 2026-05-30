@@ -45,7 +45,7 @@ class SchoolActivitySerializer(serializers.ModelSerializer):
         fields = [
             'id', 'school', 'school_name', 'name', 'date',
             'details', 'is_school_wide', 'collaborations',
-            'pending_audit', 'created_by', 'created_at', 'updated_at'
+            'pending_audit', 'created_by', 'created_by_is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -77,7 +77,7 @@ class StudentActivitySerializer(serializers.ModelSerializer):
         fields = [
             'id', 'school', 'school_name', 'name', 'date', 'details',
             'club', 'club_name', 'conducted_by', 'activity_type',
-            'collaborations', 'pending_audit', 'created_by', 'created_at', 'updated_at'
+            'collaborations', 'pending_audit', 'created_by', 'created_by_is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -106,7 +106,7 @@ class FacultyFDPWorkshopGLSerializer(serializers.ModelSerializer):
             'id', 'school', 'school_name', 'faculty_name',
             'date_start', 'date_end', 'name', 'details',
             'type', 'organizing_body',
-            'pending_audit', 'created_by', 'created_at', 'updated_at'
+            'pending_audit', 'created_by', 'created_by_is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -174,7 +174,7 @@ class PatentSerializer(serializers.ModelSerializer):
             'date_of_publication', 'journal_number', 'patent_status',
             'doi_or_link',
             'is_own_work', 'applicants',
-            'pending_audit', 'created_by', 'created_by_name', 'created_at', 'updated_at'
+            'pending_audit', 'created_by', 'created_by_name', 'created_by_is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -196,7 +196,7 @@ class CertificationSerializer(serializers.ModelSerializer):
             'id', 'school', 'school_name', 'date', 'name',
             'title_of_course', 'details', 'agency',
             'credly_or_proof_link', 'person_type',
-            'pending_audit', 'created_by', 'created_by_name', 'created_at', 'updated_at'
+            'pending_audit', 'created_by', 'created_by_name', 'created_by_is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -214,7 +214,7 @@ class PlacementActivitySerializer(serializers.ModelSerializer):
         fields = [
             'id', 'school', 'school_name', 'name', 'date',
             'details', 'company_name', 'placecom_name',
-            'pending_audit', 'created_by', 'created_at', 'updated_at'
+            'pending_audit', 'created_by', 'created_by_is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 

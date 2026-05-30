@@ -13,10 +13,11 @@ class ErrorTicket(models.Model):
     instead.
     """
     STATUS_CHOICES = [
-        ('open',          'Open'),
-        ('investigating', 'Investigating'),
-        ('resolved',      'Resolved'),
-        ('wontfix',       "Won't Fix"),
+        ('open',     'Open'),
+        ('planning', 'Planning'),
+        ('fixing',   'Fixing'),
+        ('testing',  'Testing'),
+        ('closed',   'Closed'),
     ]
 
     SOURCE_CHOICES = [
@@ -133,11 +134,11 @@ class BugReport(models.Model):
     ]
 
     STATUS_CHOICES = [
-        ('open',        'Open'),
-        ('in_review',   'In Review'),
-        ('linked',      'Linked to Ticket'),
-        ('resolved',    'Resolved'),
-        ('wontfix',     "Won't Fix"),
+        ('open',     'Open'),
+        ('planning', 'Planning'),
+        ('fixing',   'Fixing'),
+        ('testing',  'Testing'),
+        ('closed',   'Closed'),
     ]
 
     user         = models.ForeignKey(

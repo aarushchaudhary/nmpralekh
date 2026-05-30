@@ -1,6 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import serializers
 from django.db import transaction
 from django.utils import timezone
 from django.apps import apps
@@ -46,6 +47,7 @@ class AuditRequestDetailView(generics.RetrieveAPIView):
 class AuditApproveView(APIView):
     permission_classes = [IsDeleteAuth]
     throttle_classes   = [AuditThrottle]  # 60/min per user — well above human review speed
+    serializer_class = serializers.Serializer
 
     def post(self, request, pk):
         school_ids = get_user_school_ids(request.user)
@@ -152,6 +154,7 @@ class AuditApproveView(APIView):
 class AuditRejectView(APIView):
     permission_classes = [IsDeleteAuth]
     throttle_classes   = [AuditThrottle]  # 60/min per user — well above human review speed
+    serializer_class = serializers.Serializer
 
     def post(self, request, pk):
         school_ids = get_user_school_ids(request.user)

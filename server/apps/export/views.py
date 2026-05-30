@@ -14,6 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
+from rest_framework import serializers
 
 from apps.accounts.permissions import IsAdminOrUserOrSuperAdmin
 from apps.schools.utils import get_user_school_ids
@@ -84,6 +85,7 @@ def build_apply_filters(school_id, date_from, date_to):
 
 class ExportSchoolActivitiesView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
+    serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
@@ -118,6 +120,7 @@ class ExportSchoolActivitiesView(APIView):
 
 class ExportStudentActivitiesView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
+    serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
@@ -153,6 +156,7 @@ class ExportStudentActivitiesView(APIView):
 
 class ExportFDPView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
+    serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
@@ -190,6 +194,7 @@ class ExportFDPView(APIView):
 
 class ExportPublicationsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
+    serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
@@ -229,6 +234,7 @@ class ExportPublicationsView(APIView):
 
 class ExportPatentsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
+    serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
@@ -267,6 +273,7 @@ class ExportPatentsView(APIView):
 
 class ExportCertificationsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
+    serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
@@ -305,6 +312,7 @@ class ExportCertificationsView(APIView):
 
 class ExportPlacementsView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
+    serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
     def get(self, request):
@@ -341,6 +349,7 @@ from .tasks import build_campus_workbook
 
 class ExportAllView(APIView):
     permission_classes = [IsAdminOrUserOrSuperAdmin]
+    serializer_class = serializers.Serializer
 
     # Heaviest endpoint — cap at 5 exports per minute per user
     @method_decorator(ratelimit(key='user', rate='5/m', method='GET', block=True))
@@ -406,6 +415,7 @@ class ExportHistoryView(generics.ListAPIView):
 
 class ExportDownloadView(APIView):
     permission_classes = [IsMaster]
+    serializer_class = serializers.Serializer
 
     def get(self, request, pk):
         try:
@@ -443,6 +453,7 @@ class ExportDownloadView(APIView):
 
 class TriggerManualExportView(APIView):
     permission_classes = [IsMaster]
+    serializer_class = serializers.Serializer
 
     def post(self, request):
         campus_id = request.data.get('campus_id')
@@ -495,6 +506,7 @@ class TriggerManualExportView(APIView):
 
 class TriggerNightlyExportView(APIView):
     permission_classes = [IsMaster]
+    serializer_class = serializers.Serializer
 
     def post(self, request):
         task = generate_nightly_exports.delay()
@@ -507,6 +519,7 @@ class TriggerNightlyExportView(APIView):
 class ExportTaskStatusView(APIView):
     """Frontend polls this to check if export is ready"""
     permission_classes = [IsMaster]
+    serializer_class = serializers.Serializer
 
     def get(self, request, task_id):
         result = AsyncResult(task_id)
@@ -672,6 +685,7 @@ class CoordinatorExportView(APIView):
     Protected: IsMISCoordinator only
     """
     permission_classes = [IsMISCoordinator]
+    serializer_class = serializers.Serializer
 
     # Heaviest endpoint — cap at 5 exports per minute per user
     @method_decorator(ratelimit(key='user', rate='5/m', method='GET', block=True))
