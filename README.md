@@ -177,26 +177,31 @@ graph TD
         mis_coord[MIS Coordinator] -->|Read-Only & Aggregated Export| school_records
     end
     
+    subgraph Campus Coordination
+        mis_accumulator[MIS Accumulator] -->|Receives & Combines| mis_coord
+    end
+    
     delete_auth[Delete Auth Reviewer] -->|Reviews| edit_requests
     delete_auth -->|Approves/Rejects| DB_updates[Database Updates]
 ```
 
-| Action | master | super_admin | admin | faculty | delete_auth | mis_coordinator | service_admin |
-|---|---|---|---|---|---|---|---|
-| Create campuses | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Create schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Create users | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Assign users to schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View all campus records | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View campus users | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View school faculties | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Manage clubs & committees | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| View own school records | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
-| Create records | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Request update/delete | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
-| Manage errors & bug reports| ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Action | master | super_admin | admin | faculty | delete_auth | mis_coordinator | mis_accumulator | service_admin |
+|---|---|---|---|---|---|---|---|---|
+| Create campuses | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Create schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Create users | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Assign users to schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View all campus records | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View campus users | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View school faculties | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Manage clubs & committees | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View own school records | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Create records | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Request update/delete | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Finalize MIS Reports | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Manage errors & bug reports| ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -772,7 +777,7 @@ GET/POST /api/service/bug-reports/      → Submit or view bug reports
 POST   /api/service/report-error/       → Frontend automated error ingestion
 ```
 
-### Export
+### Export & MIS Reporting
 ```
 GET    /api/export/school-activities/
 GET    /api/export/student-activities/
@@ -781,8 +786,15 @@ GET    /api/export/publications/
 GET    /api/export/patents/
 GET    /api/export/certifications/
 GET    /api/export/placements/
-GET    /api/export/coordinator/         → MIS Coordinator aggregated multi-format export
 GET    /api/export/all/
+
+GET    /api/export/reports/             → List/Create final text-based MIS reports (Coord/Accumulator)
+GET    /api/export/reports/received/    → Accumulator lists reports sent by Coordinators
+GET    /api/export/reports/admin/       → Admin lists final reports sent by Coordinators
+POST   /api/export/reports/<id>/send-accumulator/
+POST   /api/export/reports/<id>/send-admin/
+
+GET    /api/export/data-requests/       → Accumulator requests data from Coordinators
 ```
 
 ### Common Query Parameters
