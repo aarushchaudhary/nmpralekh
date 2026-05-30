@@ -33,6 +33,7 @@ graph TD
         D3[records: 8 MIS Modules + Clubs]
         D4[audit: Approve/Reject]
         D5[export: Excel Export]
+        D6[service: Errors & Bug Tickets]
     end
     
     C --> D1
@@ -40,6 +41,7 @@ graph TD
     C --> D3
     C --> D4
     C --> D5
+    C --> D6
     
     C -->|Read/Write| DB[(PostgreSQL<br>ACID)]
     C -->|Cache/Sessions| Cache[(Redis)]
@@ -120,9 +122,12 @@ nmpralekh/
 │   │   │   ├── models.py           # AuditRequest
 │   │   │   ├── serializers.py
 │   │   │   └── views.py            # Pending list, approve, reject, history
-│   │   └── export/                 # Excel generation
-│   │       ├── views.py            # Per-module + all exports
-│   │       └── tasks.py            # Celery async export tasks
+│   │   ├── export/                 # Excel generation
+│   │   │   ├── views.py            # Per-module + all exports
+│   │   │   └── tasks.py            # Celery async export tasks
+│   │   └── service/                # Service Portal (errors & tickets)
+│   │       ├── models.py           # ErrorTicket, ErrorOccurrence, BugReport
+│   │       └── views.py            # Error ingestion, bug reporting, stats
 │   ├── config/
 │   │   ├── settings.py
 │   │   ├── settings.example.py     # Template — copy to settings.py, fill secrets
@@ -152,6 +157,10 @@ nmpralekh/
 graph TD
     master[Master] -->|Creates & Assigns| campuses[Campuses, Schools, Users]
     
+    subgraph System Level
+        service_admin[Service Admin] -->|Manages| errors[Error Tickets & Bug Reports]
+    end
+    
     subgraph Campus Level
         super_admin[Super Admin] -->|Read-Only & Export| all_records[All Records in Campus]
         super_admin -->|Views| campus_users[All Campus Users]
@@ -172,21 +181,22 @@ graph TD
     delete_auth -->|Approves/Rejects| DB_updates[Database Updates]
 ```
 
-| Action | master | super_admin | admin | faculty | delete_auth | mis_coordinator |
-|---|---|---|---|---|---|---|
-| Create campuses | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Create schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Create users | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Assign users to schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View all campus records | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| View campus users | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| View school faculties | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Manage clubs & committees | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| View own school records | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ |
-| Create records | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
-| Request update/delete | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
-| Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Action | master | super_admin | admin | faculty | delete_auth | mis_coordinator | service_admin |
+|---|---|---|---|---|---|---|---|
+| Create campuses | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Create schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Create users | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Assign users to schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View all campus records | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View campus users | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View school faculties | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Manage clubs & committees | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View own school records | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Create records | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Request update/delete | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Manage errors & bug reports| ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -750,6 +760,16 @@ GET    /api/audit/<id>/
 POST   /api/audit/<id>/approve/
 POST   /api/audit/<id>/reject/
 GET    /api/audit/history/
+```
+
+### Service Portal
+```
+GET    /api/service/stats/
+GET    /api/service/api-status/
+GET    /api/service/tickets/            → Admin view of error tickets
+POST   /api/service/tickets/<id>/status/
+GET/POST /api/service/bug-reports/      → Submit or view bug reports
+POST   /api/service/report-error/       → Frontend automated error ingestion
 ```
 
 ### Export
