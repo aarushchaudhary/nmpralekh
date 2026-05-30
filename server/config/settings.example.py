@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'apps.records',
     'apps.audit',
     'apps.export',
+    'apps.service',
 
     'django_ratelimit',
     'django_celery_beat',

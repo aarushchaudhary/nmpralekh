@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/records/',    include('apps.records.urls')),
     path('api/audit/',      include('apps.audit.urls')),
     path('api/export/',     include('apps.export.urls')),
+    path('api/service/',    include('apps.service.urls')),
 ]
 
 # Only expose interactive API docs in development.
