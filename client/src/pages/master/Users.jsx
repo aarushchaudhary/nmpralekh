@@ -15,6 +15,7 @@ const roleOptions = [
     { value: 'user', label: 'Faculty' },
     { value: 'delete_auth', label: 'Delete Auth' },
     { value: 'mis_coordinator', label: 'MIS Coordinator' },
+    { value: 'mis_accumulator', label: 'MIS Accumulator' },
 ]
 
 const roleBadgeColor = {
@@ -24,6 +25,7 @@ const roleBadgeColor = {
     user: 'gray',
     delete_auth: 'yellow',
     mis_coordinator: 'teal',
+    mis_accumulator: 'orange',
 }
 
 const emptyForm = {

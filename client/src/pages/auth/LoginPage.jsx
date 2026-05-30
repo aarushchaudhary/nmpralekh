@@ -17,6 +17,7 @@ export default function LoginPage() {
     super_admin: '/superadmin',
     delete_auth: '/deleteauth',
     mis_coordinator: '/coordinator',
+    mis_accumulator: '/accumulator',
   }
 
   const handleSubmit = async (e) => {

@@ -111,6 +111,14 @@ class IsMISCoordinator(BasePermission):
             request.user.role == 'mis_coordinator'
         )
 
+class IsMISAccumulator(BasePermission):
+    """Only MIS Accumulator can access"""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.role == 'mis_accumulator'
+        )
 
 class IsMISCoordinatorReadOnly(BasePermission):
     """MIS Coordinator — read-only (GET, HEAD, OPTIONS)"""

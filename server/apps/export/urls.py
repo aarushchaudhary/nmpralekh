@@ -21,4 +21,14 @@ urlpatterns = [
     path('manual/',               views.TriggerManualExportView.as_view(),    name='manual_export'),
     path('nightly/trigger/',      views.TriggerNightlyExportView.as_view(),   name='trigger_nightly'),
     path('status/<str:task_id>/', views.ExportTaskStatusView.as_view(),       name='export_status'),
+
+    # MIS Data Requests
+    path('data-requests/',        views.MISDataRequestListCreateView.as_view(), name='data_requests_list_create'),
+    path('data-requests/<int:pk>/', views.MISDataRequestDetailView.as_view(),   name='data_requests_detail'),
+
+    # MIS Reports
+    path('reports/',              views.MISReportListCreateView.as_view(),      name='reports_list_create'),
+    path('reports/<int:pk>/send-admin/', views.MISReportSendAdminView.as_view(), name='reports_send_admin'),
+    path('reports/<int:pk>/send-accumulator/', views.MISReportSendAccumulatorView.as_view(), name='reports_send_accumulator'),
+    path('reports/received/',     views.ReceivedMISReportsView.as_view(),       name='reports_received'),
 ]

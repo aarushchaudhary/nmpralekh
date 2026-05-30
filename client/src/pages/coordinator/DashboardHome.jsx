@@ -1,8 +1,22 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
+import api from '../../api/axios'
+import { Link } from 'react-router-dom'
 
 export default function DashboardHome() {
     const { user } = useAuth()
+    const [requests, setRequests] = useState([])
+
+    useEffect(() => {
+        api.get('/export/data-requests/')
+            .then(res => {
+                const data = res.data?.results ?? res.data
+                // Filter only pending requests
+                setRequests(data.filter(req => req.status === 'pending'))
+            })
+            .catch(err => console.error(err))
+    }, [])
 
     return (
         <div>
@@ -10,6 +24,32 @@ export default function DashboardHome() {
                 title={`Welcome, ${user?.full_name}`}
                 subtitle="MIS Coordinator Portal — Read-only access to school data"
             />
+
+            {requests.length > 0 && (
+                <div className="mt-6 mb-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-3">Pending Data Requests</h3>
+                    <div className="space-y-3">
+                        {requests.map(req => (
+                            <div key={req.id} className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-xl shadow-sm flex items-center justify-between">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-orange-800 font-medium">Request from {req.accumulator_name}</span>
+                                        <span className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full">Pending</span>
+                                    </div>
+                                    <p className="text-sm text-orange-700 mt-1">
+                                        Please send MIS Data for the period: <strong>{req.date_from}</strong> to <strong>{req.date_to}</strong>
+                                    </p>
+                                </div>
+                                <div>
+                                    <Link to="/coordinator/send-mis-data" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                        Fulfill Request
+                                    </Link>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 {/* Quick Info Card */}
@@ -31,7 +71,7 @@ export default function DashboardHome() {
                 </div>
 
                 {/* Quick Action Card */}
-                <a href="/coordinator/export"
+                <Link to="/coordinator/export"
                    className="group bg-white rounded-xl border border-gray-100 p-6 shadow-sm
                               hover:border-primary-200 hover:shadow-md transition-all cursor-pointer block">
                     <div className="flex items-center gap-3 mb-4">
@@ -57,7 +97,7 @@ export default function DashboardHome() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                     </span>
-                </a>
+                </Link>
             </div>
         </div>
     )

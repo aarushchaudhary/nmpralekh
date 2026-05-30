@@ -42,6 +42,8 @@ const roleNavLinks = {
         { label: 'Patents', path: '/admin/patents' },
         { label: 'Certifications', path: '/admin/certifications' },
         { label: 'Placements', path: '/admin/placements' },
+        { label: '— Export', path: null },
+        { label: 'Received MIS Data', path: '/admin/received-mis-data' },
     ],
     user: [
         { label: 'Dashboard',           path: '/faculty' },
@@ -64,8 +66,14 @@ const roleNavLinks = {
         { label: 'Dashboard', path: '/coordinator' },
         { label: '— Export', path: null },
         { label: 'Data Export', path: '/coordinator/export' },
-        { label: '— Chronicle', path: null },
-        { label: 'VC Chronicle', path: '/coordinator/vc-chronicle' },
+        { label: '— MIS Data', path: null },
+        { label: 'Send MIS Data', path: '/coordinator/send-mis-data' },
+    ],
+    mis_accumulator: [
+        { label: 'Dashboard', path: '/accumulator' },
+        { label: '— Coordinators', path: null },
+        { label: 'Received Data', path: '/accumulator/received-data' },
+        { label: 'Finalize MIS', path: '/accumulator/finalize' },
     ],
     service_admin: [
         { label: 'Dashboard', path: '/service-dashboard' },

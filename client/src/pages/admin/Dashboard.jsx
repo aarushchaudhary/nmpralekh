@@ -10,6 +10,7 @@ import CertificationsPage from '../records/CertificationsPage'
 import PlacementsPage     from '../records/PlacementsPage'
 import ClubsPage          from './ClubsPage'
 import SchoolFacultiesPage from './SchoolFacultiesPage'
+import ReceivedMISDataPage from './ReceivedMISDataPage'
 
 export default function AdminDashboard() {
   return (
@@ -29,6 +30,9 @@ export default function AdminDashboard() {
         <Route path="patents"                     element={<PatentsPage />} />
         <Route path="certifications"              element={<CertificationsPage />} />
         <Route path="placements"                  element={<PlacementsPage />} />
+        
+        {/* Export */}
+        <Route path="received-mis-data"           element={<ReceivedMISDataPage />} />
       </Routes>
     </Layout>
   )

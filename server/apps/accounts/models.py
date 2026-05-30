@@ -35,6 +35,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('user',            'User'),
         ('delete_auth',     'Delete Auth'),
         ('mis_coordinator', 'MIS Coordinator'),
+        ('mis_accumulator', 'MIS Accumulator'),
         ('service_admin',   'Service Admin'),
     ]
 

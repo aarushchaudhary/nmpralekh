@@ -13,7 +13,7 @@ from apps.accounts.serializers import (
     UserSerializer, UserVisibilitySerializer,
     UserCreateSerializer, UserUpdateSerializer, LoginSerializer
 )
-from apps.accounts.permissions import IsMaster, IsAdmin, IsSuperAdmin, IsAnyRole
+from apps.accounts.permissions import IsMaster, IsAdmin, IsSuperAdmin, IsAnyRole, IsMISAccumulator
 from config.pagination import StandardPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
@@ -277,6 +277,32 @@ class CampusUsersView(generics.ListAPIView):
             qs = qs.filter(id__in=matching_ids)
 
         return qs
+
+class AccumulatorCoordinatorsView(generics.ListAPIView):
+    """MIS Accumulator sees all MIS Coordinators in their campus"""
+    serializer_class   = UserVisibilitySerializer
+    permission_classes = [IsMISAccumulator]
+    pagination_class   = StandardPagination
+    filter_backends    = [DjangoFilterBackend, SearchFilter]
+    search_fields      = ['full_name', 'username', 'email']
+
+    def get_queryset(self):
+        from apps.schools.models import UserSchoolMapping
+        
+        campus_id = self.request.user.campus_id
+        if not campus_id:
+            return User.objects.none()
+
+        return User.objects.filter(
+            campus_id=campus_id,
+            role='mis_coordinator',
+            is_active=True
+        ).order_by('full_name').prefetch_related(
+            Prefetch(
+                'school_mappings',
+                queryset=UserSchoolMapping.objects.select_related('school')
+            )
+        )
 
 class ServiceUserManagementView(APIView):
     permission_classes = [IsMaster]

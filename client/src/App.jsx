@@ -13,6 +13,7 @@ import FacultyDashboard from './pages/faculty/Dashboard'
 import SuperAdminDashboard from './pages/superadmin/Dashboard'
 import DeleteAuthDashboard from './pages/deleteauth/Dashboard'
 import CoordinatorDashboard from './pages/coordinator/Dashboard'
+import AccumulatorDashboard from './pages/accumulator/Dashboard'
 import ServiceDashboard from './pages/service/Dashboard'
 
 function RoleRedirect() {
@@ -36,6 +37,7 @@ function RoleRedirect() {
     super_admin: '/superadmin',
     delete_auth: '/deleteauth',
     mis_coordinator: '/coordinator',
+    mis_accumulator: '/accumulator',
   }
   return <Navigate to={routes[user.role] || '/login'} replace />
 }
@@ -91,6 +93,13 @@ export default function App() {
           <Route path="/coordinator/*" element={
             <ProtectedRoute roles={['mis_coordinator']}>
               <CoordinatorDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* MIS Accumulator */}
+          <Route path="/accumulator/*" element={
+            <ProtectedRoute roles={['mis_accumulator']}>
+              <AccumulatorDashboard />
             </ProtectedRoute>
           } />
 

@@ -206,15 +206,16 @@ class ExportPublicationsView(APIView):
         wb = openpyxl.Workbook(write_only=True)
         ws = wb.create_sheet(title='Faculty Publication')
 
-        headers = ['School', 'Author Name', 'Author Type', 'Title of Paper',
+        headers = ['School', 'Author Name', 'Co-Authors', 'Author Type', 'Title of Paper',
                    'Journal/Conference', 'Date', 'Venue', 'Publication', 'DOI/Link']
         append_styled_headers(ws, headers)
 
-        queryset = apply_filters(get_scoped_queryset(FacultyPublication, request.user))
-        for pub in queryset.iterator():
+        queryset = apply_filters(get_scoped_queryset(FacultyPublication, request.user)).prefetch_related('authors')
+        for pub in queryset.iterator(chunk_size=2000):
             ws.append([
                 pub.school.name,
                 pub.author_name,
+                ", ".join(a.name for a in pub.authors.all()),
                 pub.author_type,
                 pub.title_of_paper,
                 pub.journal_or_conference_name,
@@ -246,15 +247,16 @@ class ExportPatentsView(APIView):
         wb = openpyxl.Workbook(write_only=True)
         ws = wb.create_sheet(title='PATENT')
 
-        headers = ['School', 'Applicant Name', 'Applicant Type', 'Title of Patent',
+        headers = ['School', 'Applicant Name', 'Co-Applicants', 'Applicant Type', 'Title of Patent',
                    'Details', 'Date of Publication', 'Journal Number', 'Status']
         append_styled_headers(ws, headers)
 
-        queryset = apply_filters(get_scoped_queryset(Patent, request.user))
-        for patent in queryset.iterator():
+        queryset = apply_filters(get_scoped_queryset(Patent, request.user)).prefetch_related('applicants')
+        for patent in queryset.iterator(chunk_size=2000):
             ws.append([
                 patent.school.name,
                 patent.applicant_name,
+                ", ".join(a.name for a in patent.applicants.all()),
                 patent.applicant_type,
                 patent.title_of_patent,
                 patent.details or '',
@@ -618,10 +620,12 @@ def _gather_coordinator_data(school_ids, date_from=None, date_to=None):
             'model': FacultyPublication,
             'date_field': 'date',
             'qs': FacultyPublication.objects.filter(**base).select_related('school', 'created_by').prefetch_related('authors'),
-            'headers': ['School', 'Author', 'Type', 'Title', 'Journal',
+            'headers': ['School', 'Author', 'Co-Authors', 'Type', 'Title', 'Journal',
                         'Date', 'Venue', 'Publication', 'DOI/Link'],
             'row_fn': lambda r: [
-                r.school.name, r.author_name, r.author_type,
+                r.school.name, r.author_name,
+                ", ".join(a.name for a in r.authors.all()),
+                r.author_type,
                 r.title_of_paper, r.journal_or_conference_name,
                 str(r.date), r.venue or '', r.publication or '',
                 r.doi_or_link or '',
@@ -633,10 +637,12 @@ def _gather_coordinator_data(school_ids, date_from=None, date_to=None):
             'model': Patent,
             'date_field': 'date_of_publication',
             'qs': Patent.objects.filter(**base).select_related('school', 'created_by').prefetch_related('applicants'),
-            'headers': ['School', 'Applicant', 'Type', 'Title',
+            'headers': ['School', 'Applicant', 'Co-Applicants', 'Type', 'Title',
                         'Date', 'Journal No', 'Status', 'DOI/Link'],
             'row_fn': lambda r: [
-                r.school.name, r.applicant_name, r.applicant_type,
+                r.school.name, r.applicant_name,
+                ", ".join(a.name for a in r.applicants.all()),
+                r.applicant_type,
                 r.title_of_patent, str(r.date_of_publication),
                 r.journal_number, r.patent_status,
                 r.doi_or_link or '',
@@ -726,7 +732,7 @@ class CoordinatorExportView(APIView):
             ws = wb.create_sheet(title=mod['name'][:31])  # Excel sheet-name limit
             append_styled_headers(ws, mod['headers'])
             # .iterator() prevents Django from loading all 5,000 rows into memory at once
-            for record in mod['qs'][:5000].iterator():
+            for record in mod['qs'][:5000].iterator(chunk_size=2000):
                 try:
                     ws.append(mod['row_fn'](record))
                 except Exception:
@@ -753,3 +759,120 @@ class CoordinatorExportView(APIView):
         )
         response['Content-Disposition'] = 'attachment; filename=MIS_Coordinator_Export.json'
         return response
+
+from .models import MISDataRequest
+from .serializers import MISDataRequestSerializer
+from apps.accounts.permissions import IsMISAccumulator, IsMISCoordinator, IsAnyRole
+
+class MISDataRequestListCreateView(generics.ListCreateAPIView):
+    serializer_class = MISDataRequestSerializer
+    pagination_class = StandardPagination
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsMISAccumulator()]
+        if getattr(self.request.user, 'role', None) == 'mis_accumulator':
+            return [IsMISAccumulator()]
+        return [IsMISCoordinator()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return MISDataRequest.objects.none()
+        if user.role == 'mis_accumulator':
+            return MISDataRequest.objects.filter(accumulator=user).select_related('coordinator', 'accumulator')
+        elif user.role == 'mis_coordinator':
+            return MISDataRequest.objects.filter(coordinator=user).select_related('coordinator', 'accumulator')
+        return MISDataRequest.objects.none()
+
+class MISDataRequestDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = MISDataRequestSerializer
+    permission_classes = [IsMISCoordinator]
+    
+    def get_queryset(self):
+        return MISDataRequest.objects.filter(coordinator=self.request.user)
+from django.utils import timezone
+from .models import MISReport
+from .serializers import MISReportSerializer
+
+class MISReportListCreateView(generics.ListCreateAPIView):
+    serializer_class = MISReportSerializer
+    pagination_class = StandardPagination
+
+    def get_permissions(self):
+        if getattr(self.request.user, 'role', None) == 'mis_accumulator':
+            return [IsMISAccumulator()]
+        return [IsMISCoordinator()]
+
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return MISReport.objects.none()
+        return MISReport.objects.filter(coordinator=self.request.user)
+
+class MISReportSendAdminView(APIView):
+    permission_classes = [IsMISCoordinator]
+
+    def post(self, request, pk):
+        try:
+            report = MISReport.objects.get(pk=pk, coordinator=request.user)
+        except MISReport.DoesNotExist:
+            return Response({'detail': 'Report not found'}, status=404)
+        
+        report.sent_to_admin = True
+        report.sent_to_admin_at = timezone.now()
+        report.save()
+        return Response({'detail': 'Sent to Admin successfully.'})
+
+class MISReportSendAccumulatorView(APIView):
+    permission_classes = [IsMISCoordinator]
+
+    def post(self, request, pk):
+        try:
+            report = MISReport.objects.get(pk=pk, coordinator=request.user)
+        except MISReport.DoesNotExist:
+            return Response({'detail': 'Report not found'}, status=404)
+        
+        report.sent_to_accumulator = True
+        report.sent_to_accumulator_at = timezone.now()
+        report.save()
+
+        # Fulfill any pending requests from accumulators that overlap
+        pending_requests = MISDataRequest.objects.filter(
+            coordinator=request.user,
+            status='pending',
+            date_from__lte=report.date_to,
+            date_to__gte=report.date_from
+        )
+        
+        for req in pending_requests:
+            req.status = 'completed'
+            req.completed_at = timezone.now()
+            req.save()
+
+        return Response({'detail': 'Sent to Accumulator successfully and requests fulfilled.'})
+class ReceivedMISReportsView(generics.ListAPIView):
+    serializer_class = MISReportSerializer
+    pagination_class = StandardPagination
+
+    def get_permissions(self):
+        return [IsAnyRole()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return MISReport.objects.none()
+        
+        if user.role == 'mis_accumulator':
+            # Accumulators see reports from coordinators in their campus where sent_to_accumulator=True
+            return MISReport.objects.filter(
+                sent_to_accumulator=True,
+                coordinator__campus=user.campus
+            )
+        elif user.role == 'admin':
+            # Admins see reports from coordinators who share any of the admin's schools
+            admin_schools = user.school_mappings.values_list('school_id', flat=True)
+            return MISReport.objects.filter(
+                sent_to_admin=True,
+                coordinator__school_mappings__school_id__in=admin_schools
+            ).distinct()
+        return MISReport.objects.none()

@@ -109,11 +109,13 @@ def build_campus_workbook(school_ids, date_from=None, date_to=None):
             FacultyPublication.objects.filter(
                 school_id__in=school_ids, is_deleted=False,
                 **_date_filters('date')
-            ).select_related('school'),
-            ['School', 'Author', 'Title', 'Journal',
+            ).select_related('school').prefetch_related('authors'),
+            ['School', 'Author', 'Co-Authors', 'Title', 'Journal',
              'Date', 'Venue', 'Publication'],
             lambda r: [
-                r.school.name, r.author_name, r.title_of_paper,
+                r.school.name, r.author_name,
+                ", ".join(a.name for a in r.authors.all()),
+                r.title_of_paper,
                 r.journal_or_conference_name, str(r.date),
                 r.venue or '', r.publication or '',
             ]
@@ -123,11 +125,13 @@ def build_campus_workbook(school_ids, date_from=None, date_to=None):
             Patent.objects.filter(
                 school_id__in=school_ids, is_deleted=False,
                 **_date_filters('date_of_publication')  # Patent uses date_of_publication
-            ).select_related('school'),
-            ['School', 'Applicant', 'Title', 'Date',
+            ).select_related('school').prefetch_related('applicants'),
+            ['School', 'Applicant', 'Co-Applicants', 'Title', 'Date',
              'Journal No', 'Status'],
             lambda r: [
-                r.school.name, r.applicant_name, r.title_of_patent,
+                r.school.name, r.applicant_name,
+                ", ".join(a.name for a in r.applicants.all()),
+                r.title_of_patent,
                 str(r.date_of_publication),
                 r.journal_number, r.patent_status,
             ]
@@ -165,7 +169,7 @@ def build_campus_workbook(school_ids, date_from=None, date_to=None):
         count = 0
         # .iterator() streams rows from Postgres one-by-one instead of
         # loading the entire result set into a Python list.
-        for record in queryset.iterator():
+        for record in queryset.iterator(chunk_size=2000):
             try:
                 ws.append(row_fn(record))
                 count += 1
