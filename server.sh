@@ -1,11 +1,20 @@
 #!/bin/bash
+set -e
 
-# Go to server directory
+echo "Starting system services (Redis, pgBouncer)..."
+sudo systemctl start redis
+sudo systemctl start pgbouncer
+
+echo "Activating virtual environment..."
 cd server
-
-# Activate virtual environment
 source venv/bin/activate
 
-# Run Gunicorn instead of the Django dev server
-# -c points to your configuration file
-gunicorn -c gunicorn.conf.py config.wsgi:application
+echo "Running celery migrations..."
+python manage.py migrate django_celery_beat
+
+echo "Starting Celery worker and beat in background..."
+celery -A config worker --loglevel=info --concurrency=4 &
+celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler &
+
+echo "Starting Gunicorn server..."
+exec gunicorn -c gunicorn.conf.py config.wsgi:application
