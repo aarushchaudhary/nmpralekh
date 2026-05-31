@@ -615,7 +615,7 @@ class DashboardCountsView(APIView):
 
     def get(self, request):
         school_ids = list(get_user_school_ids(request.user))
-        counts     = get_dashboard_counts(school_ids, request.user.role)
+        counts     = get_dashboard_counts(school_ids, request.user)
         return Response(counts)
 
 

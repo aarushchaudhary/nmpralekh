@@ -65,7 +65,7 @@ class MISDataRequest(models.Model):
         return f"Request from {self.accumulator.username} to {self.coordinator.username}"
 
 class MISReport(models.Model):
-    coordinator = models.ForeignKey(
+    created_by = models.ForeignKey(
         'accounts.User', on_delete=models.CASCADE, related_name='created_mis_reports'
     )
     name = models.CharField(max_length=255, blank=True, null=True)
@@ -92,4 +92,4 @@ class MISReport(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"Report by {self.coordinator.username} ({self.date_from} to {self.date_to})"
+        return f"Report by {self.created_by.username} ({self.date_from} to {self.date_to})"

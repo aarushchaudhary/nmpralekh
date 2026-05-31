@@ -64,20 +64,24 @@ def build_apply_filters(school_id, date_from, date_to):
         from django.core.exceptions import FieldError
         try:
             if school_id: qs = qs.filter(school_id=school_id)
-            if date_from: qs = qs.filter(date__gte=date_from)
-            if date_to:   qs = qs.filter(date__lte=date_to)
         except FieldError:
             pass
 
-        try:
-            if date_from: qs = qs.filter(date_start__gte=date_from)
-            if date_to:   qs = qs.filter(date_start__lte=date_to)
-        except FieldError: pass
+        if date_from or date_to:
+            model = qs.model
+            date_field = None
+            if hasattr(model, 'date_of_publication'):
+                date_field = 'date_of_publication'
+            elif hasattr(model, 'date_start'):
+                date_field = 'date_start'
+            elif hasattr(model, 'date'):
+                date_field = 'date'
 
-        try:
-            if date_from: qs = qs.filter(date_of_publication__gte=date_from)
-            if date_to:   qs = qs.filter(date_of_publication__lte=date_to)
-        except FieldError: pass
+            if date_field:
+                kwargs = {}
+                if date_from: kwargs[f'{date_field}__gte'] = date_from
+                if date_to:   kwargs[f'{date_field}__lte'] = date_to
+                qs = qs.filter(**kwargs)
 
         return qs[:5000]   # hard safety cap
     return apply_filters
@@ -770,7 +774,7 @@ class MISDataRequestListCreateView(generics.ListCreateAPIView):
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsMISAccumulator()]
+            return [IsMISAccumulator() | IsMISCoordinator()]
         if getattr(self.request.user, 'role', None) == 'mis_accumulator':
             return [IsMISAccumulator()]
         return [IsMISCoordinator()]
@@ -807,7 +811,7 @@ class MISReportListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         if not self.request.user.is_authenticated:
             return MISReport.objects.none()
-        return MISReport.objects.filter(coordinator=self.request.user)
+        return MISReport.objects.filter(created_by=self.request.user)
 
 class MISReportSendAdminView(APIView):
     permission_classes = [IsMISCoordinator]
@@ -815,7 +819,7 @@ class MISReportSendAdminView(APIView):
 
     def post(self, request, pk):
         try:
-            report = MISReport.objects.get(pk=pk, coordinator=request.user)
+            report = MISReport.objects.get(pk=pk, created_by=request.user)
         except MISReport.DoesNotExist:
             return Response({'detail': 'Report not found'}, status=404)
         
@@ -830,7 +834,7 @@ class MISReportSendAccumulatorView(APIView):
 
     def post(self, request, pk):
         try:
-            report = MISReport.objects.get(pk=pk, coordinator=request.user)
+            report = MISReport.objects.get(pk=pk, created_by=request.user)
         except MISReport.DoesNotExist:
             return Response({'detail': 'Report not found'}, status=404)
         
@@ -859,7 +863,7 @@ class MISReportSendSuperAdminView(APIView):
 
     def post(self, request, pk):
         try:
-            report = MISReport.objects.get(pk=pk, coordinator=request.user)
+            report = MISReport.objects.get(pk=pk, created_by=request.user)
         except MISReport.DoesNotExist:
             return Response({'detail': 'Report not found'}, status=404)
         
@@ -874,7 +878,7 @@ class MISReportSendChronicleMasterView(APIView):
 
     def post(self, request, pk):
         try:
-            report = MISReport.objects.get(pk=pk, coordinator=request.user)
+            report = MISReport.objects.get(pk=pk, created_by=request.user)
         except MISReport.DoesNotExist:
             return Response({'detail': 'Report not found'}, status=404)
         
@@ -898,20 +902,22 @@ class ReceivedMISReportsView(generics.ListAPIView):
             # Accumulators see reports from coordinators in their campus where sent_to_accumulator=True
             return MISReport.objects.filter(
                 sent_to_accumulator=True,
-                coordinator__campus=user.campus
+                created_by__campus=user.campus
             )
         elif user.role == 'admin':
             # Admins see reports from coordinators who share any of the admin's schools
             admin_schools = user.school_mappings.values_list('school_id', flat=True)
             return MISReport.objects.filter(
                 sent_to_admin=True,
-                coordinator__school_mappings__school_id__in=admin_schools
+                created_by__school_mappings__school_id__in=admin_schools
             ).distinct()
         elif user.role == 'super_admin':
+            if not user.campus_id:
+                return MISReport.objects.none()
             # Super Admins see reports from accumulators in their campus
             return MISReport.objects.filter(
                 sent_to_super_admin=True,
-                coordinator__campus=user.campus
+                created_by__campus_id=user.campus_id
             )
         elif user.role == 'chronicle_master':
             # Chronicle Master sees all reports sent to them

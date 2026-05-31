@@ -126,6 +126,12 @@ class AuditApproveView(APIView):
                             except Exception:
                                 setattr(record, field, value)
 
+                    if audit.table_name == 'student_activities' and 'club' in new_data and 'club_name' not in new_data:
+                        if getattr(record, 'club', None):
+                            record.club_name = record.club.name
+                        else:
+                            record.club_name = None
+
                     record.pending_audit = None
                     record.save()
 
@@ -189,7 +195,7 @@ class AuditRejectView(APIView):
                     record = Model.objects.get(pk=audit.record_id)
                     record.pending_audit = None
                     record.save()
-                except Exception:
+                except Model.DoesNotExist:
                     pass
 
             audit.status      = 'rejected'

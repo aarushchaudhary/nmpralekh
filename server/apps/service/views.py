@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
+from django.db.models import F
 
 from apps.accounts.permissions import IsMaster, IsAnyRole, IsServiceAdmin
 from apps.service.models import ErrorTicket, ErrorOccurrence, BugReport
@@ -76,7 +77,7 @@ class ReportErrorView(APIView):
             if not created:
                 # Bump counters on existing ticket
                 ErrorTicket.objects.filter(pk=ticket.pk).update(
-                    occurrence_count=ticket.occurrence_count + 1,
+                    occurrence_count=F('occurrence_count') + 1,
                 )
                 # Reopen a previously closed ticket if the error recurs
                 if ticket.status == 'closed':
@@ -102,7 +103,7 @@ class ReportErrorView(APIView):
 
             if not already_seen:
                 ErrorTicket.objects.filter(pk=ticket.pk).update(
-                    affected_users_count=ticket.affected_users_count + 1,
+                    affected_users_count=F('affected_users_count') + 1,
                 )
 
         return Response({'ok': True, 'ticket_id': ticket.id}, status=status.HTTP_200_OK)

@@ -36,13 +36,13 @@ class MISDataRequestSerializer(serializers.ModelSerializer):
 from .models import MISReport
 
 class MISReportSerializer(serializers.ModelSerializer):
-    coordinator_name = serializers.CharField(source='coordinator.full_name', read_only=True)
-    coordinator_school_name = serializers.SerializerMethodField()
+    created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
+    created_by_school_name = serializers.SerializerMethodField()
 
     class Meta:
         model = MISReport
         fields = [
-            'id', 'coordinator', 'coordinator_name', 'coordinator_school_name', 
+            'id', 'created_by', 'created_by_name', 'created_by_school_name', 
             'name', 'data_content', 'date_from', 'date_to',
             'sent_to_admin', 'sent_to_admin_at',
             'sent_to_accumulator', 'sent_to_accumulator_at',
@@ -51,22 +51,22 @@ class MISReportSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = [
-            'id', 'coordinator_name', 'coordinator_school_name',
-            'coordinator', 'sent_to_admin', 'sent_to_admin_at',
+            'id', 'created_by_name', 'created_by_school_name',
+            'created_by', 'sent_to_admin', 'sent_to_admin_at',
             'sent_to_accumulator', 'sent_to_accumulator_at',
             'sent_to_super_admin', 'sent_to_super_admin_at',
             'sent_to_chronicle_master', 'sent_to_chronicle_master_at',
             'created_at'
         ]
 
-    def get_coordinator_school_name(self, obj):
-        if obj.coordinator.role == 'mis_accumulator' and obj.coordinator.campus:
-            return obj.coordinator.campus.name
-        mappings = obj.coordinator.school_mappings.all()
+    def get_created_by_school_name(self, obj):
+        if obj.created_by.role == 'mis_accumulator' and obj.created_by.campus:
+            return obj.created_by.campus.name
+        mappings = obj.created_by.school_mappings.all()
         names = [m.school.name for m in mappings if m.school]
         return ', '.join(names) if names else 'Unknown School'
 
     def create(self, validated_data):
         request = self.context.get('request')
-        validated_data['coordinator'] = request.user
+        validated_data['created_by'] = request.user
         return super().create(validated_data)

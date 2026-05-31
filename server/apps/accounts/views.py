@@ -190,6 +190,11 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     def destroy(self, request, *args, **kwargs):
         # never hard delete — just deactivate
         user = self.get_object()
+        if user.pk == request.user.pk:
+            return Response(
+                {'detail': 'You cannot deactivate your own account'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         user.is_active = False
         user.save()
         return Response({'detail': 'User deactivated successfully'})

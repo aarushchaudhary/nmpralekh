@@ -1,5 +1,4 @@
 import os
-import stat
 import subprocess
 import tempfile
 from datetime import datetime
@@ -70,8 +69,8 @@ def perform_db_backup(scope=None, date_from=None, date_to=None):
         pgpass_line = (
             f"{db['HOST']}:{db['PORT']}:{db['NAME']}:{db['USER']}:{db['PASSWORD']}\n"
         )
-        with open(pgpass_path, 'w') as f:
-            os.chmod(pgpass_path, 0o600)
+        fd = os.open(pgpass_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, 'w') as f:
             f.write(pgpass_line)
 
         env = os.environ.copy()
