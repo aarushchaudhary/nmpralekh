@@ -878,7 +878,7 @@ Rate limiting        →  60/min anonymous, 300/min authenticated
 
 ## Load Testing (Locust)
 
-The project ships with a Locust test script at `server/locustfile.py` that simulates realistic multi-role traffic against the API.
+The project ships with a Locust test script at `server/locustfile.py` that simulates realistic multi-role traffic against all API endpoints across all 9 user roles.
 
 ### Install Locust
 
@@ -892,31 +892,56 @@ pip install locust
 
 ### Set up tokens
 
-The script authenticates each virtual user by injecting a pre-captured JWT into the `access_token` cookie. Before running, replace the placeholder values at the top of `server/locustfile.py` with real tokens captured from your browser (DevTools → Application → Cookies):
+The script authenticates each virtual user by injecting a pre-captured JWT into the `access_token` cookie. Set tokens via environment variables (capture from DevTools → Application → Cookies):
 
-```python
-TOKENS = {
-    "master":          "MASTER_JWT_TOKEN",
-    "super_admin":     "SUPER_ADMIN_JWT_TOKEN",
-    "admin":           "ADMIN_JWT_TOKEN",
-    "faculty":         "FACULTY_JWT_TOKEN",
-    "delete_auth":     "DELETE_AUTH_JWT_TOKEN",
-    "mis_coordinator": "MIS_COORDINATOR_JWT_TOKEN",
-}
+```bash
+export LOCUST_TOKEN_MASTER="eyJ..."
+export LOCUST_TOKEN_SUPER_ADMIN="eyJ..."
+export LOCUST_TOKEN_ADMIN="eyJ..."
+export LOCUST_TOKEN_FACULTY="eyJ..."
+export LOCUST_TOKEN_DELETE_AUTH="eyJ..."
+export LOCUST_TOKEN_MIS_COORDINATOR="eyJ..."
+export LOCUST_TOKEN_MIS_ACCUMULATOR="eyJ..."
+export LOCUST_TOKEN_CHRONICLE_MASTER="eyJ..."
+export LOCUST_TOKEN_SERVICE_ADMIN="eyJ..."
 ```
 
 ### User classes and weights
 
-| Class | Weight | Role simulated | Endpoints hit |
+| Class | Weight | Role | Endpoints hit |
 |---|---|---|---|
-| `MasterUser` | 1 | master | `/api/schools/campuses/`, `/api/schools/`, `/api/users/` |
-| `SuperAdminUser` | 10 | super_admin | `/api/records/dashboard-counts/`, `/api/users/campus-users/`, `/api/export/all/` |
-| `AdminUser` | 15 | admin | `/api/records/dashboard-counts/`, `/api/records/clubs/`, `/api/users/school-faculties/` |
-| `FacultyUser` | 60 | faculty | `/api/records/publications/`, `/api/records/patents/`, `/api/records/certifications/` |
-| `DeleteAuthUser` | 5 | delete_auth | `/api/audit/`, `/api/audit/history/` |
-| `MISCoordinatorUser` | 10 | mis_coordinator | `/api/export/coordinator/` |
+| `MasterUser` | 1 | master | Campuses, schools, users, assignments, export history, backup config |
+| `SuperAdminUser` | 10 | super_admin | Dashboard counts, campus users, all record types, export all, audit history |
+| `AdminUser` | 15 | admin | Dashboard counts, clubs, school/student activities, placements, faculties, exports |
+| `FacultyUser` | 60 | faculty | Dashboard counts, publications, patents, certifications, FDP, activities, faculty search, **error reporting (POST)**, **bug report (POST)**, exports |
+| `DeleteAuthUser` | 5 | delete_auth | Pending audit requests, audit history |
+| `MISCoordinatorUser` | 8 | mis_coordinator | Dashboard counts, school activities, publications, FDP, coordinator export, MIS reports |
+| `MISAccumulatorUser` | 3 | mis_accumulator | Received reports, own reports, data requests, coordinator list |
+| `ChronicleMasterUser` | 1 | chronicle_master | Received reports, own reports, accumulator list |
+| `ServiceAdminUser` | 1 | service_admin | Service dashboard stats, error tickets (all + filtered), bug reports, API status |
 
-Weights reflect realistic traffic: faculty make up ~60 % of users. `wait_time = between(600, 1800)` (10–30 min) simulates actual human think time.
+Weights reflect realistic traffic distribution: faculty make up ~60% of users. `wait_time = between(600, 1800)` (10–30 min) simulates actual human think time.
+
+### Tagged tasks
+
+Each task is tagged for selective execution. Available tags: `structure`, `users`, `dashboard`, `records`, `audit`, `export`, `reports`, `service`, `schools`, `config`, `auth`.
+
+```bash
+# Run only record-related tasks
+locust -f locustfile.py --tags records --host=https://127.0.0.1:8000
+
+# Run only service portal tasks
+locust -f locustfile.py --tags service --host=https://127.0.0.1:8000
+
+# Exclude export tasks (they generate large files)
+locust -f locustfile.py --exclude-tags export --host=https://127.0.0.1:8000
+```
+
+### Write operations
+
+The faculty user class includes **write (POST) operations** to realistically simulate frontend behavior:
+- **Error reporting** — sends randomized error payloads to `/api/service/report-error/` (tests the deduplication pipeline)
+- **Bug report submission** — posts to `/api/service/bug-reports/submit/`
 
 ### Running the tests
 
@@ -935,14 +960,14 @@ Then open the Locust UI at **http://localhost:8089** and configure user count an
 ```bash
 source venv/bin/activate
 cd server
-locust -f locustfile.py --host=http://127.0.0.1:8000
+locust -f locustfile.py --host=https://127.0.0.1:8000
 ```
 
 **Option C — headless (CI/scripted runs)**
 
 ```bash
 locust -f locustfile.py \
-  --host=http://127.0.0.1:8000 \
+  --host=https://127.0.0.1:8000 \
   --headless \
   --users 500 \
   --spawn-rate 10 \
@@ -959,6 +984,103 @@ locust -f locustfile.py \
 | Gunicorn worker CPU | < 80 % sustained |
 
 > **Note:** The test script disables SSL verification (`urllib3.disable_warnings`) because the dev server uses a self-signed certificate via `django-sslserver`. Remove that line when testing against a properly signed staging environment.
+
+---
+
+## Testing
+
+### Running the Automated Test Suite
+
+```bash
+cd server
+python manage.py test
+```
+
+This runs **160+ automated tests** across all 6 Django apps. No frontend, no browser, no Postman needed — Django spins up a temporary test database, simulates HTTP requests to every API endpoint, and tears it down when done.
+
+To run tests for a specific app:
+
+```bash
+python manage.py test apps.accounts       # Accounts only
+python manage.py test apps.schools        # Schools only
+python manage.py test apps.records        # Records only
+python manage.py test apps.audit          # Audit only
+python manage.py test apps.export         # Export only
+python manage.py test apps.service        # Service only
+```
+
+For verbose output:
+
+```bash
+python manage.py test --verbosity=2
+```
+
+### What the Automated Tests Cover
+
+| Test File | Tests | What It Validates |
+|-----------|-------|-------------------|
+| `apps/accounts/tests.py` | ~45 | User model creation, `UserManager` (`create_user`, `create_superuser`), email normalization, all 13 permission classes, serializer validation (password min-length, `ChangePasswordSerializer`), login/logout/me API, user CRUD (list, create, update, soft-delete), self-deactivation prevention, service user & chronicle master singleton management, school faculties & campus users views |
+| `apps/schools/tests.py` | ~40 | Campus/School/UserSchoolMapping models (`__str__`, unique constraints, FK cascades, `RESTRICT` delete protection), `get_user_school_ids()` utility for all role types with caching, campus CRUD + soft-deactivate + reactivate, school CRUD + scoping (master sees all, super_admin sees campus only), mapping creation with validation (role check, duplicate check, cross-campus check), my-schools (no pagination), school faculty view |
+| `apps/records/tests.py` | ~35 | All 13 models — Club (`unique_together`), SchoolActivity, StudentActivity (club_name auto-fill), FDP/Workshop/GL, Publications, Patents, Certifications, Placements, PublicationAuthor (cascade + ordering), PatentApplicant, BackupConfiguration. Serializer auto-set `created_by`. API CRUD with permission checks. Audit-gated updates (202 response). Soft-delete behavior (records never hard-deleted). Dashboard counts endpoint |
+| `apps/audit/tests.py` | ~20 | AuditRequest model (all field types, choices, FK behaviors — CASCADE on school, RESTRICT on requested_by, SET_NULL on reviewed_by). Serializer with nested `UserSerializer`. Approve DELETE (sets `is_deleted=True`), approve UPDATE (applies field changes via whitelist), reject (clears `pending_audit`, record unchanged). History view (excludes pending, allows master/super_admin/delete_auth). Permission gating on all endpoints |
+| `apps/export/tests.py` | ~25 | GeneratedExport, MISDataRequest, MISReport models (defaults, `__str__`, FK behaviors). Serializer auto-set `accumulator`/`created_by` from request. Export history (master only). MIS report send workflow (send-admin, send-accumulator, send-superadmin, send-chronicle with permission checks). Coordinator export access. `validate_export_params` helper (valid/invalid school_id, date formats) |
+| `apps/service/tests.py` | ~35 | ErrorTicket, ErrorOccurrence, BugReport models. `make_fingerprint` normalization (digits→N, hex→0xADDR, SHA256, truncation at 200 chars). Error deduplication (same error → 1 ticket, 2 occurrences). `affected_users_count` tracking (unique users only). Closed ticket reopening on recurrence. Invalid payload returns `{ok: false}`. Bug report creation with user auto-set. Ticket list filtering (status, source, search, sort). Ticket status transitions with `resolved_by`/`resolved_at` set on close and cleared on reopen. Bug report admin updates (status, admin_note, linked_ticket). Service dashboard stats |
+
+### What the Tests Specifically Validate
+
+- **Models**: Creation, `__str__` output, default values, `unique_together`, FK cascade behavior (`CASCADE`, `RESTRICT`, `SET_NULL`), field choices, ordering, `db_table`
+- **Permissions**: All 13 custom permission classes tested with correct and incorrect roles, including edge cases (e.g., `IsMaster` excludes `is_service_admin` users)
+- **Serializers**: Field validation, password min-length, `created_by` auto-injection, `club_name` auto-fill from FK, nested read-only fields (`campus_name`, `school_name`, `user_full_name`)
+- **API Endpoints**: Correct HTTP status codes (200, 201, 202, 400, 401, 403, 404), response data, pagination, role-based access control on every endpoint
+- **Business Logic**: Audit approve/reject workflow, error fingerprint deduplication, soft-delete (never hard-delete), school-scoped data isolation, singleton patterns (service user, chronicle master), token blacklisting on logout
+
+### What You Must Test Manually
+
+The automated tests cover all backend API logic, but the following areas require manual verification because they depend on the browser, external services, or visual inspection.
+
+#### Frontend UI (browser testing)
+
+| What to Test | Why |
+|--------------|-----|
+| Pages load without blank screens | React rendering, routing, lazy loading |
+| Forms show validation errors correctly | Client-side validation, field highlighting |
+| Buttons and links navigate correctly | React Router, sidebar, breadcrumbs |
+| Tables display data with pagination | Sorting UI, empty states, page controls |
+| Modals open and close properly | Create/edit/delete confirmation dialogs |
+| Responsive layout on mobile/tablet | Breakpoints, sidebar collapse |
+| Loading spinners and error toasts | UX feedback on slow or failed requests |
+
+#### End-to-End (frontend + backend together)
+
+| What to Test | Why |
+|--------------|-----|
+| Login → Dashboard flow | Full cookie-based JWT auth through the browser, CSRF tokens |
+| Session stays alive after 30 min | Auto token refresh without logging out |
+| Excel file downloads | Click Export → `.xlsx` downloads and opens correctly |
+| Role-based UI visibility | Admin sees admin panels, faculty doesn't |
+| Date pickers, dropdowns, search bars | Real filter interactions with live API |
+
+#### Infrastructure (requires running services)
+
+| What to Test | Why |
+|--------------|-----|
+| Rate limiting | Hit login 11 times rapidly → should get blocked (needs Redis) |
+| Nightly export Celery task | Scheduled job runs at midnight and creates files (needs Celery + Redis) |
+| Manual backup trigger | Backup creates `.dump` file on disk (needs PostgreSQL) |
+| Dashboard caching | Second load is faster (needs Redis) |
+
+#### Quick Manual Test Checklist
+
+```
+□ Login with each role: master, super_admin, admin, user, delete_auth,
+  mis_coordinator, mis_accumulator, chronicle_master, service_admin
+□ Download one Excel export and open it in Excel/Sheets
+□ Trigger a manual backup and verify the .dump file exists
+□ Leave a session idle for 30+ min, verify it auto-refreshes
+□ Rapid-fire 11+ login attempts to confirm rate limiting
+□ Check all pages on a mobile screen size
+□ Submit a bug report from the frontend and verify it appears in the service portal
+```
 
 ---
 
