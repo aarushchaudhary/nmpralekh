@@ -354,11 +354,16 @@ class PublicationAuthorTests(RecordTestMixin, TestCase):
         self.assertFalse(PublicationAuthor.objects.filter(pk=author.pk).exists())
 
     def test_user_set_null(self):
+        from apps.accounts.models import User
+        other_user = User.objects.create_user(
+            username="other_author", email="oa@t.com", password="p",
+            full_name="Other Author", role="user", campus=self.campus
+        )
         author = PublicationAuthor.objects.create(
             publication=self.pub, name="User Author",
-            user=self.faculty,
+            user=other_user,
         )
-        self.faculty.delete()
+        other_user.delete()
         author.refresh_from_db()
         self.assertIsNone(author.user)
 
@@ -405,7 +410,7 @@ class PatentModelTests(RecordTestMixin, TestCase):
             p = Patent(
                 school=self.school, applicant_name="A",
                 title_of_patent="P", date_of_publication=date(2025, 1, 1),
-                journal_number="J", patent_status=s, created_by=self.faculty,
+                journal_number="J", patent_status=s, created_by=self.faculty, doi_or_link="http://link",
             )
             p.full_clean()
 

@@ -87,7 +87,7 @@ class AuditRequestModelTests(AuditTestMixin, TestCase):
         for action in ['UPDATE', 'DELETE']:
             ar = AuditRequest(
                 table_name="school_activities", record_id=1,
-                action=action, old_data={}, requested_by=self.admin_user,
+                action=action, old_data={"k": "v"}, requested_by=self.admin_user,
             )
             ar.full_clean()
 
@@ -100,7 +100,7 @@ class AuditRequestModelTests(AuditTestMixin, TestCase):
         ]
         for t in valid_tables:
             ar = AuditRequest(
-                table_name=t, record_id=1, action="UPDATE", old_data={},
+                table_name=t, record_id=1, action="UPDATE", old_data={"k":"v"},
                 requested_by=self.admin_user,
             )
             ar.full_clean()

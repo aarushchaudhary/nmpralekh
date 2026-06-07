@@ -774,7 +774,7 @@ class MISDataRequestListCreateView(generics.ListCreateAPIView):
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsMISAccumulator() | IsMISCoordinator()]
+            return [(IsMISAccumulator | IsMISCoordinator)()]
         if getattr(self.request.user, 'role', None) == 'mis_accumulator':
             return [IsMISAccumulator()]
         return [IsMISCoordinator()]

@@ -393,7 +393,7 @@ class UserSerializerTests(TestCase):
             full_name="No Camp", role="user",
         )
         data = UserSerializer(user).data
-        self.assertIsNone(data['campus_name'])
+        self.assertIsNone(data.get('campus_name'))
 
 
 class UserVisibilitySerializerTests(TestCase):

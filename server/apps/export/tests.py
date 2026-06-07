@@ -402,6 +402,8 @@ class MISReportViewTests(ExportTestMixin, APITestCase):
 @override_settings(RATELIMIT_ENABLE=False)
 class CoordinatorExportViewTests(ExportTestMixin, APITestCase):
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         self._setup_base()
 
     def test_coordinator_access(self):
@@ -425,20 +427,22 @@ class CoordinatorExportViewTests(ExportTestMixin, APITestCase):
 class ExportHelperFunctionTests(TestCase):
     def test_validate_export_params_valid(self):
         from apps.export.views import validate_export_params
-        errors = validate_export_params('1', '2025-01-01', '2025-06-30')
-        self.assertEqual(len(errors), 0)
+        result = validate_export_params('1', '2025-01-01', '2025-06-30')
+        self.assertIsNone(result)
 
     def test_validate_export_params_invalid_school_id(self):
         from apps.export.views import validate_export_params
-        errors = validate_export_params('abc', '2025-01-01', '2025-06-30')
-        self.assertGreater(len(errors), 0)
+        from rest_framework.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
+            validate_export_params('abc', '2025-01-01', '2025-06-30')
 
     def test_validate_export_params_invalid_date(self):
         from apps.export.views import validate_export_params
-        errors = validate_export_params('1', 'not-a-date', '2025-06-30')
-        self.assertGreater(len(errors), 0)
+        from rest_framework.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
+            validate_export_params('1', 'not-a-date', '2025-06-30')
 
     def test_validate_export_params_empty(self):
         from apps.export.views import validate_export_params
-        errors = validate_export_params(None, None, None)
-        self.assertEqual(len(errors), 0)
+        result = validate_export_params(None, None, None)
+        self.assertIsNone(result)

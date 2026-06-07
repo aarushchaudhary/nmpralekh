@@ -567,6 +567,8 @@ class CampusSchoolsViewTests(APITestCase):
 @override_settings(RATELIMIT_ENABLE=False)
 class CampusUsersSchoolViewTests(APITestCase):
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         self.campus = Campus.objects.create(name="CUS Campus", code="CUS", city="X")
         self.master = User.objects.create_user(
             username="cusmaster", email="cusm@t.com", password="p",
@@ -587,6 +589,8 @@ class CampusUsersSchoolViewTests(APITestCase):
 @override_settings(RATELIMIT_ENABLE=False)
 class SchoolFacultyViewTests(APITestCase):
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         self.campus = Campus.objects.create(name="Fac Campus", code="FC", city="X")
         self.school = School.objects.create(campus=self.campus, name="Fac School", code="FS")
         self.master = User.objects.create_superuser("facmaster", "fm@t.com", "p")

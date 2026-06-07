@@ -71,6 +71,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         db_table = 'users'
+        ordering = ['id']
 
     def __str__(self):
         return f'{self.username} ({self.role})'

@@ -318,6 +318,7 @@ CREATE USER mis_user WITH PASSWORD 'your_strong_password';
 ALTER ROLE mis_user SET client_encoding TO 'utf8';
 ALTER ROLE mis_user SET default_transaction_isolation TO 'read committed';
 ALTER ROLE mis_user SET timezone TO 'Asia/Kolkata';
+ALTER ROLE mis_user WITH CREATEDB;
 
 GRANT ALL PRIVILEGES ON DATABASE nmpralekh TO mis_user;
 

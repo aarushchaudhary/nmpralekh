@@ -83,8 +83,8 @@ class ErrorTicket(models.Model):
         """
         import re
         # strip volatile parts: line:col numbers, hex addresses, UUIDs
-        clean_msg  = re.sub(r'\d+', 'N', error_message or '')
-        clean_msg  = re.sub(r'0x[0-9a-fA-F]+', '0xADDR', clean_msg)
+        clean_msg  = re.sub(r'0x[0-9a-fA-F]+', 'HEXADDR', error_message or '')
+        clean_msg  = re.sub(r'\d+', 'N', clean_msg)
         raw        = f'{error_type}|{clean_msg[:200]}|{url_path}'
         return hashlib.sha256(raw.encode()).hexdigest()
 
