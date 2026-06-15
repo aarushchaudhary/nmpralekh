@@ -789,3 +789,431 @@ class DashboardCountsAPITests(RecordTestMixin, APITestCase):
     def test_unauthenticated_denied(self):
         resp = self.client.get('/api/records/dashboard-counts/')
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SERVER-SIDE PAGINATION TESTS
+# Verifies that all ListCreate views return the paginated response envelope
+# (count, results, total_pages, current_page) and respect ?page / ?page_size.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@override_settings(RATELIMIT_ENABLE=False)
+class ClubListPaginationTests(RecordTestMixin, APITestCase):
+    """ClubListCreateView must return paginated envelope."""
+
+    def setUp(self):
+        self._setup_base()
+        for i in range(3):
+            Club.objects.create(
+                name=f"Club {i}", type="club", school=self.school,
+                created_by=self.admin_user,
+            )
+
+    def test_response_has_pagination_envelope(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/clubs/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for key in ('count', 'results', 'total_pages', 'current_page'):
+            self.assertIn(key, resp.data, f"Missing key '{key}' in clubs list response")
+
+    def test_results_is_list(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/clubs/')
+        self.assertIsInstance(resp.data['results'], list)
+
+    def test_count_matches_db(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/clubs/')
+        self.assertEqual(resp.data['count'], 3)
+
+    def test_page_size_param(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/clubs/?page_size=2')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['results']), 2)
+        self.assertEqual(resp.data['total_pages'], 2)
+
+    def test_page_2(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/clubs/?page_size=2&page=2')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['current_page'], 2)
+        self.assertEqual(len(resp.data['results']), 1)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class SchoolActivityListPaginationTests(RecordTestMixin, APITestCase):
+    """SchoolActivityListCreateView must return paginated envelope."""
+
+    def setUp(self):
+        self._setup_base()
+        for i in range(3):
+            SchoolActivity.objects.create(
+                school=self.school, name=f"Activity {i}",
+                date=date(2025, 1, i + 1), details="d",
+                created_by=self.admin_user,
+            )
+
+    def test_response_has_pagination_envelope(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/school-activities/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for key in ('count', 'results', 'total_pages', 'current_page'):
+            self.assertIn(key, resp.data, f"Missing key '{key}' in school-activities response")
+
+    def test_page_size_respected(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/school-activities/?page_size=2')
+        self.assertEqual(len(resp.data['results']), 2)
+        self.assertEqual(resp.data['total_pages'], 2)
+
+    def test_soft_deleted_excluded_from_count(self):
+        """Soft-deleted records must NOT appear in the paginated count."""
+        sa = SchoolActivity.objects.create(
+            school=self.school, name="Deleted Activity",
+            date=date(2025, 6, 1), details="d", created_by=self.admin_user,
+            is_deleted=True,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/school-activities/')
+        ids = [r['id'] for r in resp.data['results']]
+        self.assertNotIn(sa.pk, ids)
+        self.assertEqual(resp.data['count'], 3)  # only the 3 live records
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class StudentActivityListPaginationTests(RecordTestMixin, APITestCase):
+    """StudentActivityListCreateView must return paginated envelope."""
+
+    def setUp(self):
+        self._setup_base()
+        for i in range(3):
+            StudentActivity.objects.create(
+                school=self.school, name=f"StAct {i}",
+                date=date(2025, 2, i + 1), details="d",
+                created_by=self.admin_user,
+            )
+
+    def test_response_has_pagination_envelope(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/student-activities/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for key in ('count', 'results', 'total_pages', 'current_page'):
+            self.assertIn(key, resp.data)
+
+    def test_page_size_respected(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/student-activities/?page_size=2')
+        self.assertEqual(len(resp.data['results']), 2)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class FDPListPaginationTests(RecordTestMixin, APITestCase):
+    """FDPListCreateView must return paginated envelope."""
+
+    def setUp(self):
+        self._setup_base()
+        for i in range(3):
+            FacultyFDPWorkshopGL.objects.create(
+                school=self.school, faculty_name=f"Dr. {i}",
+                date_start=date(2025, 3, i + 1), name=f"FDP {i}",
+                details="d", type="FDP", created_by=self.faculty,
+            )
+
+    def test_response_has_pagination_envelope(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/fdp/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for key in ('count', 'results', 'total_pages', 'current_page'):
+            self.assertIn(key, resp.data)
+
+    def test_page_size_respected(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/fdp/?page_size=2')
+        self.assertEqual(len(resp.data['results']), 2)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class PublicationListPaginationTests(RecordTestMixin, APITestCase):
+    """PublicationListCreateView must return paginated envelope."""
+
+    def setUp(self):
+        self._setup_base()
+        for i in range(3):
+            FacultyPublication.objects.create(
+                school=self.school, author_name=f"Author {i}",
+                title_of_paper=f"Paper {i}", journal_or_conference_name="IEEE",
+                date=date(2025, 4, i + 1), created_by=self.admin_user,
+            )
+
+    def test_response_has_pagination_envelope(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/publications/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for key in ('count', 'results', 'total_pages', 'current_page'):
+            self.assertIn(key, resp.data)
+
+    def test_page_size_respected(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/publications/?page_size=2')
+        self.assertEqual(len(resp.data['results']), 2)
+        self.assertEqual(resp.data['total_pages'], 2)
+
+    def test_page_2_returns_remaining(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/publications/?page_size=2&page=2')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['current_page'], 2)
+        self.assertEqual(len(resp.data['results']), 1)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class PatentListPaginationTests(RecordTestMixin, APITestCase):
+    """PatentListCreateView must return paginated envelope."""
+
+    def setUp(self):
+        self._setup_base()
+        for i in range(3):
+            Patent.objects.create(
+                school=self.school, applicant_name=f"Inv {i}",
+                title_of_patent=f"Patent {i}",
+                date_of_publication=date(2025, 5, i + 1),
+                journal_number=f"J-{i}", created_by=self.faculty,
+            )
+
+    def test_response_has_pagination_envelope(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/patents/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for key in ('count', 'results', 'total_pages', 'current_page'):
+            self.assertIn(key, resp.data)
+
+    def test_page_size_respected(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/patents/?page_size=2')
+        self.assertEqual(len(resp.data['results']), 2)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class CertificationListPaginationTests(RecordTestMixin, APITestCase):
+    """CertificationListCreateView must return paginated envelope."""
+
+    def setUp(self):
+        self._setup_base()
+        for i in range(3):
+            Certification.objects.create(
+                school=self.school, date=date(2025, 6, i + 1),
+                name=f"Person {i}", title_of_course=f"Course {i}",
+                agency="AWS", created_by=self.faculty,
+            )
+
+    def test_response_has_pagination_envelope(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/certifications/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for key in ('count', 'results', 'total_pages', 'current_page'):
+            self.assertIn(key, resp.data)
+
+    def test_page_size_respected(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/certifications/?page_size=2')
+        self.assertEqual(len(resp.data['results']), 2)
+
+    def test_faculty_sees_only_own_records(self):
+        """Faculty (role='user') should only see certifications they created."""
+        # create a cert by the admin (not visible to faculty)
+        Certification.objects.create(
+            school=self.school, date=date(2025, 7, 1),
+            name="Admin Person", title_of_course="Admin Course",
+            agency="MS", created_by=self.admin_user,
+        )
+        self.client.force_authenticate(user=self.faculty)
+        resp = self.client.get('/api/records/certifications/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        # Faculty should only see the 3 records they created in setUp
+        self.assertEqual(resp.data['count'], 3)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class PlacementListPaginationTests(RecordTestMixin, APITestCase):
+    """PlacementListCreateView must return paginated envelope."""
+
+    def setUp(self):
+        self._setup_base()
+        for i in range(3):
+            PlacementActivity.objects.create(
+                school=self.school, name=f"Drive {i}",
+                date=date(2025, 7, i + 1), details="d",
+                company_name=f"Company {i}", created_by=self.admin_user,
+            )
+
+    def test_response_has_pagination_envelope(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/placements/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for key in ('count', 'results', 'total_pages', 'current_page'):
+            self.assertIn(key, resp.data)
+
+    def test_page_size_respected(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/placements/?page_size=2')
+        self.assertEqual(len(resp.data['results']), 2)
+
+    def test_page_2_returns_remaining(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.get('/api/records/placements/?page_size=2&page=2')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['current_page'], 2)
+        self.assertEqual(len(resp.data['results']), 1)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DB INDEX TESTS
+# Verifies the new index definitions are present on the model Meta classes.
+# These act as regression guards — if an index is accidentally removed from
+# Meta, Django's migration framework will generate a RemoveIndex operation,
+# but these tests will catch it before migrations are even run.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class PublicationAuthorIndexTests(TestCase):
+    """PublicationAuthor must have user and publication indices."""
+
+    def _index_names(self):
+        return {idx.name for idx in PublicationAuthor._meta.indexes}
+
+    def test_user_index_exists(self):
+        self.assertIn('pubauthor_user_idx', self._index_names())
+
+    def test_publication_index_exists(self):
+        # Django auto-names the publication index; assert any index covers 'publication'
+        index_fields = [
+            idx.fields for idx in PublicationAuthor._meta.indexes
+        ]
+        self.assertTrue(
+            any('publication' in f for f in index_fields),
+            "No index covering 'publication' field found on PublicationAuthor",
+        )
+
+
+class PatentApplicantIndexTests(TestCase):
+    """PatentApplicant must have user and patent indices."""
+
+    def _index_names(self):
+        return {idx.name for idx in PatentApplicant._meta.indexes}
+
+    def test_user_index_exists(self):
+        self.assertIn('patapp_user_idx', self._index_names())
+
+    def test_patent_index_exists(self):
+        index_fields = [
+            idx.fields for idx in PatentApplicant._meta.indexes
+        ]
+        self.assertTrue(
+            any('patent' in f for f in index_fields),
+            "No index covering 'patent' field found on PatentApplicant",
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CO-AUTHOR / CO-APPLICANT VISIBILITY VIA USER FK TESTS
+# Verifies the business logic that uses the newly-indexed user FK:
+# a faculty member who is linked as a co-author (PublicationAuthor.user) or
+# co-applicant (PatentApplicant.user) must see those records in the list view.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@override_settings(RATELIMIT_ENABLE=False)
+class CoAuthorVisibilityTests(RecordTestMixin, APITestCase):
+    """Faculty linked via PublicationAuthor.user should see the publication."""
+
+    def setUp(self):
+        self._setup_base()
+        # publication created by admin — faculty is NOT the creator
+        self.pub = FacultyPublication.objects.create(
+            school=self.school, author_name="Admin Author",
+            title_of_paper="Co-authored Paper",
+            journal_or_conference_name="IEEE",
+            date=date(2025, 1, 1), created_by=self.admin_user,
+        )
+        # link faculty as co-author via the indexed user FK
+        PublicationAuthor.objects.create(
+            publication=self.pub, name="Faculty Co-Author",
+            user=self.faculty, author_type="faculty",
+        )
+
+    def test_faculty_sees_coauthored_publication(self):
+        self.client.force_authenticate(user=self.faculty)
+        resp = self.client.get('/api/records/publications/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        ids = [r['id'] for r in resp.data['results']]
+        self.assertIn(self.pub.pk, ids,
+            "Faculty co-author should see the publication via PublicationAuthor.user FK")
+
+    def test_count_includes_coauthored(self):
+        self.client.force_authenticate(user=self.faculty)
+        resp = self.client.get('/api/records/publications/')
+        self.assertGreaterEqual(resp.data['count'], 1)
+
+    def test_unrelated_faculty_cannot_see_publication(self):
+        """A faculty member NOT linked as a co-author must NOT see the publication."""
+        other_faculty = User.objects.create_user(
+            username="other_fac", email="of@t.com", password="p",
+            full_name="Other Faculty", role="user", campus=self.campus,
+        )
+        UserSchoolMapping.objects.create(
+            user=other_faculty, school=self.school, assigned_by=self.master,
+        )
+        self.client.force_authenticate(user=other_faculty)
+        resp = self.client.get('/api/records/publications/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        ids = [r['id'] for r in resp.data['results']]
+        self.assertNotIn(self.pub.pk, ids,
+            "Unrelated faculty must not see a publication they did not create or co-author")
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class CoApplicantVisibilityTests(RecordTestMixin, APITestCase):
+    """Faculty linked via PatentApplicant.user should see the patent."""
+
+    def setUp(self):
+        self._setup_base()
+        # patent created by admin — faculty is NOT the creator
+        self.patent = Patent.objects.create(
+            school=self.school, applicant_name="Admin Applicant",
+            title_of_patent="Co-applied Patent",
+            date_of_publication=date(2025, 2, 1),
+            journal_number="J-99", created_by=self.admin_user,
+        )
+        # link faculty as co-applicant via the indexed user FK
+        PatentApplicant.objects.create(
+            patent=self.patent, name="Faculty Co-Applicant",
+            user=self.faculty, applicant_type="faculty",
+        )
+
+    def test_faculty_sees_coapplied_patent(self):
+        self.client.force_authenticate(user=self.faculty)
+        resp = self.client.get('/api/records/patents/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        ids = [r['id'] for r in resp.data['results']]
+        self.assertIn(self.patent.pk, ids,
+            "Faculty co-applicant should see the patent via PatentApplicant.user FK")
+
+    def test_count_includes_coapplied(self):
+        self.client.force_authenticate(user=self.faculty)
+        resp = self.client.get('/api/records/patents/')
+        self.assertGreaterEqual(resp.data['count'], 1)
+
+    def test_unrelated_faculty_cannot_see_patent(self):
+        """A faculty member NOT linked as a co-applicant must NOT see the patent."""
+        other_faculty = User.objects.create_user(
+            username="other_fac2", email="of2@t.com", password="p",
+            full_name="Other Faculty 2", role="user", campus=self.campus,
+        )
+        UserSchoolMapping.objects.create(
+            user=other_faculty, school=self.school, assigned_by=self.master,
+        )
+        self.client.force_authenticate(user=other_faculty)
+        resp = self.client.get('/api/records/patents/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        ids = [r['id'] for r in resp.data['results']]
+        self.assertNotIn(self.patent.pk, ids,
+            "Unrelated faculty must not see a patent they did not create or co-apply")

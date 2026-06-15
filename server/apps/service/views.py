@@ -317,14 +317,27 @@ class ServiceDashboardStatsView(APIView):
             'disk_percent': round(disk.used / disk.total * 100, 1) if disk.total else 0,
         }
 
+        # Check Nginx via systemctl (Ubuntu/systemd)
+        nginx_status = 'offline'
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['systemctl', 'is-active', 'nginx'],
+                capture_output=True, text=True, timeout=2
+            )
+            nginx_status = 'online' if result.stdout.strip() == 'active' else 'offline'
+        except Exception:
+            pass
+
         services = [
-            {'name': 'Django', 'status': 'online'},
+            {'name': 'Django',     'status': 'online'},
             {'name': 'PostgreSQL', 'status': db_status},
             {'name': 'PgBouncer', 'status': db_status},
-            {'name': 'Redis', 'status': redis_status},
-            {'name': 'Celery', 'status': 'online' if redis_status == 'online' else 'offline'},
-            {'name': 'Nginx', 'status': 'placeholder'},
+            {'name': 'Redis',      'status': redis_status},
+            {'name': 'Celery',     'status': 'online' if redis_status == 'online' else 'offline'},
+            {'name': 'Nginx',      'status': nginx_status},
         ]
+
 
         return Response({
             'total_tickets':   total_tickets,

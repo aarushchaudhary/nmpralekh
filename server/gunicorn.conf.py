@@ -13,7 +13,7 @@ worker_class = 'gthread'
 threads = 2
 
 # Connection settings
-bind = '0.0.0.0:8000'
+bind = '127.0.0.1:8000'
 timeout = 120
 keepalive = 5
 

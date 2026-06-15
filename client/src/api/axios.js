@@ -1,8 +1,10 @@
 import axios from 'axios'
 import { reportApiError } from '../hooks/useErrorReporter'
 
+const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
+
 const api = axios.create({
-    baseURL:         '/api',
+    baseURL,
     withCredentials: true,
     headers: { 'Content-Type': 'application/json' },
 })
@@ -62,7 +64,7 @@ api.interceptors.response.use(
 
             isRefreshing = true
             try {
-                await axios.post('/api/auth/refresh/', {}, { withCredentials: true })
+                await axios.post(`${baseURL}/auth/refresh/`, {}, { withCredentials: true })
                 isRefreshing = false
                 return api(original)
             } catch {

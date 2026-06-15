@@ -361,6 +361,10 @@ class PublicationAuthor(models.Model):
     class Meta:
         db_table = 'publication_authors'
         ordering = ['order']
+        indexes  = [
+            models.Index(fields=['publication']),
+            models.Index(fields=['user'], name='pubauthor_user_idx'),
+        ]
 
     def __str__(self):
         return f'{self.name} → {self.publication.title_of_paper[:50]}'
@@ -397,6 +401,10 @@ class PatentApplicant(models.Model):
     class Meta:
         db_table = 'patent_applicants'
         ordering = ['id']
+        indexes  = [
+            models.Index(fields=['patent']),
+            models.Index(fields=['user'], name='patapp_user_idx'),
+        ]
 
     def __str__(self):
         return f'{self.name} → {self.patent.title_of_patent[:50]}'

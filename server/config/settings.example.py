@@ -14,11 +14,7 @@ SECRET_KEY = config('SECRET_KEY', default='your-secret-key-here')
 # SECURITY WARNING: keep DEBUG=False in production.
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    # 'api.yourdomain.com',     # add your production backend domain here
-]
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
 
 # -----------------------------------------------------------------------------
@@ -225,21 +221,19 @@ CSRF_COOKIE_HTTPONLY     = False
 # -----------------------------------------------------------------------------
 # CORS — allow your frontend origin with credentials
 # -----------------------------------------------------------------------------
-CORS_ALLOWED_ORIGINS = [
-    'https://localhost:5173',   # local dev (Vite default)
-    'https://localhost:5174',   # local dev (Vite fallback when 5173 is in use)
-    # 'https://mis.yourdomain.com',  # add your production frontend here
-]
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='https://localhost:5173,https://localhost:5174'
+).split(',')
 
 CORS_ALLOW_CREDENTIALS = True
 
 # Django 4+ cross-origin CSRF protection — must mirror CORS_ALLOWED_ORIGINS
 # for any origin that sends cookie-authenticated POST/PUT/PATCH/DELETE requests.
-CSRF_TRUSTED_ORIGINS = [
-    'https://localhost:5173',
-    'https://localhost:5174',
-    # 'https://mis.yourdomain.com',
-]
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='https://localhost:5173,https://localhost:5174'
+).split(',')
 
 
 # -----------------------------------------------------------------------------
@@ -324,3 +318,10 @@ if not DEBUG:
 # Without this, Django sees all requests as HTTP even when the browser is on
 # HTTPS, which breaks SECURE_SSL_REDIRECT and HSTS enforcement in production.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+import sys
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../api/axios'
 
 export default function useRecords(endpoint) {
@@ -10,17 +10,24 @@ export default function useRecords(endpoint) {
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 25
 
-  const fetch = useCallback(async (params = {}) => {
+  // Keep a ref so fetch() can always read the latest page without being
+  // recreated on every page change (which would cause mutation callbacks
+  // like create/update/remove to stale-close over an old fetch reference).
+  const currentPageRef = useRef(currentPage)
+  useEffect(() => { currentPageRef.current = currentPage }, [currentPage])
+
+  const fetch = useCallback(async (params = {}, page = null) => {
+    const activePage = page ?? currentPageRef.current
     setLoading(true)
     setError(null)
     try {
       const res = await api.get(endpoint, {
-        params: { ...params, page: currentPage, page_size: pageSize }
+        params: { ...params, page: activePage, page_size: pageSize }
       })
       if (res.data?.results !== undefined) {
         // paginated response
         setData(res.data.results)
-        setTotalCount(res.data.count   ?? 0)
+        setTotalCount(res.data.count      ?? 0)
         setTotalPages(res.data.total_pages ?? 1)
       } else {
         // non-paginated response (some endpoints return plain arrays)
@@ -33,13 +40,19 @@ export default function useRecords(endpoint) {
     } finally {
       setLoading(false)
     }
-  }, [endpoint, currentPage])
+  }, [endpoint]) // endpoint is the only true dependency now
 
+  // Re-fetch whenever the page changes (driven by goToPage)
+  useEffect(() => { fetch({}, currentPage) }, [currentPage]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initial load
   useEffect(() => { fetch() }, [fetch])
 
   const create = useCallback(async (payload) => {
     const res = await api.post(endpoint, payload)
-    await fetch()
+    // After creating, go back to page 1 so the new record is visible
+    setCurrentPage(1)
+    await fetch({}, 1)
     return res.data
   }, [endpoint, fetch])
 
@@ -55,7 +68,7 @@ export default function useRecords(endpoint) {
     return res.data
   }, [endpoint, fetch])
 
-  const goToPage = (page) => setCurrentPage(page)
+  const goToPage = useCallback((page) => setCurrentPage(page), [])
 
   return {
     data, loading, error,

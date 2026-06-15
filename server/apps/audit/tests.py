@@ -390,3 +390,202 @@ class AuditHistoryViewTests(AuditTestMixin, APITestCase):
         self.client.force_authenticate(user=self.admin_user)
         resp = self.client.get('/api/audit/history/')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AUDIT INDEX TESTS
+# Verifies the new composite index definitions are present on AuditRequest.Meta.
+# Acts as a regression guard against accidental index removal.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class AuditRequestIndexTests(TestCase):
+    """AuditRequest.Meta must define the two new composite indices."""
+
+    def _index_names(self):
+        return {idx.name for idx in AuditRequest._meta.indexes}
+
+    def test_school_status_requested_at_index_exists(self):
+        """Index for AuditRequestListView query pattern must be present."""
+        self.assertIn(
+            'audit_school_status_reqat_idx',
+            self._index_names(),
+            "Composite index (school, status, requested_at) is missing from AuditRequest.Meta",
+        )
+
+    def test_school_status_reviewed_at_index_exists(self):
+        """Index for AuditHistoryView query pattern must be present."""
+        self.assertIn(
+            'audit_school_status_revat_idx',
+            self._index_names(),
+            "Composite index (school, status, reviewed_at) is missing from AuditRequest.Meta",
+        )
+
+    def test_old_status_school_index_removed(self):
+        """The superseded (status, school) index must no longer exist."""
+        self.assertNotIn(
+            'audit_status_school_idx',
+            self._index_names(),
+            "Old index audit_status_school_idx should have been replaced by the two composite indices",
+        )
+
+    def test_school_status_reqat_index_field_order(self):
+        """The (school, status, requested_at) index must list fields in the correct order
+        so the leading-column optimisation for school lookups applies."""
+        for idx in AuditRequest._meta.indexes:
+            if idx.name == 'audit_school_status_reqat_idx':
+                self.assertEqual(
+                    list(idx.fields),
+                    ['school', 'status', 'requested_at'],
+                    "Field order in audit_school_status_reqat_idx is wrong",
+                )
+                return
+        self.fail("audit_school_status_reqat_idx not found in AuditRequest.Meta.indexes")
+
+    def test_school_status_revat_index_field_order(self):
+        """The (school, status, reviewed_at) index must list fields in the correct order."""
+        for idx in AuditRequest._meta.indexes:
+            if idx.name == 'audit_school_status_revat_idx':
+                self.assertEqual(
+                    list(idx.fields),
+                    ['school', 'status', 'reviewed_at'],
+                    "Field order in audit_school_status_revat_idx is wrong",
+                )
+                return
+        self.fail("audit_school_status_revat_idx not found in AuditRequest.Meta.indexes")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AUDIT PAGINATION TESTS
+# AuditRequestListView and AuditHistoryView both set pagination_class =
+# StandardPagination.  These tests confirm the paginated envelope is returned
+# and that ?page / ?page_size params are respected.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@override_settings(RATELIMIT_ENABLE=False)
+class AuditListPaginationTests(AuditTestMixin, APITestCase):
+    """AuditRequestListView must return paginated envelope."""
+
+    def setUp(self):
+        self._setup_base()
+        for i in range(3):
+            AuditRequest.objects.create(
+                table_name="school_activities", record_id=i + 1,
+                action="UPDATE", old_data={"name": f"Record {i}"},
+                school=self.school, requested_by=self.admin_user,
+                status="pending",
+            )
+
+    def test_response_has_pagination_envelope(self):
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.get('/api/audit/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for key in ('count', 'results', 'total_pages', 'current_page'):
+            self.assertIn(key, resp.data, f"Missing key '{key}' in audit list response")
+
+    def test_results_is_list(self):
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.get('/api/audit/')
+        self.assertIsInstance(resp.data['results'], list)
+
+    def test_count_only_pending(self):
+        """count must reflect only pending requests, not approved/rejected."""
+        AuditRequest.objects.create(
+            table_name="school_activities", record_id=99,
+            action="DELETE", old_data={}, school=self.school,
+            requested_by=self.admin_user, status="approved",
+        )
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.get('/api/audit/')
+        self.assertEqual(resp.data['count'], 3)
+
+    def test_page_size_param(self):
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.get('/api/audit/?page_size=2')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['results']), 2)
+        self.assertEqual(resp.data['total_pages'], 2)
+
+    def test_page_2(self):
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.get('/api/audit/?page_size=2&page=2')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['current_page'], 2)
+        self.assertEqual(len(resp.data['results']), 1)
+
+    def test_school_scoping(self):
+        """Requests from a different campus must not appear in results.
+
+        delete_auth is scoped by campus (get_user_school_ids returns all
+        active schools whose campus_id matches the user's campus_id).
+        A school on a *different* campus is genuinely out of scope.
+        """
+        other_campus = Campus.objects.create(name="Other Campus", code="OC2", city="Y")
+        other_school = School.objects.create(
+            campus=other_campus, name="Other Campus School", code="OCS",
+        )
+        AuditRequest.objects.create(
+            table_name="school_activities", record_id=50,
+            action="DELETE", old_data={}, school=other_school,
+            requested_by=self.admin_user, status="pending",
+        )
+        # delete_auth.campus = self.campus, so other_school (other_campus) is out of scope
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.get('/api/audit/')
+        ids_in_resp = {r['id'] for r in resp.data['results']}
+        other_req_ids = set(
+            AuditRequest.objects.filter(school=other_school).values_list('id', flat=True)
+        )
+        self.assertTrue(
+            ids_in_resp.isdisjoint(other_req_ids),
+            "Audit requests from a different campus leaked into the response",
+        )
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class AuditHistoryPaginationTests(AuditTestMixin, APITestCase):
+    """AuditHistoryView must return paginated envelope and exclude pending."""
+
+    def setUp(self):
+        self._setup_base()
+        from django.utils import timezone as tz
+        for i in range(3):
+            AuditRequest.objects.create(
+                table_name="school_activities", record_id=i + 1,
+                action="UPDATE", old_data={"name": f"H{i}"},
+                school=self.school, requested_by=self.admin_user,
+                status="approved",
+                reviewed_by=self.delete_auth, reviewed_at=tz.now(),
+            )
+
+    def test_response_has_pagination_envelope(self):
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.get('/api/audit/history/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for key in ('count', 'results', 'total_pages', 'current_page'):
+            self.assertIn(key, resp.data, f"Missing key '{key}' in history response")
+
+    def test_page_size_param(self):
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.get('/api/audit/history/?page_size=2')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['results']), 2)
+        self.assertEqual(resp.data['total_pages'], 2)
+
+    def test_page_2(self):
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.get('/api/audit/history/?page_size=2&page=2')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['current_page'], 2)
+        self.assertEqual(len(resp.data['results']), 1)
+
+    def test_pending_excluded_from_count(self):
+        """Pending requests must not appear in history count."""
+        AuditRequest.objects.create(
+            table_name="school_activities", record_id=99,
+            action="UPDATE", old_data={}, school=self.school,
+            requested_by=self.admin_user, status="pending",
+        )
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.get('/api/audit/history/')
+        self.assertEqual(resp.data['count'], 3,
+            "Pending audit requests must be excluded from history count")

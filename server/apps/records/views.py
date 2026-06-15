@@ -8,6 +8,7 @@ from rest_framework import serializers
 from apps.accounts.permissions import IsAdminOrUser, IsAdminOrUserOrSuperAdmin, IsAdminOrUserOrSuperAdminOrCoordinator
 from apps.schools.utils import get_user_school_ids
 from apps.records.cache_utils import get_dashboard_counts, invalidate_dashboard_cache
+from config.pagination import StandardPagination
 from apps.audit.models import AuditRequest
 from apps.records.models import (
     Club,
@@ -129,6 +130,7 @@ from apps.accounts.permissions import IsAdmin
 class ClubListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = ClubSerializer
     permission_classes = [IsAdminOrUser]
+    pagination_class   = StandardPagination
 
     def get_queryset(self):
         school_ids = get_user_school_ids(self.request.user)
@@ -170,6 +172,7 @@ class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
 class SchoolActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = SchoolActivitySerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    pagination_class   = StandardPagination
 
     def get_queryset(self):
         qs = self.get_base_queryset(SchoolActivity)
@@ -213,6 +216,7 @@ class SchoolActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroy
 class StudentActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = StudentActivitySerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    pagination_class   = StandardPagination
 
     def get_queryset(self):
         qs = self.get_base_queryset(StudentActivity)
@@ -256,6 +260,7 @@ class StudentActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestro
 class FDPListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = FacultyFDPWorkshopGLSerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    pagination_class   = StandardPagination
 
     def get_queryset(self):
         qs = self.get_base_queryset(FacultyFDPWorkshopGL)
@@ -348,6 +353,7 @@ class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
 class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = FacultyPublicationSerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    pagination_class   = StandardPagination
 
     def get_queryset(self):
         user       = self.request.user
@@ -459,6 +465,7 @@ class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
 class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = PatentSerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    pagination_class   = StandardPagination
 
     def get_queryset(self):
         user       = self.request.user
@@ -519,6 +526,7 @@ class PatentDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView)
 class CertificationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = CertificationSerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    pagination_class   = StandardPagination
 
     def get_queryset(self):
         user       = self.request.user
@@ -570,6 +578,7 @@ class CertificationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyA
 class PlacementListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = PlacementActivitySerializer
     permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    pagination_class   = StandardPagination
 
     def get_queryset(self):
         qs = self.get_base_queryset(PlacementActivity)

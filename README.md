@@ -17,6 +17,7 @@ A full-stack Management Information System portal built for NMIMS University acr
 | Search & Filtering | django-filter + DRF SearchFilter |
 | Excel Export | openpyxl |
 | Production Server | Gunicorn (gthread workers) |
+| Reverse Proxy | Nginx (rate limiting, admin protection, static files) |
 
 ---
 
@@ -24,8 +25,9 @@ A full-stack Management Information System portal built for NMIMS University acr
 
 ```mermaid
 graph TD
-    A[Browser<br>https://localhost:5173] -->|HTTPS/API| B[Vite Dev Server / Nginx]
-    B -->|Proxy /api/*| C[Django + Gunicorn<br>REST API]
+    A["Browser<br>https://localhost:5173"] -->|HTTPS| B["Vite Dev Server<br>:5173"]
+    B -->|"Proxy /api/* → http://localhost:7567"| N["Nginx<br>:7567 — public entry point"]
+    N -->|"proxy_pass → 127.0.0.1:8000"| C["Gunicorn<br>:8000 — internal only"]
     
     subgraph Django Applications
         D1[accounts: Users, Roles, JWT]
@@ -329,9 +331,27 @@ GRANT ALL ON SCHEMA public TO mis_user;
 \q
 ```
 
-### 5. Configure environment variables
+### 5. Start Redis
 
-Create `server/.env`:
+Redis is strictly required for caching dashboard counts. If you don't have it installed:
+
+```bash
+sudo apt update
+sudo apt install redis-server -y
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+```
+
+### 6. Configure Django settings & environment variables
+
+Because they contain sensitive paths and imports, the main Django configuration files are gitignored. You must copy them from their templates:
+
+```bash
+cp config/settings.example.py config/settings.py
+cp config/wsgi.example.py config/wsgi.py
+```
+
+Next, create `server/.env`:
 
 ```ini
 SECRET_KEY=your_long_random_secret_key
@@ -360,14 +380,14 @@ Generate a secure secret key:
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
-### 6. Run migrations
+### 7. Run migrations
 
 ```bash
 python manage.py makemigrations accounts schools audit records export
 python manage.py migrate
 ```
 
-### 7. Create the master user
+### 8. Create the master user
 
 ```bash
 python manage.py createsuperuser
@@ -375,10 +395,22 @@ python manage.py createsuperuser
 
 Enter username, email and password when prompted. This account gets the `master` role automatically.
 
-### 8. Install frontend dependencies
+### 9. Generate local SSL certificates (mkcert)
+
+The Vite frontend is configured to run on HTTPS. You need to generate local trusted certificates in the **project root**:
 
 ```bash
-cd ../client
+# Install mkcert if you don't have it (e.g. on Ubuntu: sudo apt install mkcert libnss3-tools)
+cd ..  # Move to the nmpralekh root folder
+mkcert -install
+mkcert localhost 127.0.0.1 ::1
+```
+This generates `localhost+1.pem` and `localhost+1-key.pem` which Vite expects.
+
+### 10. Install frontend dependencies
+
+```bash
+cd client
 npm install
 ```
 
@@ -625,6 +657,176 @@ total DB connections = 9 × 2 = 18  ←  fits inside pgBouncer's pool of 20
 | `graceful_timeout` | `30` | Lets in-flight requests finish on shutdown |
 | `limit_request_line` | `4096` | Rejects oversized request lines |
 | `limit_request_fields`| `100` | Caps HTTP header count |
+
+---
+
+## Nginx Configuration
+
+Nginx sits between the public internet and Gunicorn, acting as the **only public entry point**. It handles rate limiting, security headers, static file serving, and blocks direct access to the Django admin panel.
+
+### Traffic flow
+
+```
+Browser / Client  (https://localhost:5173)
+    ↓  /api/* proxied by Vite dev server
+Nginx             (http://localhost:7567)        ← public entry point
+    ↓  proxy_pass
+Gunicorn          (http://127.0.0.1:8000)        ← internal only
+    ↓
+Django
+```
+
+### Step 1 — Install Nginx
+
+```bash
+sudo apt update && sudo apt install nginx -y
+```
+
+### Step 2 — Create the backend config
+
+```bash
+sudo nano /etc/nginx/sites-available/nmpralekh-backend
+```
+
+Paste the following (replace `/path/to/nmpralekh` with your actual project path):
+
+```nginx
+limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
+
+server {
+    listen 7567;
+    server_name localhost;   # replace with your domain in production
+
+    # --- Security Headers ---
+    add_header X-Frame-Options         "DENY"                            always;
+    add_header X-Content-Type-Options  "nosniff"                         always;
+    add_header Referrer-Policy         "strict-origin-when-cross-origin" always;
+
+    # --- Django static files (Admin panel assets) ---
+    # Run `python manage.py collectstatic` first
+    location /static/ {
+        alias /path/to/nmpralekh/server/staticfiles/;
+        expires 30d;
+    }
+
+    # --- Block /admin/ from public internet, allow only from localhost ---
+    location /admin/ {
+        allow 127.0.0.1;
+        deny all;
+
+        proxy_pass         http://127.0.0.1:8000;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
+    # --- Proxy all other requests (including /api/*) to Gunicorn ---
+    location / {
+        limit_req zone=api burst=50 nodelay;
+
+        proxy_pass         http://127.0.0.1:8000;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout    120s;
+        proxy_connect_timeout 10s;
+        client_max_body_size  20M;
+    }
+}
+```
+
+### Step 3 — Enable the site
+
+```bash
+# Enable the nmpralekh site
+sudo ln -s /etc/nginx/sites-available/nmpralekh-backend /etc/nginx/sites-enabled/nmpralekh-backend
+
+# Disable the default site — it may conflict if it listens on the same port
+sudo rm /etc/nginx/sites-enabled/default
+
+# Test config syntax
+sudo nginx -t
+
+# Apply changes
+sudo systemctl reload nginx
+```
+
+### Step 4 — Collect Django static files
+
+Required so the Admin panel loads its CSS/JS through Nginx:
+
+```bash
+cd server
+source venv/bin/activate
+python manage.py collectstatic
+```
+
+### Step 5 — Lock Gunicorn to localhost
+
+In `server/gunicorn.conf.py`:
+
+```python
+bind = '127.0.0.1:8000'  # was 0.0.0.0:8000 — only Nginx can now reach it
+```
+
+### Step 6 — Configure UFW firewall
+
+```bash
+sudo ufw allow ssh              # don't lock yourself out
+sudo ufw allow 7567/tcp         # nginx port (use 80/443 in production)
+sudo ufw deny 8000/tcp          # block direct Gunicorn access
+sudo ufw enable
+```
+
+### Step 7 — Update Vite proxy
+
+In `client/vite.config.js`, set the `/api` proxy to point to Nginx instead of Gunicorn directly:
+
+```javascript
+proxy: {
+  '/api': {
+    target: 'http://localhost:7567',   // Nginx, not Gunicorn
+    changeOrigin: true,
+    secure: false,
+  }
+}
+```
+
+### Verifying Nginx is working
+
+```bash
+# Confirm Server header shows nginx
+curl -sI http://localhost:7567/api/auth/me/ | grep -i server
+# → Server: nginx/1.x.x
+
+# Watch live request log
+sudo tail -f /var/log/nginx/access.log
+
+# Confirm /admin/ is blocked from external IPs (returns 403)
+# From localhost it returns 302 (allowed through to Django login)
+curl -s -o /dev/null -w "%{http_code}" http://localhost:7567/admin/
+
+# Confirm all services are listening on the right ports
+ss -tlnp | grep -E '7567|8000|5173'
+```
+
+### Production deployment checklist
+
+When deploying to a real server, update `server/.env`:
+
+```ini
+DEBUG=False
+ALLOWED_HOSTS=api.yourdomain.com
+CORS_ALLOWED_ORIGINS=https://yourdomain.com
+CSRF_TRUSTED_ORIGINS=https://yourdomain.com
+```
+
+And in the Nginx config:
+- `listen 7567` → `listen 80` (then set up `certbot` for HTTPS on 443)
+- `server_name localhost` → `server_name api.yourdomain.com`
+- Update the `/static/` alias to the absolute path on the server
 
 ---
 
@@ -1096,8 +1298,13 @@ Data isolation   →  Every query scoped to user's school and campus
 Soft deletes     →  Records never hard deleted without approval
 Audit trail      →  Every change logged with who, when, what
 Password hashing →  Django PBKDF2 with SHA256
-CORS             →  Restricted to configured origins only
+CORS             →  Restricted to configured origins only (via .env)
 SQL injection    →  Django ORM parameterised queries throughout
+Reverse proxy    →  Nginx is the only public entry point; Gunicorn bound to 127.0.0.1
+Admin panel      →  /admin/ blocked at Nginx level for all external IPs
+Rate limiting    →  30 req/s at Nginx + DRF throttles (60/min anon, 300/min auth)
+Firewall         →  UFW blocks all ports except SSH and the Nginx port
+HSTS             →  Enabled in production (DEBUG=False) — 1-year max-age
 ```
 
 ---
