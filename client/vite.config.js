@@ -5,10 +5,10 @@ import fs from 'fs'
 export default defineConfig({
   plugins: [react()],
   server: {
-    https: {
+    https: fs.existsSync('../localhost+1-key.pem') ? {
       key: fs.readFileSync('../localhost+1-key.pem'),
       cert: fs.readFileSync('../localhost+1.pem'),
-    },
+    } : false,
     proxy: {
       '/api': {
         target: 'http://localhost:7567',
