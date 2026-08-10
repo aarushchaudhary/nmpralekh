@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 
-const roleNavLinks = {
+export const roleNavLinks = {
     master: [
         { label: 'Dashboard', path: '/master' },
         { label: 'Campuses', path: '/master/campuses' },

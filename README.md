@@ -144,6 +144,14 @@ nmpralekh/
 │   ├── venv/                       # Virtual environment
 │   └── .env                        # Never commit — use .env.example as reference
 │
+├── android-client/                 # Native Android mobile app (Java)
+│   ├── app/
+│   │   └── src/main/
+│   │       ├── java/.../           # Activities (LoginActivity, FacultyActivity)
+│   │       ├── res/layout/         # UI layouts (XML)
+│   │       └── AndroidManifest.xml # App config and entry points
+│   └── build.gradle                # Android build config
+│
 ├── start.sh                        # Start all services in one command (Gunicorn)
 ├── server.sh                       # Start Gunicorn only
 ├── client.sh                       # Start React only
@@ -1320,3 +1328,21 @@ HSTS             →  Enabled in production (DEBUG=False) — 1-year max-age
 - Master is the only role that creates campuses, schools, and users
 - DOI/Link fields are mandatory for Publications, Patents, and Certifications
 - All dropdown menus use the searchable `SearchableSelect` component
+
+---
+
+## Mobile App (Android)
+
+An Android mobile client is available to provide easy access for faculty members on the go. It is built using the native Android SDK (Java) and connects to the same Django REST API as the web client.
+
+### Features
+- **Native Login**: Authenticates securely via the `/api/auth/login/` endpoint.
+- **Faculty Dashboard**: A mobile-optimized DrawerLayout (sidebar) that provides access to all faculty-specific modules (School Activities, Student Activities, FDP, Publications, Patents, Certifications, Placements).
+- **Custom Branding**: Integrated with the official NMPralekh logo and a clean, light-blue Material Design UI.
+- **Networking**: Uses `OkHttp` for fast and reliable API requests.
+
+### Setup and Running
+1. Open the `android-client/` directory in **Android Studio**.
+2. Sync the project with Gradle files.
+3. Ensure the Django server is running locally with `ALLOWED_HOSTS = ['*']` or specifically allowing the Android emulator IP (`10.0.2.2`).
+4. Build and run the app on an emulator or a physical device.
