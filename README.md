@@ -207,6 +207,7 @@ graph TD
 | Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Finalize MIS Reports | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Use AI Summarizer | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
 | Manage errors & bug reports| ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
@@ -1199,7 +1200,7 @@ cd server
 python manage.py test
 ```
 
-This runs **160+ automated tests** across all 6 Django apps. No frontend, no browser, no Postman needed — Django spins up a temporary test database, simulates HTTP requests to every API endpoint, and tears it down when done.
+This runs **390 automated tests** across all 6 Django apps. No frontend, no browser, no Postman needed — Django spins up a temporary test database, simulates HTTP requests to every API endpoint, and tears it down when done.
 
 To run tests for a specific app:
 
@@ -1226,7 +1227,7 @@ python manage.py test --verbosity=2
 | `apps/schools/tests.py` | ~40 | Campus/School/UserSchoolMapping models (`__str__`, unique constraints, FK cascades, `RESTRICT` delete protection), `get_user_school_ids()` utility for all role types with caching, campus CRUD + soft-deactivate + reactivate, school CRUD + scoping (master sees all, super_admin sees campus only), mapping creation with validation (role check, duplicate check, cross-campus check), my-schools (no pagination), school faculty view |
 | `apps/records/tests.py` | ~35 | All 13 models — Club (`unique_together`), SchoolActivity, StudentActivity (club_name auto-fill), FDP/Workshop/GL, Publications, Patents, Certifications, Placements, PublicationAuthor (cascade + ordering), PatentApplicant, BackupConfiguration. Serializer auto-set `created_by`. API CRUD with permission checks. Audit-gated updates (202 response). Soft-delete behavior (records never hard-deleted). Dashboard counts endpoint |
 | `apps/audit/tests.py` | ~20 | AuditRequest model (all field types, choices, FK behaviors — CASCADE on school, RESTRICT on requested_by, SET_NULL on reviewed_by). Serializer with nested `UserSerializer`. Approve DELETE (sets `is_deleted=True`), approve UPDATE (applies field changes via whitelist), reject (clears `pending_audit`, record unchanged). History view (excludes pending, allows master/super_admin/delete_auth). Permission gating on all endpoints |
-| `apps/export/tests.py` | ~25 | GeneratedExport, MISDataRequest, MISReport models (defaults, `__str__`, FK behaviors). Serializer auto-set `accumulator`/`created_by` from request. Export history (master only). MIS report send workflow (send-admin, send-accumulator, send-superadmin, send-chronicle with permission checks). Coordinator export access. `validate_export_params` helper (valid/invalid school_id, date formats) |
+| `apps/export/tests.py` | ~30 | GeneratedExport, MISDataRequest, MISReport models (defaults, `__str__`, FK behaviors). Serializer auto-set `accumulator`/`created_by` from request. Export history (master only). MIS report send workflow (send-admin, send-accumulator, send-superadmin, send-chronicle with permission checks). Coordinator, Accumulator, and Chronicle Master dashboard and export access. Chronicle Data Requests. `validate_export_params` helper (valid/invalid school_id, date formats) |
 | `apps/service/tests.py` | ~35 | ErrorTicket, ErrorOccurrence, BugReport models. `make_fingerprint` normalization (digits→N, hex→0xADDR, SHA256, truncation at 200 chars). Error deduplication (same error → 1 ticket, 2 occurrences). `affected_users_count` tracking (unique users only). Closed ticket reopening on recurrence. Invalid payload returns `{ok: false}`. Bug report creation with user auto-set. Ticket list filtering (status, source, search, sort). Ticket status transitions with `resolved_by`/`resolved_at` set on close and cleared on reopen. Bug report admin updates (status, admin_note, linked_ticket). Service dashboard stats |
 
 ### What the Tests Specifically Validate
