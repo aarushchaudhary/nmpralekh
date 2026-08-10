@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import api from '../../api/axios'
 
-export default function RequestDataModal({ isOpen, onClose, coordinator, onSuccess }) {
+export default function RequestDataModal({ isOpen, onClose, coordinator, onSuccess, isBulk }) {
     const [dateFrom, setDateFrom] = useState('')
     const [dateTo, setDateTo] = useState('')
     const [loading, setLoading] = useState(false)
@@ -23,11 +23,18 @@ export default function RequestDataModal({ isOpen, onClose, coordinator, onSucce
         setError('')
         setLoading(true)
         try {
-            await api.post('/export/data-requests/', {
-                coordinator: coordinator.id,
-                date_from: dateFrom,
-                date_to: dateTo
-            })
+            if (isBulk) {
+                await api.post('/export/accumulator/request-all/', {
+                    date_from: dateFrom,
+                    date_to: dateTo
+                })
+            } else {
+                await api.post('/export/data-requests/', {
+                    coordinator: coordinator.id,
+                    date_from: dateFrom,
+                    date_to: dateTo
+                })
+            }
             onSuccess()
             onClose()
         } catch (err) {
@@ -42,7 +49,7 @@ export default function RequestDataModal({ isOpen, onClose, coordinator, onSucce
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-gray-800">
-                        Request MIS Data
+                        {isBulk ? 'Request Data from All' : 'Request MIS Data'}
                     </h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         &times;
@@ -51,7 +58,10 @@ export default function RequestDataModal({ isOpen, onClose, coordinator, onSucce
                 
                 <div className="p-6">
                     <p className="text-sm text-gray-500 mb-4">
-                        Request data from <strong>{coordinator?.full_name}</strong>. They will receive a notification on their dashboard.
+                        {isBulk 
+                            ? "Request data from all coordinators in your campus. They will receive notifications on their dashboard." 
+                            : <>Request data from <strong>{coordinator?.full_name}</strong>. They will receive a notification on their dashboard.</>
+                        }
                     </p>
 
                     {error && (
@@ -104,3 +114,4 @@ export default function RequestDataModal({ isOpen, onClose, coordinator, onSucce
         </div>
     )
 }
+

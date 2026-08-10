@@ -33,4 +33,14 @@ urlpatterns = [
     path('reports/<int:pk>/send-superadmin/', views.MISReportSendSuperAdminView.as_view(), name='reports_send_superadmin'),
     path('reports/<int:pk>/send-chronicle/', views.MISReportSendChronicleMasterView.as_view(), name='reports_send_chronicle'),
     path('reports/received/',     views.ReceivedMISReportsView.as_view(),       name='reports_received'),
+    
+    # Chronicle Master features
+    path('chronicle/data-requests/', views.ChronicleDataRequestListCreateView.as_view(), name='chronicle_requests'),
+    path('chronicle/dashboard/', views.ChronicleDashboardView.as_view(), name='chronicle_dashboard'),
+    path('chronicle/export/', views.ChronicleExportView.as_view(), name='chronicle_export'),
+
+    # MIS Accumulator features
+    path('accumulator/request-all/', views.AccumulatorBulkRequestView.as_view(), name='accumulator_request_all'),
+    path('accumulator/dashboard/', views.AccumulatorDashboardView.as_view(), name='accumulator_dashboard'),
+    path('accumulator/export/', views.AccumulatorExportView.as_view(), name='accumulator_export'),
 ]

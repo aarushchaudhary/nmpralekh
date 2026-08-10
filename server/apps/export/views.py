@@ -925,3 +925,424 @@ class ReceivedMISReportsView(generics.ListAPIView):
                 sent_to_chronicle_master=True
             )
         return MISReport.objects.none()
+
+
+# ─────────────────────────────────────────────
+# CHRONICLE MASTER - DATA REQUESTS & DASHBOARD
+# ─────────────────────────────────────────────
+from .models import ChronicleDataRequest
+from .serializers import ChronicleDataRequestSerializer
+from apps.accounts.permissions import IsChronicleMaster
+from apps.accounts.models import User
+
+
+class ChronicleDataRequestListCreateView(generics.ListCreateAPIView):
+    """
+    GET:  List all chronicle data requests
+    POST: Create a new chronicle data request -> fans out to all accumulators & coordinators
+    """
+    serializer_class = ChronicleDataRequestSerializer
+    permission_classes = [IsChronicleMaster]
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        return ChronicleDataRequest.objects.filter(
+            created_by=self.request.user
+        ).select_related('created_by')
+
+    def perform_create(self, serializer):
+        chronicle_request = serializer.save(created_by=self.request.user)
+
+        # Fan out: for each accumulator, create MISDataRequests to all their coordinators
+        accumulators = User.objects.filter(
+            role='mis_accumulator', is_active=True
+        ).select_related('campus')
+
+        for acc in accumulators:
+            if not acc.campus:
+                continue
+            coordinators = User.objects.filter(
+                role='mis_coordinator',
+                is_active=True,
+                campus=acc.campus
+            )
+            for coord in coordinators:
+                MISDataRequest.objects.create(
+                    accumulator=acc,
+                    coordinator=coord,
+                    date_from=chronicle_request.date_from,
+                    date_to=chronicle_request.date_to,
+                    chronicle_request=chronicle_request,
+                )
+
+
+class ChronicleDashboardView(APIView):
+    """
+    GET /api/export/chronicle/dashboard/?chronicle_request_id=<id>
+    Returns tracking data: each accumulator's submission status + coordinator counts.
+    """
+    permission_classes = [IsChronicleMaster]
+    serializer_class = serializers.Serializer
+
+    def get(self, request):
+        chronicle_request_id = request.query_params.get('chronicle_request_id')
+
+        accumulators = User.objects.filter(
+            role='mis_accumulator', is_active=True
+        ).select_related('campus')
+
+        result = []
+        for acc in accumulators:
+            campus_name = acc.campus.name if acc.campus else 'No Campus'
+
+            # Coordinators under this accumulator's campus
+            coordinators = User.objects.filter(
+                role='mis_coordinator',
+                is_active=True,
+                campus=acc.campus
+            ) if acc.campus else User.objects.none()
+
+            total_coordinators = coordinators.count()
+
+            # If filtering by a specific chronicle request
+            if chronicle_request_id:
+                data_requests = MISDataRequest.objects.filter(
+                    accumulator=acc,
+                    chronicle_request_id=chronicle_request_id,
+                )
+            else:
+                data_requests = MISDataRequest.objects.filter(
+                    accumulator=acc,
+                )
+
+            coordinators_submitted = data_requests.filter(status='completed').values('coordinator').distinct().count()
+            coordinators_pending = total_coordinators - coordinators_submitted
+
+            # Check if accumulator has sent any reports to chronicle master
+            report_filter = {'sent_to_chronicle_master': True, 'created_by': acc}
+            if chronicle_request_id:
+                try:
+                    cr = ChronicleDataRequest.objects.get(id=chronicle_request_id)
+                    report_filter['date_from__lte'] = cr.date_to
+                    report_filter['date_to__gte'] = cr.date_from
+                except ChronicleDataRequest.DoesNotExist:
+                    pass
+
+            acc_reports = MISReport.objects.filter(**report_filter)
+            has_submitted = acc_reports.exists()
+            submitted_at = acc_reports.order_by('-sent_to_chronicle_master_at').values_list(
+                'sent_to_chronicle_master_at', flat=True
+            ).first() if has_submitted else None
+
+            result.append({
+                'id': acc.id,
+                'full_name': acc.full_name,
+                'username': acc.username,
+                'campus_name': campus_name,
+                'has_submitted': has_submitted,
+                'submitted_at': submitted_at,
+                'total_coordinators': total_coordinators,
+                'coordinators_submitted': coordinators_submitted,
+                'coordinators_pending': coordinators_pending,
+            })
+
+        return Response(result)
+
+
+# ─────────────────────────────────────────────
+# ACCUMULATOR - BULK REQUEST & DASHBOARD
+# ─────────────────────────────────────────────
+
+class AccumulatorBulkRequestView(APIView):
+    """
+    POST /api/export/accumulator/request-all/
+    Body: { date_from, date_to }
+    Creates MISDataRequest for ALL coordinators under this accumulator's campus.
+    """
+    permission_classes = [IsMISAccumulator]
+    serializer_class = serializers.Serializer
+
+    def post(self, request):
+        date_from = request.data.get('date_from')
+        date_to = request.data.get('date_to')
+
+        if not date_from or not date_to:
+            return Response({'detail': 'date_from and date_to are required.'}, status=400)
+
+        if date_from > date_to:
+            return Response({'detail': 'date_from cannot be after date_to.'}, status=400)
+
+        user = request.user
+        if not user.campus:
+            return Response({'detail': 'No campus assigned to your account.'}, status=400)
+
+        coordinators = User.objects.filter(
+            role='mis_coordinator',
+            is_active=True,
+            campus=user.campus
+        )
+
+        if not coordinators.exists():
+            return Response({'detail': 'No coordinators found in your campus.'}, status=400)
+
+        created_count = 0
+        skipped_count = 0
+        for coord in coordinators:
+            # Skip if there's already a pending request for this coordinator with overlapping dates
+            existing = MISDataRequest.objects.filter(
+                accumulator=user,
+                coordinator=coord,
+                status='pending',
+                date_from__lte=date_to,
+                date_to__gte=date_from,
+            ).exists()
+            if existing:
+                skipped_count += 1
+                continue
+
+            MISDataRequest.objects.create(
+                accumulator=user,
+                coordinator=coord,
+                date_from=date_from,
+                date_to=date_to,
+            )
+            created_count += 1
+
+        return Response({
+            'detail': f'Requests sent to {created_count} coordinators. {skipped_count} skipped (already pending).',
+            'created': created_count,
+            'skipped': skipped_count,
+        })
+
+
+class AccumulatorDashboardView(APIView):
+    """
+    GET /api/export/accumulator/dashboard/
+    Returns tracking data: each coordinator's submission status.
+    """
+    permission_classes = [IsMISAccumulator]
+    serializer_class = serializers.Serializer
+
+    def get(self, request):
+        user = request.user
+        if not user.campus:
+            return Response({'detail': 'No campus assigned.'}, status=400)
+
+        coordinators = User.objects.filter(
+            role='mis_coordinator',
+            is_active=True,
+            campus=user.campus
+        ).prefetch_related('school_mappings__school')
+
+        result = []
+        for coord in coordinators:
+            school_names = [m.school.name for m in coord.school_mappings.all() if m.school]
+            school_name = ', '.join(school_names) if school_names else 'Unknown School'
+
+            # Check if this coordinator has sent any report to accumulator
+            reports = MISReport.objects.filter(
+                created_by=coord,
+                sent_to_accumulator=True,
+            )
+
+            # Check pending requests from this accumulator to this coordinator
+            pending_requests = MISDataRequest.objects.filter(
+                accumulator=user,
+                coordinator=coord,
+                status='pending',
+            )
+
+            has_submitted = reports.exists()
+            latest_report = reports.order_by('-sent_to_accumulator_at').first()
+            pending_count = pending_requests.count()
+
+            result.append({
+                'id': coord.id,
+                'full_name': coord.full_name,
+                'username': coord.username,
+                'school_name': school_name,
+                'has_submitted': has_submitted,
+                'latest_report_date': latest_report.sent_to_accumulator_at if latest_report else None,
+                'latest_report_name': latest_report.name if latest_report else None,
+                'pending_requests': pending_count,
+            })
+
+        submitted = sum(1 for c in result if c['has_submitted'])
+        pending = len(result) - submitted
+
+        return Response({
+            'coordinators': result,
+            'total': len(result),
+            'submitted': submitted,
+            'pending': pending,
+        })
+
+
+# ─────────────────────────────────────────────
+# ACCUMULATOR & CHRONICLE MASTER - EXPORT
+# ─────────────────────────────────────────────
+
+class AccumulatorExportView(APIView):
+    """
+    GET /api/export/accumulator/export/?format=excel|json&date_from=&date_to=
+    Exports all received MIS reports for this accumulator.
+    """
+    permission_classes = [IsMISAccumulator]
+    serializer_class = serializers.Serializer
+
+    @method_decorator(ratelimit(key='user', rate='5/m', method='GET', block=True))
+    def get(self, request):
+        fmt = request.query_params.get('format', 'excel').lower()
+        export_type = request.query_params.get('export_type', 'coordinator_data').lower()
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+
+        if fmt not in ('excel', 'json'):
+            return Response({'detail': 'format must be "excel" or "json"'}, status=400)
+
+        user = request.user
+        
+        if export_type == 'campus_data':
+            reports = MISReport.objects.filter(
+                created_by=user
+            ).select_related('created_by').order_by('date_from')
+        else:
+            reports = MISReport.objects.filter(
+                sent_to_accumulator=True,
+                created_by__campus=user.campus
+            ).select_related('created_by').order_by('date_from')
+
+        if date_from:
+            reports = reports.filter(date_to__gte=date_from)
+        if date_to:
+            reports = reports.filter(date_from__lte=date_to)
+
+        if fmt == 'json':
+            return self._export_json(reports)
+        return self._export_excel(reports)
+
+    def _export_excel(self, reports):
+        wb = openpyxl.Workbook(write_only=True)
+        ws = wb.create_sheet(title='MIS Reports Export')
+        append_styled_headers(ws, [
+            'Author', 'School/Campus', 'Report Title',
+            'Period From', 'Period To', 'Date', 'Content'
+        ])
+        for report in reports[:5000].iterator():
+            school = self._get_school_name(report.created_by)
+            ws.append([
+                report.created_by.full_name,
+                school,
+                report.name or 'MIS Report',
+                str(report.date_from),
+                str(report.date_to),
+                str(report.created_at.date()),
+                report.data_content[:500],
+            ])
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=MIS_Accumulator_Export.xlsx'
+        wb.save(response)
+        return response
+
+    def _export_json(self, reports):
+        data = []
+        for report in reports[:5000]:
+            school = self._get_school_name(report.created_by)
+            data.append({
+                'author': report.created_by.full_name,
+                'school_or_campus': school,
+                'title': report.name or 'MIS Report',
+                'date_from': str(report.date_from),
+                'date_to': str(report.date_to),
+                'date': str(report.created_at.date()),
+                'content': report.data_content,
+            })
+
+        json_bytes = json_module.dumps(data, indent=2, default=str).encode('utf-8')
+        response = HttpResponse(json_bytes, content_type='application/json')
+        response['Content-Disposition'] = 'attachment; filename=MIS_Accumulator_Export.json'
+        return response
+
+    def _get_school_name(self, user):
+        mappings = user.school_mappings.all()
+        names = [m.school.name for m in mappings if m.school]
+        return ', '.join(names) if names else 'Unknown School'
+
+
+class ChronicleExportView(APIView):
+    """
+    GET /api/export/chronicle/export/?format=excel|json&date_from=&date_to=
+    Exports all MIS reports sent to chronicle master.
+    """
+    permission_classes = [IsChronicleMaster]
+    serializer_class = serializers.Serializer
+
+    @method_decorator(ratelimit(key='user', rate='5/m', method='GET', block=True))
+    def get(self, request):
+        fmt = request.query_params.get('format', 'excel').lower()
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+
+        if fmt not in ('excel', 'json'):
+            return Response({'detail': 'format must be "excel" or "json"'}, status=400)
+
+        reports = MISReport.objects.filter(
+            sent_to_chronicle_master=True
+        ).select_related('created_by').order_by('date_from')
+
+        if date_from:
+            reports = reports.filter(date_to__gte=date_from)
+        if date_to:
+            reports = reports.filter(date_from__lte=date_to)
+
+        if fmt == 'json':
+            return self._export_json(reports)
+        return self._export_excel(reports)
+
+    def _export_excel(self, reports):
+        wb = openpyxl.Workbook(write_only=True)
+        ws = wb.create_sheet(title='Chronicle MIS Reports')
+        append_styled_headers(ws, [
+            'Accumulator', 'Campus', 'Report Title',
+            'Period From', 'Period To', 'Submitted At', 'Content'
+        ])
+        for report in reports[:5000].iterator():
+            campus = report.created_by.campus.name if report.created_by.campus else 'Unknown'
+            ws.append([
+                report.created_by.full_name,
+                campus,
+                report.name or 'MIS Report',
+                str(report.date_from),
+                str(report.date_to),
+                str(report.sent_to_chronicle_master_at or ''),
+                report.data_content[:500],
+            ])
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=MIS_Chronicle_Export.xlsx'
+        wb.save(response)
+        return response
+
+    def _export_json(self, reports):
+        data = []
+        for report in reports[:5000]:
+            campus = report.created_by.campus.name if report.created_by.campus else 'Unknown'
+            data.append({
+                'accumulator': report.created_by.full_name,
+                'campus': campus,
+                'title': report.name or 'MIS Report',
+                'date_from': str(report.date_from),
+                'date_to': str(report.date_to),
+                'submitted_at': str(report.sent_to_chronicle_master_at or ''),
+                'content': report.data_content,
+            })
+
+        json_bytes = json_module.dumps(data, indent=2, default=str).encode('utf-8')
+        response = HttpResponse(json_bytes, content_type='application/json')
+        response['Content-Disposition'] = 'attachment; filename=MIS_Chronicle_Export.json'
+        return response

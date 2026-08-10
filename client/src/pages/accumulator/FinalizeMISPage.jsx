@@ -96,8 +96,8 @@ export default function FinalizeMISPage() {
         if (activeSchool) {
             const searchTerm = activeSchool.toLowerCase()
             const matchesName = report.name?.toLowerCase().includes(searchTerm)
-            const matchesSchool = report.coordinator_school_name?.toLowerCase().includes(searchTerm)
-            const matchesCoordinator = report.coordinator_name?.toLowerCase().includes(searchTerm)
+            const matchesSchool = report.created_by_school_name?.toLowerCase().includes(searchTerm)
+            const matchesCoordinator = report.created_by_name?.toLowerCase().includes(searchTerm)
             if (!matchesName && !matchesSchool && !matchesCoordinator) {
                 match = false
             }
@@ -143,7 +143,7 @@ export default function FinalizeMISPage() {
             if (index > 0 || formData.data_content) {
                 combined += `-------------------------------------------------\n\n`
             }
-            combined += `${report.coordinator_school_name || 'Unknown School'}\n\n`
+            combined += `${report.created_by_school_name || 'Unknown School'}\n\n`
             combined += `${report.data_content}\n\n`
         })
 
@@ -342,8 +342,8 @@ export default function FinalizeMISPage() {
                                                             className="mt-1"
                                                         />
                                                         <div>
-                                                            <div className="font-medium text-sm text-gray-800">{report.coordinator_school_name}</div>
-                                                            <div className="text-xs text-gray-500">{report.coordinator_name} | {report.date_from} to {report.date_to}</div>
+                                                            <div className="font-medium text-sm text-gray-800">{report.name || 'Unnamed Report'}</div>
+                                                            <div className="text-xs text-gray-500">{report.created_by_school_name} | {new Date(report.created_at).toLocaleString()} | {report.date_from} to {report.date_to}</div>
                                                         </div>
                                                     </div>
                                                 </div>

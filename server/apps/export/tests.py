@@ -42,6 +42,11 @@ class ExportTestMixin:
             username="expacc", email="eac@t.com", password="p",
             full_name="Accumulator", role="mis_accumulator", campus=self.campus,
         )
+        self.chronicle_master = User.objects.create_user(
+            username="expchron", email="ec@t.com", password="p",
+            full_name="Chronicle Master", role="chronicle_master",
+            is_chronicle_master=True,
+        )
         UserSchoolMapping.objects.create(user=self.admin_user, school=self.school, assigned_by=self.master)
         UserSchoolMapping.objects.create(user=self.faculty, school=self.school, assigned_by=self.master)
         UserSchoolMapping.objects.create(user=self.coordinator, school=self.school, assigned_by=self.master)
@@ -446,3 +451,49 @@ class ExportHelperFunctionTests(TestCase):
         from apps.export.views import validate_export_params
         result = validate_export_params(None, None, None)
         self.assertIsNone(result)
+
+@override_settings(RATELIMIT_ENABLE=False)
+class NewExportEndpointsTests(ExportTestMixin, APITestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self._setup_base()
+
+    def test_accumulator_export_access(self):
+        self.client.force_authenticate(user=self.accumulator)
+        resp = self.client.get(
+            '/api/export/accumulator/export/',
+            {'format': 'json', 'export_type': 'campus_data'}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        
+    def test_accumulator_dashboard_access(self):
+        self.client.force_authenticate(user=self.accumulator)
+        resp = self.client.get('/api/export/accumulator/dashboard/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_chronicle_export_access(self):
+        self.client.force_authenticate(user=self.chronicle_master)
+        resp = self.client.get(
+            '/api/export/chronicle/export/',
+            {'format': 'json'}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        
+    def test_chronicle_dashboard_access(self):
+        self.client.force_authenticate(user=self.chronicle_master)
+        resp = self.client.get('/api/export/chronicle/dashboard/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        
+    def test_chronicle_data_requests(self):
+        self.client.force_authenticate(user=self.chronicle_master)
+        resp = self.client.get('/api/export/chronicle/data-requests/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        
+        # Test creation
+        resp = self.client.post('/api/export/chronicle/data-requests/', {
+            'date_from': '2025-01-01',
+            'date_to': '2025-06-30',
+            'message': 'Please submit Q1/Q2 MIS data'
+        })
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)

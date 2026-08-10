@@ -9,14 +9,19 @@ export default function DashboardHome() {
     const [loading, setLoading] = useState(true)
 
     const [totalMisRecords, setTotalMisRecords] = useState(0)
+    const [totalCoordinators, setTotalCoordinators] = useState(0)
 
     useEffect(() => {
-        const fetchAccumulators = api.get('/users/chronicle/accumulators/')
+        const fetchDashboard = api.get('/export/chronicle/dashboard/')
         const fetchReports = api.get('/export/reports/received/')
 
-        Promise.all([fetchAccumulators, fetchReports])
-            .then(([accRes, repRes]) => {
-                setAccumulators(accRes.data?.results ?? accRes.data)
+        Promise.all([fetchDashboard, fetchReports])
+            .then(([dashRes, repRes]) => {
+                const accumulatorsData = dashRes.data?.results ?? dashRes.data
+                setAccumulators(accumulatorsData)
+                
+                const coordsCount = accumulatorsData.reduce((acc, curr) => acc + (curr.total_coordinators || 0), 0)
+                setTotalCoordinators(coordsCount)
                 
                 const reports = repRes.data?.results ?? repRes.data
                 setTotalMisRecords(reports.length)
@@ -29,22 +34,29 @@ export default function DashboardHome() {
         { key: 'full_name', label: 'Accumulator Name' },
         { key: 'campus_name', label: 'Campus' },
         { key: 'username', label: 'Username' },
-        { key: 'email', label: 'Email Address' },
         {
-            key: 'is_active', label: 'Status', sortable: false,
+            key: 'tracking', label: 'Coordinators Tracking', sortable: false,
             render: row => (
-                <Badge
-                    label={row.is_active ? 'Active' : 'Inactive'}
-                    color={row.is_active ? 'green' : 'red'}
-                />
+                <div className="flex gap-2 items-center">
+                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-md">
+                        {row.coordinators_submitted} Submitted
+                    </span>
+                    <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-md">
+                        {row.coordinators_pending} Pending
+                    </span>
+                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-md">
+                        {row.total_coordinators} Total
+                    </span>
+                </div>
             )
         },
         {
-            key: 'coordinator_count', label: 'MIS Coordinators',
+            key: 'submission_status', label: 'Accumulator Submission', sortable: false,
             render: row => (
-                <span className="font-semibold text-gray-700 bg-gray-100 px-2.5 py-1 rounded-full text-xs">
-                    {row.coordinator_count}
-                </span>
+                <Badge
+                    label={row.has_submitted ? 'Submitted' : 'Pending'}
+                    color={row.has_submitted ? 'green' : 'gray'}
+                />
             )
         }
     ]
@@ -58,8 +70,16 @@ export default function DashboardHome() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Total Accumulators</h3>
+                    <p className="text-3xl font-bold text-gray-800">{loading ? '...' : accumulators.length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Total Coordinators</h3>
+                    <p className="text-3xl font-bold text-gray-800">{loading ? '...' : totalCoordinators}</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                     <h3 className="text-sm font-medium text-gray-500 mb-1">Total MIS Records</h3>
-                    <p className="text-3xl font-bold text-gray-800">{totalMisRecords}</p>
+                    <p className="text-3xl font-bold text-gray-800">{loading ? '...' : totalMisRecords}</p>
                 </div>
             </div>
 

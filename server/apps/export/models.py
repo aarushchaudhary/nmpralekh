@@ -39,6 +39,24 @@ class GeneratedExport(models.Model):
             f'— {self.filename}'
         )
 
+class ChronicleDataRequest(models.Model):
+    """Data request initiated by Chronicle Master, fans out to all accumulators and coordinators."""
+    created_by = models.ForeignKey(
+        'accounts.User', on_delete=models.CASCADE, related_name='chronicle_requests_created'
+    )
+    date_from = models.DateField()
+    date_to = models.DateField()
+    message = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'chronicle_data_requests'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Chronicle Request by {self.created_by.username} ({self.date_from} to {self.date_to})"
+
+
 class MISDataRequest(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -54,6 +72,10 @@ class MISDataRequest(models.Model):
     date_from = models.DateField()
     date_to = models.DateField()
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
+    chronicle_request = models.ForeignKey(
+        ChronicleDataRequest, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='mis_data_requests'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 

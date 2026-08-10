@@ -4,6 +4,8 @@ import DashboardHome from './DashboardHome'
 import ExportPage from './ExportPage'
 import SendMISDataPage from './SendMISDataPage'
 
+import AISummarizerPage from '../../components/shared/AISummarizerPage'
+
 export default function CoordinatorDashboard() {
   return (
     <Layout>
@@ -11,6 +13,7 @@ export default function CoordinatorDashboard() {
         <Route index element={<DashboardHome />} />
         <Route path="export" element={<ExportPage />} />
         <Route path="send-mis-data" element={<SendMISDataPage />} />
+        <Route path="ai-summarizer" element={<AISummarizerPage />} />
       </Routes>
     </Layout>
   )

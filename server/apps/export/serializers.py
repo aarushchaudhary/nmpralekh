@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import GeneratedExport, MISDataRequest
+from .models import GeneratedExport, MISDataRequest, ChronicleDataRequest
 from apps.accounts.serializers import UserVisibilitySerializer
 
 class GeneratedExportSerializer(serializers.ModelSerializer):
@@ -24,9 +24,10 @@ class MISDataRequestSerializer(serializers.ModelSerializer):
             'id', 'accumulator', 'accumulator_name', 
             'coordinator', 'coordinator_name', 
             'date_from', 'date_to', 'status', 
+            'chronicle_request',
             'created_at', 'completed_at'
         ]
-        read_only_fields = ['accumulator', 'status', 'completed_at']
+        read_only_fields = ['accumulator', 'status', 'completed_at', 'chronicle_request']
 
     def create(self, validated_data):
         request = self.context.get('request')
@@ -70,3 +71,22 @@ class MISReportSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         validated_data['created_by'] = request.user
         return super().create(validated_data)
+
+
+class ChronicleDataRequestSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
+
+    class Meta:
+        model = ChronicleDataRequest
+        fields = [
+            'id', 'created_by', 'created_by_name',
+            'date_from', 'date_to', 'message',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'created_by', 'created_by_name', 'created_at']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        validated_data['created_by'] = request.user
+        return super().create(validated_data)
+

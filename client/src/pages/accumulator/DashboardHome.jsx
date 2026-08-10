@@ -8,24 +8,32 @@ import RequestDataModal from './RequestDataModal'
 export default function DashboardHome() {
     const [coordinators, setCoordinators] = useState([])
     const [pendingRequestsMap, setPendingRequestsMap] = useState({})
+    const [metrics, setMetrics] = useState({ total: 0, submitted: 0, pending: 0 })
     const [loading, setLoading] = useState(true)
     const [selectedCoordinator, setSelectedCoordinator] = useState(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isBulkRequest, setIsBulkRequest] = useState(false)
 
     const fetchData = () => {
         setLoading(true)
         Promise.all([
             api.get('/users/accumulator-coordinators/'),
-            api.get('/export/data-requests/')
+            api.get('/export/accumulator/dashboard/')
         ])
-        .then(([coordinatorsRes, requestsRes]) => {
+        .then(([coordinatorsRes, dashboardRes]) => {
             setCoordinators(coordinatorsRes.data?.results ?? coordinatorsRes.data)
             
-            const reqs = requestsRes.data?.results ?? requestsRes.data
+            const dashData = dashboardRes.data
+            setMetrics({
+                total: dashData.total,
+                submitted: dashData.submitted,
+                pending: dashData.pending
+            })
+
             const reqMap = {}
-            reqs.forEach(req => {
-                if (req.status === 'pending') {
-                    reqMap[req.coordinator] = true
+            dashData.coordinators.forEach(coord => {
+                if (coord.pending_requests > 0) {
+                    reqMap[coord.id] = true
                 }
             })
             setPendingRequestsMap(reqMap)
@@ -39,7 +47,14 @@ export default function DashboardHome() {
     }, [])
 
     const handleRequestData = (coordinator) => {
+        setIsBulkRequest(false)
         setSelectedCoordinator(coordinator)
+        setIsModalOpen(true)
+    }
+
+    const handleRequestAll = () => {
+        setIsBulkRequest(true)
+        setSelectedCoordinator(null)
         setIsModalOpen(true)
     }
 
@@ -83,15 +98,31 @@ export default function DashboardHome() {
 
     return (
         <div>
-            <PageHeader 
-                title="Accumulator Dashboard" 
-                subtitle="Overview of MIS Data from Coordinators" 
-            />
+            <div className="flex justify-between items-start mb-6">
+                <PageHeader 
+                    title="Accumulator Dashboard" 
+                    subtitle="Overview of MIS Data from Coordinators" 
+                />
+                <button
+                    onClick={handleRequestAll}
+                    className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                >
+                    Request All
+                </button>
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Coordinators Linked</h3>
-                    <p className="text-3xl font-bold text-gray-800">{loading ? '...' : coordinators.length}</p>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Total Coordinators</h3>
+                    <p className="text-3xl font-bold text-gray-800">{loading ? '...' : metrics.total}</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Submitted</h3>
+                    <p className="text-3xl font-bold text-green-600">{loading ? '...' : metrics.submitted}</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Not Submitted</h3>
+                    <p className="text-3xl font-bold text-orange-600">{loading ? '...' : metrics.pending}</p>
                 </div>
             </div>
 
@@ -107,6 +138,7 @@ export default function DashboardHome() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 coordinator={selectedCoordinator}
+                isBulk={isBulkRequest}
                 onSuccess={() => {
                     fetchData()
                 }}

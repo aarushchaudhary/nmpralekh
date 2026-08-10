@@ -43,8 +43,8 @@ export default function ReceivedMISDataPage() {
         if (activeSchool) {
             const searchTerm = activeSchool.toLowerCase()
             const matchesName = report.name?.toLowerCase().includes(searchTerm)
-            const matchesSchool = report.coordinator_school_name?.toLowerCase().includes(searchTerm)
-            const matchesCoordinator = report.coordinator_name?.toLowerCase().includes(searchTerm)
+            const matchesSchool = report.created_by_school_name?.toLowerCase().includes(searchTerm)
+            const matchesCoordinator = report.created_by_name?.toLowerCase().includes(searchTerm)
             if (!matchesName && !matchesSchool && !matchesCoordinator) {
                 match = false
             }
@@ -130,10 +130,10 @@ export default function ReceivedMISDataPage() {
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                                        {report.name || 'MIS Report'} <span className="text-sm font-normal text-gray-500">from {report.coordinator_school_name}</span>
+                                        {report.name || 'MIS Report'} <span className="text-sm font-normal text-gray-500">from {report.created_by_school_name}</span>
                                     </h3>
                                     <div className="text-sm text-gray-500 flex flex-wrap gap-4">
-                                        <span>From Coordinator: <strong className="text-gray-700">{report.coordinator_name}</strong></span>
+                                        <span>From: <strong className="text-gray-700">{report.created_by_name}</strong></span>
                                         <span>Period: <strong className="text-gray-700">{report.date_from}</strong> to <strong className="text-gray-700">{report.date_to}</strong></span>
                                         <span>Sent at: {new Date(report.sent_to_accumulator_at || report.sent_to_admin_at).toLocaleString()}</span>
                                     </div>

@@ -455,6 +455,16 @@ class MISAccumulatorUser(BaseMISUser):
     def list_data_requests(self):
         self.client.get("/api/export/data-requests/", name="/api/export/data-requests/")
 
+    @tag("dashboard")
+    @task(3)
+    def accumulator_dashboard(self):
+        self.client.get("/api/export/accumulator/dashboard/", name="/api/export/accumulator/dashboard/")
+
+    @tag("export")
+    @task(2)
+    def accumulator_export(self):
+        self.client.get("/api/export/accumulator/export/?format=excel&export_type=campus_data", name="/api/export/accumulator/export/")
+
     @tag("auth")
     @task(1)
     def me(self):
@@ -487,6 +497,21 @@ class ChronicleMasterUser(BaseMISUser):
             "/api/users/chronicle/accumulators/",
             name="/api/users/chronicle/accumulators/",
         )
+
+    @tag("dashboard")
+    @task(4)
+    def chronicle_dashboard(self):
+        self.client.get("/api/export/chronicle/dashboard/", name="/api/export/chronicle/dashboard/")
+
+    @tag("export")
+    @task(2)
+    def chronicle_export(self):
+        self.client.get("/api/export/chronicle/export/?format=json", name="/api/export/chronicle/export/")
+
+    @tag("reports")
+    @task(1)
+    def list_chronicle_data_requests(self):
+        self.client.get("/api/export/chronicle/data-requests/", name="/api/export/chronicle/data-requests/")
 
     @tag("auth")
     @task(1)

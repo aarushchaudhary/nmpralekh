@@ -20,8 +20,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
+from django.views.decorators.csrf import ensure_csrf_cookie
 
-
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -160,6 +161,7 @@ class RefreshTokenView(APIView):
             )
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer

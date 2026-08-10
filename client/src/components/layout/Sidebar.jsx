@@ -70,12 +70,18 @@ const roleNavLinks = {
         { label: 'Data Export', path: '/coordinator/export' },
         { label: '— MIS Data', path: null },
         { label: 'Send MIS Data', path: '/coordinator/send-mis-data' },
+        { label: '— AI Tools', path: null },
+        { label: 'AI Summarizer', path: '/coordinator/ai-summarizer' },
     ],
     mis_accumulator: [
         { label: 'Dashboard', path: '/accumulator' },
         { label: '— Coordinators', path: null },
         { label: 'Received Data', path: '/accumulator/received-data' },
         { label: 'Finalize MIS', path: '/accumulator/finalize' },
+        { label: '— Export', path: null },
+        { label: 'Export Data', path: '/accumulator/export' },
+        { label: '— AI Tools', path: null },
+        { label: 'AI Summarizer', path: '/accumulator/ai-summarizer' },
     ],
     service_admin: [
         { label: 'Dashboard', path: '/service-dashboard' },
@@ -86,8 +92,13 @@ const roleNavLinks = {
     ],
     chronicle_master: [
         { label: 'Dashboard', path: '/chronicle-dashboard' },
-        { label: '— MIS Data', path: null },
+        { label: '— Requests', path: null },
+        { label: 'Initiate Request', path: '/chronicle-dashboard/initiate-request' },
+        { label: '— Export', path: null },
+        { label: 'Export Data', path: '/chronicle-dashboard/export' },
         { label: 'Received MIS Data', path: '/chronicle-dashboard/received-mis-data' },
+        { label: '— AI Tools', path: null },
+        { label: 'AI Summarizer', path: '/chronicle-dashboard/ai-summarizer' },
     ],
 }
 
