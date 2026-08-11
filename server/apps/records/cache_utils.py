@@ -29,17 +29,28 @@ def get_dashboard_counts(school_ids, user):
         school_counts = cache.get(cache_key)
         if school_counts is None:
             filters = {'school_id': school_id, 'is_deleted': False}
-            user_filters = dict(filters)
+            
+            pub_qs = FacultyPublication.objects.filter(**filters)
+            pat_qs = Patent.objects.filter(**filters)
+            cert_qs = Certification.objects.filter(**filters)
+            
             if role == 'user':
-                user_filters['created_by'] = user
+                from django.db.models import Q
+                from apps.records.models import PublicationAuthor, PatentApplicant
+                co_pub_ids = PublicationAuthor.objects.filter(user=user).values_list('publication_id', flat=True)
+                co_pat_ids = PatentApplicant.objects.filter(user=user).values_list('patent_id', flat=True)
+                
+                pub_qs = pub_qs.filter(Q(created_by=user) | Q(id__in=co_pub_ids))
+                pat_qs = pat_qs.filter(Q(created_by=user) | Q(id__in=co_pat_ids))
+                cert_qs = cert_qs.filter(created_by=user)
 
             school_counts = {
                 'school_activities':  SchoolActivity.objects.filter(**filters).count(),
                 'student_activities': StudentActivity.objects.filter(**filters).count(),
                 'fdp':                FacultyFDPWorkshopGL.objects.filter(**filters).count(),
-                'publications':       FacultyPublication.objects.filter(**user_filters).count(),
-                'patents':            Patent.objects.filter(**user_filters).count(),
-                'certifications':     Certification.objects.filter(**user_filters).count(),
+                'publications':       pub_qs.count(),
+                'patents':            pat_qs.count(),
+                'certifications':     cert_qs.count(),
                 'placements':         PlacementActivity.objects.filter(**filters).count(),
             }
             cache.set(cache_key, school_counts, timeout=60)

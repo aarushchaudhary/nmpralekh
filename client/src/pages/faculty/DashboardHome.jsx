@@ -33,8 +33,12 @@ export default function DashboardHome() {
                 'certifications': data.certifications,
                 'placements': data.placements
             })
+        }).catch(err => {
+            console.error("Failed to fetch dashboard counts:", err);
         })
-        api.get('/schools/my-schools/').then(res => setSchools(res.data))
+        api.get('/schools/my-schools/').then(res => setSchools(res.data)).catch(err => {
+            console.error("Failed to fetch schools:", err);
+        })
     }, [])
 
     return (

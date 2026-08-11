@@ -10,7 +10,7 @@
         android:label="NMPralekh"
         android:roundIcon="@drawable/nmpralekh"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+        android:theme="@style/Theme.NMPralekh"
         android:usesCleartextTraffic="true"> <!-- 2. Allows HTTP during development -->
 
         <!-- 3. Main Login Launcher Activity -->
