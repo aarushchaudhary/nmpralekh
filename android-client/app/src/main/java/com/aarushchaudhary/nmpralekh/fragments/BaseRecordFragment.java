@@ -123,6 +123,7 @@ public abstract class BaseRecordFragment extends Fragment {
                 if (!isReadOnly()) showDeleteConfirmDialog(record);
             }
         });
+        adapter.setReadOnly(isReadOnly());
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
 

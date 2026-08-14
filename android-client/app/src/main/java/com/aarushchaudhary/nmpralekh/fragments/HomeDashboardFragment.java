@@ -67,9 +67,7 @@ public class HomeDashboardFragment extends Fragment {
                 {"placements", "Placements"},
                 {"publications", "Publications"},
                 {"patents", "Patents"},
-                {"certifications", "Certifications"},
-                {"clubs", "Clubs"},
-                {"faculties", "Faculties"}
+                {"certifications", "Certifications"}
             };
         } else {
             modules = new String[][]{

@@ -35,10 +35,16 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.ViewHolder
     private List<JsonObject> records = new ArrayList<>();
     private final RecordBinder binder;
     private final OnRecordActionListener listener;
+    private boolean isReadOnly = false;
 
     public RecordAdapter(RecordBinder binder, OnRecordActionListener listener) {
         this.binder = binder;
         this.listener = listener;
+    }
+
+    public void setReadOnly(boolean readOnly) {
+        isReadOnly = readOnly;
+        notifyDataSetChanged();
     }
 
     public void setRecords(List<JsonObject> records) {
@@ -87,16 +93,20 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.ViewHolder
             holder.tvExtra.setVisibility(View.GONE);
         }
 
-        // Pending audit
+        // Pending audit or Read-only
         boolean isPending = record.has("pending_audit") && !record.get("pending_audit").isJsonNull();
         if (isPending) {
             holder.tvPending.setVisibility(View.VISIBLE);
             holder.layoutActions.setVisibility(View.GONE);
         } else {
             holder.tvPending.setVisibility(View.GONE);
-            holder.layoutActions.setVisibility(View.VISIBLE);
-            holder.btnEdit.setOnClickListener(v -> listener.onEdit(record));
-            holder.btnDelete.setOnClickListener(v -> listener.onDelete(record));
+            if (isReadOnly) {
+                holder.layoutActions.setVisibility(View.GONE);
+            } else {
+                holder.layoutActions.setVisibility(View.VISIBLE);
+                holder.btnEdit.setOnClickListener(v -> listener.onEdit(record));
+                holder.btnDelete.setOnClickListener(v -> listener.onDelete(record));
+            }
         }
     }
 
