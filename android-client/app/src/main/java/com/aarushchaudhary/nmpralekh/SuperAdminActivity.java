@@ -18,7 +18,7 @@ import com.aarushchaudhary.nmpralekh.databinding.ActivitySuperadminBinding;
 import com.aarushchaudhary.nmpralekh.fragments.CampusUsersFragment;
 import com.aarushchaudhary.nmpralekh.fragments.CertificationsFragment;
 import com.aarushchaudhary.nmpralekh.fragments.ClubsFragment;
-import com.aarushchaudhary.nmpralekh.fragments.FdpFragment;
+import com.aarushchaudhary.nmpralekh.fragments.FDPFragment;
 import com.aarushchaudhary.nmpralekh.fragments.HomeDashboardFragment;
 import com.aarushchaudhary.nmpralekh.fragments.PatentsFragment;
 import com.aarushchaudhary.nmpralekh.fragments.PlacementsFragment;
