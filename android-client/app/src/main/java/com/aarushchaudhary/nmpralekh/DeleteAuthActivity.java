@@ -15,12 +15,12 @@ import com.aarushchaudhary.nmpralekh.auth.SessionManager;
 import com.aarushchaudhary.nmpralekh.databinding.ActivityDeleteauthBinding;
 import com.aarushchaudhary.nmpralekh.fragments.DeleteAuthPendingFragment;
 import com.aarushchaudhary.nmpralekh.fragments.DeleteAuthHistoryFragment;
-import com.aarushchaudhary.nmpralekh.fragments.HomeDashboardFragment;
+import com.aarushchaudhary.nmpralekh.fragments.DeleteAuthDashboardFragment;
 import com.google.android.material.navigation.NavigationView;
 
 public class DeleteAuthActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
-        HomeDashboardFragment.OnModuleClickListener {
+        DeleteAuthDashboardFragment.OnViewAllClickListener {
 
     private ActivityDeleteauthBinding binding;
     private ActionBarDrawerToggle toggle;
@@ -51,7 +51,7 @@ public class DeleteAuthActivity extends AppCompatActivity
 
         // Load Default Fragment
         if (savedInstanceState == null) {
-            loadFragment(new HomeDashboardFragment());
+            loadFragment(new DeleteAuthDashboardFragment());
         }
     }
 
@@ -68,7 +68,7 @@ public class DeleteAuthActivity extends AppCompatActivity
         String title = "Delete Auth Dashboard";
 
         if (id == R.id.nav_dashboard) {
-            fragment = new HomeDashboardFragment();
+            fragment = new DeleteAuthDashboardFragment();
             title = "Dashboard";
         } else if (id == R.id.nav_pending) {
             fragment = new DeleteAuthPendingFragment();
@@ -94,33 +94,12 @@ public class DeleteAuthActivity extends AppCompatActivity
     }
 
     @Override
-    public void onModuleClick(String moduleKey) {
-        Fragment fragment = null;
-        String title = "";
-        int navId = -1;
-
-        switch (moduleKey) {
-            case "pending":
-                fragment = new DeleteAuthPendingFragment();
-                title = "Pending Requests";
-                navId = R.id.nav_pending;
-                break;
-            case "history":
-                fragment = new DeleteAuthHistoryFragment();
-                title = "History";
-                navId = R.id.nav_history;
-                break;
+    public void onViewAllClick() {
+        loadFragment(new DeleteAuthPendingFragment());
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("Pending Requests");
         }
-
-        if (fragment != null) {
-            loadFragment(fragment);
-            if (getSupportActionBar() != null) {
-                getSupportActionBar().setTitle(title);
-            }
-            if (navId != -1) {
-                binding.navView.setCheckedItem(navId);
-            }
-        }
+        binding.navView.setCheckedItem(R.id.nav_pending);
     }
 
     private void performLogout() {
