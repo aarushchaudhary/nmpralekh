@@ -36,7 +36,7 @@ public class LoginActivity extends AppCompatActivity {
         // Check if already logged in
         SessionManager session = new SessionManager(this);
         if (session.isLoggedIn()) {
-            navigateToFaculty();
+            navigateBasedOnRole();
             return;
         }
 
@@ -82,7 +82,7 @@ public class LoginActivity extends AppCompatActivity {
                             }
 
                             Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
-                            navigateToFaculty();
+                            navigateBasedOnRole();
                         } else {
                             Toast.makeText(LoginActivity.this, "Invalid credentials or unauthorized", Toast.LENGTH_SHORT).show();
                         }
@@ -101,8 +101,17 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    private void navigateToFaculty() {
-        Intent intent = new Intent(this, FacultyActivity.class);
+    private void navigateBasedOnRole() {
+        SessionManager session = new SessionManager(this);
+        String role = session.getRole();
+        Intent intent;
+        
+        if (role.equals("admin") || role.equals("super_admin") || role.equals("coordinator")) {
+            intent = new Intent(this, AdminActivity.class);
+        } else {
+            intent = new Intent(this, FacultyActivity.class);
+        }
+        
         startActivity(intent);
         finish();
     }

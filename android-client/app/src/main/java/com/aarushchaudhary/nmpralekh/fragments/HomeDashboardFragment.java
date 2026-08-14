@@ -41,15 +41,7 @@ public class HomeDashboardFragment extends Fragment {
     private SessionManager sessionManager;
     private ApiService apiService;
 
-    private final String[][] modules = {
-            {"school_activities", "School Activities"},
-            {"student_activities", "Student Activities"},
-            {"fdp", "FDP / Workshop / GL"},
-            {"publications", "Publications"},
-            {"patents", "Patents"},
-            {"certifications", "Certifications"},
-            {"placements", "Placements"}
-    };
+    private String[][] modules;
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -63,6 +55,34 @@ public class HomeDashboardFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         binding = FragmentHomeDashboardBinding.inflate(inflater, container, false);
+        sessionManager = new SessionManager(requireContext());
+        apiService = ApiClient.getApiService(requireContext());
+
+        String role = sessionManager.getRole();
+        if (role.equals("admin") || role.equals("super_admin") || role.equals("coordinator")) {
+            modules = new String[][]{
+                {"school_activities", "School Activities"},
+                {"student_activities", "Student Activities"},
+                {"fdp", "FDP / Workshop / GL"},
+                {"placements", "Placements"},
+                {"publications", "Publications"},
+                {"patents", "Patents"},
+                {"certifications", "Certifications"},
+                {"clubs", "Clubs"},
+                {"faculties", "Faculties"}
+            };
+        } else {
+            modules = new String[][]{
+                {"school_activities", "School Activities"},
+                {"student_activities", "Student Activities"},
+                {"fdp", "FDP / Workshop / GL"},
+                {"publications", "My Publications"},
+                {"patents", "My Patents"},
+                {"certifications", "My Certifications"},
+                {"placements", "Placements"}
+            };
+        }
+
         return binding.getRoot();
     }
 
@@ -70,9 +90,6 @@ public class HomeDashboardFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         
-        sessionManager = new SessionManager(requireContext());
-        apiService = ApiClient.getApiService(requireContext());
-
         binding.tvWelcome.setText("Welcome, " + sessionManager.getFullName());
 
         loadSchools();

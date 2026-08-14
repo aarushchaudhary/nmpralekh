@@ -2,8 +2,10 @@ from django.core.cache import cache
 from apps.records.models import (
     SchoolActivity, StudentActivity,
     FacultyFDPWorkshopGL, FacultyPublication,
-    Patent, Certification, PlacementActivity
+    Patent, Certification, PlacementActivity, ClubCommittee
 )
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 DASHBOARD_CACHE_VERSION = 'v1'
 
@@ -22,6 +24,8 @@ def get_dashboard_counts(school_ids, user):
         'patents':            0,
         'certifications':     0,
         'placements':         0,
+        'clubs':              0,
+        'faculties':          0,
     }
     role = user.role
     for school_id in school_ids:
@@ -52,6 +56,8 @@ def get_dashboard_counts(school_ids, user):
                 'patents':            pat_qs.count(),
                 'certifications':     cert_qs.count(),
                 'placements':         PlacementActivity.objects.filter(**filters).count(),
+                'clubs':              ClubCommittee.objects.filter(**filters).count() if role in ['admin', 'super_admin'] else 0,
+                'faculties':          User.objects.filter(schools__id=school_id, role='user').count() if role in ['admin', 'super_admin'] else 0,
             }
             cache.set(cache_key, school_counts, timeout=60)
         for k in counts:

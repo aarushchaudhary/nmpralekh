@@ -80,6 +80,10 @@ public abstract class BaseRecordFragment extends Fragment {
         return inflater.inflate(R.layout.fragment_record_list, container, false);
     }
 
+    protected boolean isReadOnly() {
+        return false;
+    }
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -98,6 +102,12 @@ public abstract class BaseRecordFragment extends Fragment {
         btnNext = view.findViewById(R.id.btnNext);
         FloatingActionButton fabAdd = view.findViewById(R.id.fabAdd);
 
+        if (isReadOnly()) {
+            fabAdd.setVisibility(View.GONE);
+        } else {
+            fabAdd.setOnClickListener(v -> showFormDialog(null));
+        }
+
         tvPageTitle.setText(getPageTitle());
         tvPageSubtitle.setText(getPageSubtitle());
 
@@ -105,19 +115,16 @@ public abstract class BaseRecordFragment extends Fragment {
         adapter = new RecordAdapter(getBinder(), new RecordAdapter.OnRecordActionListener() {
             @Override
             public void onEdit(JsonObject record) {
-                showFormDialog(record);
+                if (!isReadOnly()) showFormDialog(record);
             }
 
             @Override
             public void onDelete(JsonObject record) {
-                showDeleteConfirmDialog(record);
+                if (!isReadOnly()) showDeleteConfirmDialog(record);
             }
         });
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
-
-        // FAB
-        fabAdd.setOnClickListener(v -> showFormDialog(null));
 
         // Pagination
         btnPrevious.setOnClickListener(v -> {
@@ -214,6 +221,9 @@ public abstract class BaseRecordFragment extends Fragment {
         if (endpoint.contains("publications")) return apiService.getPublications(params);
         if (endpoint.contains("patents")) return apiService.getPatents(params);
         if (endpoint.contains("certifications")) return apiService.getCertifications(params);
+        if (endpoint.contains("clubs")) return apiService.getClubs(params);
+        if (endpoint.contains("school-faculties")) return apiService.getSchoolFaculties(params);
+        if (endpoint.contains("reports/received")) return apiService.getReceivedReports(params);
         return apiService.getSchoolActivities(params); // fallback
     }
 

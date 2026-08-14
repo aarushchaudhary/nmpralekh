@@ -145,4 +145,22 @@ public interface ApiService {
     @GET("api/export/all/")
     @Streaming
     Call<ResponseBody> exportAll();
+
+    // Clubs (Admin)
+    @POST("api/records/clubs/")
+    Call<JsonObject> createClub(@Body JsonObject body);
+
+    @PUT("api/records/clubs/{id}/")
+    Call<JsonObject> updateClub(@Path("id") int id, @Body JsonObject body);
+
+    @DELETE("api/records/clubs/{id}/")
+    Call<JsonObject> deleteClub(@Path("id") int id);
+
+    // School Faculties (Admin)
+    @GET("api/users/school-faculties/")
+    Call<JsonObject> getSchoolFaculties(@QueryMap Map<String, String> params);
+
+    // Received MIS Data (Admin)
+    @GET("api/export/reports/received/")
+    Call<JsonObject> getReceivedReports(@QueryMap Map<String, String> params);
 }
