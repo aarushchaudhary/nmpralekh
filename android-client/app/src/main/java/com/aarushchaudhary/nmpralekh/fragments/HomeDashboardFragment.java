@@ -21,6 +21,8 @@ import com.aarushchaudhary.nmpralekh.ApiClient;
 import com.aarushchaudhary.nmpralekh.api.ApiService;
 import com.aarushchaudhary.nmpralekh.auth.SessionManager;
 import com.aarushchaudhary.nmpralekh.databinding.FragmentHomeDashboardBinding;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
@@ -95,31 +97,71 @@ public class HomeDashboardFragment extends Fragment {
     }
 
     private void loadSchools() {
-        apiService.getMySchools().enqueue(new Callback<List<JsonObject>>() {
-            @Override
-            public void onResponse(Call<List<JsonObject>> call, Response<List<JsonObject>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    List<String> schoolNames = new ArrayList<>();
-                    for (JsonObject obj : response.body()) {
-                        if (obj.has("name")) {
-                            schoolNames.add(obj.get("name").getAsString());
+        if ("super_admin".equals(sessionManager.getRole())) {
+            apiService.getAllSchools().enqueue(new Callback<JsonElement>() {
+                @Override
+                public void onResponse(Call<JsonElement> call, Response<JsonElement> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        List<String> schoolNames = new ArrayList<>();
+                        JsonElement body = response.body();
+                        JsonArray results = new JsonArray();
+                        if (body.isJsonObject() && body.getAsJsonObject().has("results")) {
+                            results = body.getAsJsonObject().getAsJsonArray("results");
+                        } else if (body.isJsonArray()) {
+                            results = body.getAsJsonArray();
                         }
-                    }
-                    if (schoolNames.isEmpty()) {
-                        binding.tvSchools.setText("No schools assigned");
+                        for (JsonElement el : results) {
+                            if (el.isJsonObject()) {
+                                JsonObject obj = el.getAsJsonObject();
+                                if (obj.has("is_active") && obj.get("is_active").getAsBoolean()) {
+                                    if (obj.has("name")) {
+                                        schoolNames.add(obj.get("name").getAsString());
+                                    }
+                                }
+                            }
+                        }
+                        if (schoolNames.isEmpty()) {
+                            binding.tvSchools.setText("0 Active Schools");
+                        } else {
+                            binding.tvSchools.setText(schoolNames.size() + " Active Schools: " + String.join(", ", schoolNames));
+                        }
                     } else {
-                        binding.tvSchools.setText(String.join(", ", schoolNames));
+                        binding.tvSchools.setText("Failed to load schools");
                     }
-                } else {
-                    binding.tvSchools.setText("Failed to load schools");
                 }
-            }
 
-            @Override
-            public void onFailure(Call<List<JsonObject>> call, Throwable t) {
-                binding.tvSchools.setText("Error: " + t.getMessage());
-            }
-        });
+                @Override
+                public void onFailure(Call<JsonElement> call, Throwable t) {
+                    binding.tvSchools.setText("Error: " + t.getMessage());
+                }
+            });
+        } else {
+            apiService.getMySchools().enqueue(new Callback<List<JsonObject>>() {
+                @Override
+                public void onResponse(Call<List<JsonObject>> call, Response<List<JsonObject>> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        List<String> schoolNames = new ArrayList<>();
+                        for (JsonObject obj : response.body()) {
+                            if (obj.has("name")) {
+                                schoolNames.add(obj.get("name").getAsString());
+                            }
+                        }
+                        if (schoolNames.isEmpty()) {
+                            binding.tvSchools.setText("No schools assigned");
+                        } else {
+                            binding.tvSchools.setText(schoolNames.size() + " Schools: " + String.join(", ", schoolNames));
+                        }
+                    } else {
+                        binding.tvSchools.setText("Failed to load schools");
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<List<JsonObject>> call, Throwable t) {
+                    binding.tvSchools.setText("Error: " + t.getMessage());
+                }
+            });
+        }
     }
 
     private void loadCounts() {

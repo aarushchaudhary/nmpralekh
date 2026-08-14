@@ -1,5 +1,6 @@
 package com.aarushchaudhary.nmpralekh.api;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,9 @@ public interface ApiService {
 
     @GET("api/schools/my-schools/")
     Call<List<JsonObject>> getMySchools();
+
+    @GET("api/schools/")
+    Call<JsonElement> getAllSchools();
 
     // School Activities
     @GET("api/records/school-activities/")
