@@ -84,7 +84,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
     if (!form.title_of_patent)     e.title_of_patent     = 'Required'
     if (!form.date_of_publication) e.date_of_publication = 'Required'
     if (!form.journal_number)      e.journal_number      = 'Required'
-    if (!form.doi_or_link)         e.doi_or_link         = 'DOI or Link is required'
+    if (!form.doi_or_link)         e.doi_or_link         = 'Patent Link is required'
     setErrors(e); return !Object.keys(e).length
   }
 
@@ -279,7 +279,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
                 onChange={set('details')} />
             </div>
             <div className="md:col-span-2">
-              <FormInput label="DOI / Link" value={form.doi_or_link}
+              <FormInput label="Patent Link" value={form.doi_or_link}
                 onChange={set('doi_or_link')} placeholder="https://..."
                 required error={errors.doi_or_link} />
             </div>

@@ -137,6 +137,10 @@ public interface ApiService {
     @DELETE("api/records/certifications/{id}/")
     Call<JsonObject> deleteCertification(@Path("id") int id);
 
+    // Faculty User Search
+    @GET("api/records/faculty-users/")
+    Call<com.google.gson.JsonArray> searchFaculty(@Query("search") String query);
+
     // Export
     @GET("api/export/all/")
     @Streaming

@@ -67,7 +67,7 @@ public class SchoolActivitiesFragment extends BaseRecordFragment {
         formFields.put("school", addSchoolSpinner(container, jsonStr(existingData, "school_name")));
         formFields.put("name", addTextField(container, "Name", null, jsonStr(existingData, "name"), true));
         formFields.put("date", addDateField(container, "Date", jsonStr(existingData, "date"), true));
-        formFields.put("details", addTextArea(container, "Details", jsonStr(existingData, "details"), false));
+        formFields.put("details", addTextArea(container, "Details", jsonStr(existingData, "details"), true));
         boolean isSchoolWide = existingData != null && existingData.has("is_school_wide") && !existingData.get("is_school_wide").isJsonNull() && existingData.get("is_school_wide").getAsBoolean();
         formFields.put("is_school_wide", addCheckBox(container, "Is School Wide", isSchoolWide));
     }
@@ -87,6 +87,7 @@ public class SchoolActivitiesFragment extends BaseRecordFragment {
     protected boolean validateForm() {
         return getSelectedSchoolId((Spinner) formFields.get("school")) != -1 &&
                !getTextValue(formFields.get("name")).isEmpty() &&
-               !getTextValue(formFields.get("date")).isEmpty();
+               !getTextValue(formFields.get("date")).isEmpty() &&
+               !getTextValue(formFields.get("details")).isEmpty();
     }
 }

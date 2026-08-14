@@ -73,6 +73,22 @@ public class ApiClient {
 
         OkHttpClient client = new OkHttpClient.Builder()
                 .cookieJar(cookieJar)
+                .addInterceptor(chain -> {
+                    okhttp3.Request original = chain.request();
+                    okhttp3.Request.Builder builder = original.newBuilder();
+                    
+                    List<Cookie> cookies = cookieStore.get(original.url().host());
+                    if (cookies != null) {
+                        for (Cookie cookie : cookies) {
+                            if ("csrftoken".equals(cookie.name())) {
+                                builder.header("X-CSRFToken", cookie.value());
+                                break;
+                            }
+                        }
+                    }
+                    
+                    return chain.proceed(builder.build());
+                })
                 .addInterceptor(logging)
                 .build();
 

@@ -66,7 +66,7 @@ public class FDPFragment extends BaseRecordFragment {
         formFields.put("name", addTextField(container, "Name/Title", null, jsonStr(existingData, "name"), true));
         formFields.put("type", addSpinner(container, "Type", Arrays.asList("FDP", "Workshop", "Guest_Lecture"), jsonStr(existingData, "type")));
         formFields.put("organizing_body", addTextField(container, "Organizing Body", null, jsonStr(existingData, "organizing_body"), false));
-        formFields.put("details", addTextArea(container, "Details", jsonStr(existingData, "details"), false));
+        formFields.put("details", addTextArea(container, "Details", jsonStr(existingData, "details"), true));
     }
 
     @Override
@@ -88,6 +88,7 @@ public class FDPFragment extends BaseRecordFragment {
         return getSelectedSchoolId((Spinner) formFields.get("school")) != -1 &&
                !getTextValue(formFields.get("faculty_name")).isEmpty() &&
                !getTextValue(formFields.get("name")).isEmpty() &&
-               !getTextValue(formFields.get("date_start")).isEmpty();
+               !getTextValue(formFields.get("date_start")).isEmpty() &&
+               !getTextValue(formFields.get("details")).isEmpty();
     }
 }

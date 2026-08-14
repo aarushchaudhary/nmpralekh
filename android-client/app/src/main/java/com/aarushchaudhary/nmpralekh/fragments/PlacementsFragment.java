@@ -65,7 +65,7 @@ public class PlacementsFragment extends BaseRecordFragment {
         formFields.put("date", addDateField(container, "Date", jsonStr(existingData, "date"), true));
         formFields.put("placecom_name", addTextField(container, "PlaceCom", null, jsonStr(existingData, "placecom_name"), false));
         formFields.put("company_name", addTextField(container, "Company Name", null, jsonStr(existingData, "company_name"), false));
-        formFields.put("details", addTextArea(container, "Details", jsonStr(existingData, "details"), false));
+        formFields.put("details", addTextArea(container, "Details", jsonStr(existingData, "details"), true));
     }
 
     @Override
@@ -84,6 +84,7 @@ public class PlacementsFragment extends BaseRecordFragment {
     protected boolean validateForm() {
         return getSelectedSchoolId((Spinner) formFields.get("school")) != -1 &&
                !getTextValue(formFields.get("name")).isEmpty() &&
-               !getTextValue(formFields.get("date")).isEmpty();
+               !getTextValue(formFields.get("date")).isEmpty() &&
+               !getTextValue(formFields.get("details")).isEmpty();
     }
 }
