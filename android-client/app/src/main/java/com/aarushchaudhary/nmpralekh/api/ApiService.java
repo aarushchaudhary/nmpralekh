@@ -171,4 +171,17 @@ public interface ApiService {
     // Campus Users (Super Admin)
     @GET("api/users/campus-users/")
     Call<JsonObject> getCampusUsers(@QueryMap Map<String, String> params);
+
+    // Delete Auth (Audit)
+    @GET("api/audit/")
+    Call<JsonObject> getPendingAudits(@QueryMap Map<String, String> params);
+
+    @GET("api/audit/history/")
+    Call<JsonObject> getAuditHistory(@QueryMap Map<String, String> params);
+
+    @POST("api/audit/{id}/approve/")
+    Call<JsonObject> approveAudit(@Path("id") int id);
+
+    @POST("api/audit/{id}/reject/")
+    Call<JsonObject> rejectAudit(@Path("id") int id);
 }
