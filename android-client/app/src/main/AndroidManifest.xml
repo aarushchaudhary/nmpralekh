@@ -28,5 +28,9 @@
             android:name=".FacultyActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".AdminActivity"
+            android:exported="false" />
+
     </application>
 </manifest>
