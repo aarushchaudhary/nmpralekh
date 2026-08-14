@@ -33,11 +33,18 @@ public class LoginActivity extends AppCompatActivity {
 
         prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
 
-        // Check if already logged in
+        // Check if already logged in AND we have cookies (session survived)
         SessionManager session = new SessionManager(this);
-        if (session.isLoggedIn()) {
+        if (session.isLoggedIn() && ApiClient.hasCookies()) {
             navigateBasedOnRole();
             return;
+        }
+
+        // If not fully logged in but we have a saved username, pre-fill it
+        String savedUsername = session.getUsername();
+        if (!savedUsername.isEmpty()) {
+            binding.etUsername.setText(savedUsername);
+            binding.etPassword.requestFocus();
         }
 
         binding.btnSettings.setOnClickListener(v -> showSettingsDialog());

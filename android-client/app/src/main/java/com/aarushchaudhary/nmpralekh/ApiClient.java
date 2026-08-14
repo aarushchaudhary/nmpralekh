@@ -30,6 +30,10 @@ public class ApiClient {
         cookieStore.clear();
     }
 
+    public static boolean hasCookies() {
+        return !cookieStore.isEmpty();
+    }
+
     public static ApiService getApiService(Context context) {
         SharedPreferences prefs = context.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         String baseUrl = prefs.getString("SERVER_URL", "http://10.0.2.2:8000");
