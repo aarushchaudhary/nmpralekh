@@ -1333,20 +1333,44 @@ HSTS             →  Enabled in production (DEBUG=False) — 1-year max-age
 
 ## Mobile App (Android)
 
-An Android mobile client is available to provide easy access on the go. It is built using the native Android SDK (Java) and connects to the same Django REST API as the web client.
+An Android mobile client is available to provide easy access on the go. It is built using the native Android SDK (Java) and seamlessly connects to the same Django REST API as the web client, ensuring a unified data source across all platforms. The application is highly optimized for performance, security, and a native Material Design experience.
 
-### Features
-- **Native Login & Role-Based Routing**: Authenticates securely via the `/api/auth/login/` endpoint and dynamically routes users to their respective dashboards based on their role (Faculty, Admin, Super Admin, Delete Auth).
-- **Role-Specific Dashboards**: Mobile-optimized DrawerLayout (sidebar) interfaces tailored for various roles:
-  - **Faculty**: Access to self-managed modules (School Activities, Student Activities, FDP, Publications, Patents, Certifications, Placements).
-  - **Admin**: View and export records, manage clubs and school faculties, and download MIS data.
-  - **Super Admin**: Read-only overview across all schools, along with a campus users list.
-  - **Delete Auth**: Review, approve, or reject pending change requests and view audit history.
-- **Custom Branding**: Integrated with the official NMPralekh logo and a clean, light-blue Material Design UI.
-- **Networking**: Uses `Retrofit` and `Gson` for fast, reliable, and type-safe API requests.
+### Key Features
 
-### Setup and Running
-1. Open the `android-client/` directory in **Android Studio**.
-2. Sync the project with Gradle files.
-3. Ensure the Django server is running locally with `ALLOWED_HOSTS = ['*']` or specifically allowing the Android emulator IP (`10.0.2.2`).
-4. Build and run the app on an emulator or a physical device.
+#### 1. Role-Based Dashboards & Routing
+The application dynamically configures the user interface, navigation drawer, and available actions based on the authenticated user's role:
+- **Faculty**: Complete CRUD access to self-managed modules (School Activities, Student Activities, FDP, Publications, Patents, Certifications, Placements).
+- **Admin**: View records, manage school clubs, handle faculty lists, and export MIS data specifically for their assigned school.
+- **Super Admin**: Global read-only overview across all 9 campuses and schools, plus exclusive access to the Campus Users directory.
+- **Delete Auth**: Specialized dashboard mimicking the web portal to review, approve, or reject pending modification/deletion requests, along with an audit history log.
+
+#### 2. Advanced Security & Session Management
+- **Secure Authentication**: Authenticates via the `/api/auth/login/` endpoint using HTTPOnly JWT cookies, ensuring protection against XSS.
+- **Smart Session Recovery**: Uses `SharedPreferences` to remember user profiles. If the app is fully closed and the in-memory cookie jar is cleared, the app intelligently detects the lost session, routes the user back to the login screen, and pre-fills their username so they only have to enter their password.
+- **Role-Gated Actions**: Modules like "Add Record" or "Edit/Delete" buttons are dynamically hidden if a user is operating under a read-only role (like Super Admin) or viewing historical data.
+
+#### 3. Native UI/UX & Architecture
+- **Material Design 3**: Utilizes Google's Material Components for Android (`MaterialCardView`, `MaterialButton`, `TextInputLayout`) for a clean, light-blue branded, and highly responsive interface.
+- **Dynamic Lists**: Implements highly optimized `RecyclerView` setups with custom adapters to render complex record cards, including status badges and inline difference views for audit logs.
+- **Robust Networking**: Powered by **Retrofit2** and **OkHttp3** for fast, reliable, and asynchronous API requests, coupled with **Gson** for type-safe JSON parsing.
+
+### Setup and Running Locally
+
+#### Using Android Studio (Recommended)
+1. Launch **Android Studio** and select `Open an existing project`.
+2. Navigate to and select the `nmpralekh/android-client/` directory.
+3. Allow Gradle to sync the project dependencies.
+4. Ensure your local Django server is running. If you are using the default Android emulator, it connects to `10.0.2.2`. 
+   *(Note: Ensure your Django `ALLOWED_HOSTS` includes `10.0.2.2` or `*` for local testing).*
+5. Click the **Run** button (Shift + F10) to deploy to your emulator or physical device.
+
+#### Using Command Line
+If you prefer building without an IDE, you can generate the APK directly using the Gradle wrapper:
+```bash
+cd android-client/
+# Build a debug APK
+./gradlew assembleDebug
+
+# The generated APK will be located at:
+# android-client/app/build/outputs/apk/debug/app-debug.apk
+```
