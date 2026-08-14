@@ -163,4 +163,8 @@ public interface ApiService {
     // Received MIS Data (Admin)
     @GET("api/export/reports/received/")
     Call<JsonObject> getReceivedReports(@QueryMap Map<String, String> params);
+
+    // Campus Users (Super Admin)
+    @GET("api/users/campus-users/")
+    Call<JsonObject> getCampusUsers(@QueryMap Map<String, String> params);
 }

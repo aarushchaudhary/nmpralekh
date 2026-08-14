@@ -106,7 +106,9 @@ public class LoginActivity extends AppCompatActivity {
         String role = session.getRole();
         Intent intent;
         
-        if (role.equals("admin") || role.equals("super_admin") || role.equals("coordinator")) {
+        if (role.equals("super_admin")) {
+            intent = new Intent(this, SuperAdminActivity.class);
+        } else if (role.equals("admin") || role.equals("coordinator")) {
             intent = new Intent(this, AdminActivity.class);
         } else {
             intent = new Intent(this, FacultyActivity.class);

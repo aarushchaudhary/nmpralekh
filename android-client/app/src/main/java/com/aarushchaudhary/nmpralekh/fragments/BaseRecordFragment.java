@@ -25,6 +25,7 @@ import com.aarushchaudhary.nmpralekh.ApiClient;
 import com.aarushchaudhary.nmpralekh.R;
 import com.aarushchaudhary.nmpralekh.adapters.RecordAdapter;
 import com.aarushchaudhary.nmpralekh.api.ApiService;
+import com.aarushchaudhary.nmpralekh.auth.SessionManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -45,6 +46,7 @@ import retrofit2.Response;
 public abstract class BaseRecordFragment extends Fragment {
 
     protected ApiService apiService;
+    protected SessionManager sessionManager;
     protected RecordAdapter adapter;
     protected RecyclerView recyclerView;
     protected ProgressBar progressBar;
@@ -81,6 +83,9 @@ public abstract class BaseRecordFragment extends Fragment {
     }
 
     protected boolean isReadOnly() {
+        if (sessionManager != null && "super_admin".equals(sessionManager.getRole())) {
+            return true;
+        }
         return false;
     }
 
@@ -89,6 +94,7 @@ public abstract class BaseRecordFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         apiService = ApiClient.getApiService(requireContext());
+        sessionManager = new SessionManager(requireContext());
 
         // Bind views
         tvPageTitle = view.findViewById(R.id.tvPageTitle);
@@ -224,6 +230,7 @@ public abstract class BaseRecordFragment extends Fragment {
         if (endpoint.contains("certifications")) return apiService.getCertifications(params);
         if (endpoint.contains("clubs")) return apiService.getClubs(params);
         if (endpoint.contains("school-faculties")) return apiService.getSchoolFaculties(params);
+        if (endpoint.contains("campus-users")) return apiService.getCampusUsers(params);
         if (endpoint.contains("reports/received")) return apiService.getReceivedReports(params);
         return apiService.getSchoolActivities(params); // fallback
     }
