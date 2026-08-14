@@ -1333,13 +1333,17 @@ HSTS             →  Enabled in production (DEBUG=False) — 1-year max-age
 
 ## Mobile App (Android)
 
-An Android mobile client is available to provide easy access for faculty members on the go. It is built using the native Android SDK (Java) and connects to the same Django REST API as the web client.
+An Android mobile client is available to provide easy access on the go. It is built using the native Android SDK (Java) and connects to the same Django REST API as the web client.
 
 ### Features
-- **Native Login**: Authenticates securely via the `/api/auth/login/` endpoint.
-- **Faculty Dashboard**: A mobile-optimized DrawerLayout (sidebar) that provides access to all faculty-specific modules (School Activities, Student Activities, FDP, Publications, Patents, Certifications, Placements).
+- **Native Login & Role-Based Routing**: Authenticates securely via the `/api/auth/login/` endpoint and dynamically routes users to their respective dashboards based on their role (Faculty, Admin, Super Admin, Delete Auth).
+- **Role-Specific Dashboards**: Mobile-optimized DrawerLayout (sidebar) interfaces tailored for various roles:
+  - **Faculty**: Access to self-managed modules (School Activities, Student Activities, FDP, Publications, Patents, Certifications, Placements).
+  - **Admin**: View and export records, manage clubs and school faculties, and download MIS data.
+  - **Super Admin**: Read-only overview across all schools, along with a campus users list.
+  - **Delete Auth**: Review, approve, or reject pending change requests and view audit history.
 - **Custom Branding**: Integrated with the official NMPralekh logo and a clean, light-blue Material Design UI.
-- **Networking**: Uses `OkHttp` for fast and reliable API requests.
+- **Networking**: Uses `Retrofit` and `Gson` for fast, reliable, and type-safe API requests.
 
 ### Setup and Running
 1. Open the `android-client/` directory in **Android Studio**.
