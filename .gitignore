@@ -59,3 +59,25 @@ server/backups/
 
 # Gunicorn ctl
 server/gunicorn.ctl
+
+# Graphify — knowledge graph outputs
+# Commit: graph.json, GRAPH_REPORT.md, .graphify_python, .graphify_root, .graphify_labels.json
+# (they let teammates query the graph and run --update without rebuilding from scratch)
+graphify-out/graph.html
+graphify-out/graph.svg
+graphify-out/graph.graphml
+graphify-out/cypher.txt
+graphify-out/cost.json
+graphify-out/obsidian/
+graphify-out/wiki/
+# Ephemeral extraction scratch files (always safe to delete)
+graphify-out/.graphify_detect.json
+graphify-out/.graphify_extract.json
+graphify-out/.graphify_ast.json
+graphify-out/.graphify_semantic.json
+graphify-out/.graphify_semantic_new.json
+graphify-out/.graphify_cached.json
+graphify-out/.graphify_uncached.txt
+graphify-out/.graphify_analysis.json
+graphify-out/.graphify_chunk_*.json
+graphify-out/.needs_update
