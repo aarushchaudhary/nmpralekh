@@ -44,77 +44,96 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-
-        {/* Header */}
-        <div className="text-center mb-8">
-          <img src="/nmpralekh.png" alt="NMPralekh Logo" className="w-48 h-48 mx-auto mb-4" />
-          <p className="text-gray-400 mt-2 text-sm">
-            Sign in to your account
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Brand Panel - Hidden on mobile */}
+      <div className="hidden lg:flex lg:w-[45%] bg-gray-950 p-16 flex-col justify-between relative overflow-hidden border-r-4 border-primary-600">
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-4 h-10 bg-primary-600 rounded-sm"></div>
+            <h1 className="text-4xl font-bold text-white tracking-tight">NMPralekh</h1>
+          </div>
+          <p className="text-gray-400 text-lg font-medium leading-relaxed max-w-sm">
+            The unified Management Information System Portal for NMIMS University.
           </p>
         </div>
+        
+        <div className="relative z-10 mt-auto">
+          <blockquote className="space-y-4">
+            <p className="text-xl font-medium text-white max-w-md leading-relaxed">
+              "Streamlining academic and administrative operations for excellence."
+            </p>
+            <footer className="text-gray-500 text-sm font-semibold tracking-wider uppercase">NMIMS University</footer>
+          </blockquote>
+        </div>
+      </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+      {/* Login Panel */}
+      <div className="w-full lg:w-[55%] flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-white">
+        <div className="w-full max-w-sm space-y-8">
+          <div className="text-center lg:text-left">
+            <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
+                <div className="w-2.5 h-6 bg-primary-600 rounded-sm"></div>
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">NMPralekh</h1>
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+              Welcome back
+            </h2>
+            <p className="text-base text-gray-500 mt-2">
+              Sign in to access your dashboard
+            </p>
+          </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm font-medium" role="alert">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="username" className="block text-sm font-semibold text-gray-700">
                 Username
               </label>
               <input
+                id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                className="block w-full rounded-md border-gray-300 shadow-sm px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm bg-gray-50 focus:bg-white transition-colors border"
                 placeholder="Enter your username"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm
-                           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                           placeholder:text-gray-400"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
                 Password
               </label>
               <input
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="block w-full rounded-md border-gray-300 shadow-sm px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm bg-gray-50 focus:bg-white transition-colors border"
                 placeholder="Enter your password"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm
-                           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                           placeholder:text-gray-400"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white
-                         font-medium py-2.5 rounded-lg text-sm transition-colors
-                         disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex w-full justify-center items-center rounded-md bg-gray-900 px-4 py-3.5 text-sm font-bold text-white shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Signing in...' : 'Sign in to account'}
             </button>
-
           </form>
+
+          <p className="text-center lg:text-left text-xs text-gray-400 font-medium">
+            &copy; {new Date().getFullYear()} NMIMS. All rights reserved.
+          </p>
         </div>
-
-        <p className="text-center text-xs text-gray-400 mt-6">
-          NMPralekh — MIS Portal Dashboard Portal
-        </p>
-
       </div>
     </div>
   )

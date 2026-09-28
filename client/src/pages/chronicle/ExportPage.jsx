@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
-import useChronicleExport from '../../hooks/useChronicleExport'
+import useExport from '../../hooks/useExport'
 
 export default function ExportPage() {
     const [dateFrom, setDateFrom] = useState('')
     const [dateTo, setDateTo]     = useState('')
     const [format, setFormat]     = useState('excel')
     const [dateError, setDateError] = useState('')
-
-    const { exportFile, exporting } = useChronicleExport()
-
+    const { exportFile, exporting } = useExport('/export/chronicle/export/', {
+        filename: format === 'json' ? 'MIS_Chronicle_Export' : 'MIS_Chronicle_Export',
+        mimeType: format === 'json' ? 'application/json' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        extension: format === 'json' ? '.json' : '.xlsx'
+    })
     const handleExport = () => {
         if (dateFrom && dateTo && dateTo < dateFrom) {
             setDateError('End date cannot be before start date')

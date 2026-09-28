@@ -17,7 +17,7 @@ export default function PlacementsPage({ readOnly = false }) {
     const { user } = useAuth()
     const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/placements/')
     const { schoolOptions } = useSchools()
-    const { exportFile, exporting } = useExport('/export/placements/', 'placements.xlsx')
+    const { exportFile, exporting } = useExport('/export/placements/', { filename: 'placements.xlsx' })
 
     const [showForm, setShowForm] = useState(false)
     const [showEditConfirm, setShowEditConfirm] = useState(false)

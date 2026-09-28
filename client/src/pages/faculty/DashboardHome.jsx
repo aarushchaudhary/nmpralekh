@@ -19,7 +19,7 @@ export default function DashboardHome() {
     const { user } = useAuth()
     const [counts, setCounts] = useState({})
     const [schools, setSchools] = useState([])
-    const { exportFile, exporting } = useExport('/export/all/', 'MIS_Dashboard.xlsx')
+    const { exportFile, exporting } = useExport('/export/all/', { filename: 'MIS_Dashboard.xlsx' })
 
     useEffect(() => {
         api.get('/records/dashboard-counts/').then(res => {
@@ -50,7 +50,7 @@ export default function DashboardHome() {
                     <button
                         onClick={() => exportFile()}
                         disabled={exporting}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700
+                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 shadow-sm active:scale-95
                                    text-white text-sm font-medium rounded-lg
                                    transition-colors disabled:opacity-50
                                    disabled:cursor-not-allowed flex items-center gap-2"
@@ -61,8 +61,8 @@ export default function DashboardHome() {
             />
 
             {/* Info banner */}
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
-                <p className="text-sm text-blue-700">
+            <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-6">
+                <p className="text-sm text-primary-700">
                     You can <strong>create and view</strong> records for your school.
                     Any updates or deletions require approval from the authorized reviewer.
                 </p>
@@ -74,7 +74,7 @@ export default function DashboardHome() {
                     <Link
                         key={mod.path}
                         to={`/faculty/${mod.path}`}
-                        className="bg-white rounded-xl border border-gray-100 p-5
+                        className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm
                        hover:border-primary-200 hover:shadow-sm
                        transition-all group"
                     >

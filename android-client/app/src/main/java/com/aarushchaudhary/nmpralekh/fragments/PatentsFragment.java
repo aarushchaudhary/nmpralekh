@@ -1,4 +1,6 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import java.util.Map;
+import retrofit2.Call;
 
 import android.content.Context;
 import android.view.View;
@@ -23,7 +25,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import retrofit2.Call;
+
+
 import retrofit2.Callback;
 import retrofit2.Response;
 
@@ -387,5 +390,25 @@ public class PatentsFragment extends BaseRecordFragment {
                 }
             };
         }
+    }
+
+    @Override
+    protected Call<JsonObject> getApiCall(Map<String, String> params) {
+        return apiService.getPatents(params);
+    }
+
+    @Override
+    protected Call<JsonObject> createRecordCall(JsonObject data) {
+        return apiService.createPatent(data);
+    }
+
+    @Override
+    protected Call<JsonObject> updateRecordCall(int id, JsonObject data) {
+        return apiService.updatePatent(id, data);
+    }
+
+    @Override
+    protected Call<JsonObject> deleteRecordCall(int id) {
+        return apiService.deletePatent(id);
     }
 }

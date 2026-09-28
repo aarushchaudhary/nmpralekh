@@ -69,8 +69,8 @@ export default function SchoolFacultiesPage() {
                 subtitle="Faculty members assigned to your school(s)"
             />
 
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
-                <p className="text-sm text-blue-700">
+            <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-6">
+                <p className="text-sm text-primary-700">
                     Showing all faculty members who are assigned to the same school(s) as you.
                     This is a <strong>read-only</strong> view.
                 </p>

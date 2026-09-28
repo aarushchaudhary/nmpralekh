@@ -18,7 +18,7 @@ import com.aarushchaudhary.nmpralekh.fragments.DeleteAuthHistoryFragment;
 import com.aarushchaudhary.nmpralekh.fragments.DeleteAuthDashboardFragment;
 import com.google.android.material.navigation.NavigationView;
 
-public class DeleteAuthActivity extends AppCompatActivity
+public class DeleteAuthActivity extends BaseAuthActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         DeleteAuthDashboardFragment.OnViewAllClickListener {
 
@@ -102,34 +102,7 @@ public class DeleteAuthActivity extends AppCompatActivity
         binding.navView.setCheckedItem(R.id.nav_pending);
     }
 
-    private void performLogout() {
-        // Clear session
-        new SessionManager(this).clear();
-        ApiClient.clearCookies();
-
-        // Call logout API (fire and forget)
-        try {
-            ApiClient.getApiService(this).logout().enqueue(new retrofit2.Callback<com.google.gson.JsonObject>() {
-                @Override
-                public void onResponse(retrofit2.Call<com.google.gson.JsonObject> call,
-                        retrofit2.Response<com.google.gson.JsonObject> response) {
-                }
-
-                @Override
-                public void onFailure(retrofit2.Call<com.google.gson.JsonObject> call, Throwable t) {
-                }
-            });
-        } catch (Exception ignored) {
-        }
-
-        // Go to login
-        Toast.makeText(this, "Signed out", Toast.LENGTH_SHORT).show();
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
-    }
-
+    
     @Override
     public void onBackPressed() {
         if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {

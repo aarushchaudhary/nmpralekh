@@ -1,106 +1,23 @@
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-from rest_framework.permissions import BasePermission
-
-
-class IsServiceAdmin(BasePermission):
-    """Only service admin can access"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            getattr(request.user, 'is_service_admin', False)
-        )
-
-class IsMaster(BasePermission):
-    """Only master login can access (excluding service admin)"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            request.user.role == 'master' and
-            not getattr(request.user, 'is_service_admin', False)
-        )
-
-class IsChronicleMaster(BasePermission):
-    """Only chronicle master can access"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            getattr(request.user, 'is_chronicle_master', False)
-        )
-
-
-class IsSuperAdmin(BasePermission):
-    """Only super admin can access"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            request.user.role == 'super_admin'
-        )
-
-
-class IsAdmin(BasePermission):
-    """Only admin (dean, program chair) can access"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            request.user.role == 'admin'
-        )
-
-
-class IsUser(BasePermission):
-    """Only faculty user can access"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            request.user.role == 'user'
-        )
-
-
-class IsDeleteAuth(BasePermission):
-    """Only delete_auth role can access"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            request.user.role == 'delete_auth'
-        )
-
-
-class IsMasterOrSuperAdmin(BasePermission):
-    """Master or super admin"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            request.user.role in ['master', 'super_admin'] and
-            not getattr(request.user, 'is_service_admin', False)
-        )
-
-
-class IsAdminOrUser(BasePermission):
-    """Admin or faculty user — for record entry endpoints"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            request.user.role in ['admin', 'user']
-        )
-
-
-class IsAdminOrUserOrSuperAdmin(BasePermission):
-    """Admin, faculty, or super admin — for record viewing endpoints"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            request.user.role in ['admin', 'user', 'super_admin']
-        )
-
+def RolePermission(allowed_roles, read_only_roles=None, exclude_service_admin=False):
+    class Perm(BasePermission):
+        def has_permission(self, request, view):
+            user = request.user
+            if not (user and user.is_authenticated):
+                return False
+            if exclude_service_admin and getattr(user, 'is_service_admin', False):
+                return False
+            if 'service_admin' in allowed_roles and getattr(user, 'is_service_admin', False):
+                return True
+            if 'chronicle_master' in allowed_roles and getattr(user, 'is_chronicle_master', False):
+                return True
+            if user.role in allowed_roles:
+                return True
+            if read_only_roles and user.role in read_only_roles:
+                return request.method in SAFE_METHODS
+            return False
+    return Perm
 
 class IsAnyRole(BasePermission):
     """Any authenticated user regardless of role"""
@@ -109,44 +26,3 @@ class IsAnyRole(BasePermission):
             request.user and
             request.user.is_authenticated
         )
-
-
-class IsMISCoordinator(BasePermission):
-    """Only MIS Coordinator can access"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            request.user.role == 'mis_coordinator'
-        )
-
-class IsMISAccumulator(BasePermission):
-    """Only MIS Accumulator can access"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated and
-            request.user.role == 'mis_accumulator'
-        )
-
-class IsMISCoordinatorReadOnly(BasePermission):
-    """MIS Coordinator — read-only (GET, HEAD, OPTIONS)"""
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        if request.user.role != 'mis_coordinator':
-            return False
-        return request.method in ('GET', 'HEAD', 'OPTIONS')
-
-
-class IsAdminOrUserOrSuperAdminOrCoordinator(BasePermission):
-    """Admin, faculty, super admin, or MIS coordinator (read-only) — for record viewing"""
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        if request.user.role in ['admin', 'user', 'super_admin']:
-            return True
-        # coordinator gets read-only access
-        if request.user.role == 'mis_coordinator':
-            return request.method in ('GET', 'HEAD', 'OPTIONS')
-        return False

@@ -1,4 +1,6 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import java.util.Map;
+import retrofit2.Call;
 
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
@@ -10,7 +12,7 @@ import com.google.gson.JsonObject;
 
 import java.util.Arrays;
 
-import retrofit2.Call;
+
 import retrofit2.Callback;
 import retrofit2.Response;
 
@@ -165,5 +167,25 @@ public class ClubsFragment extends BaseRecordFragment {
                 Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    @Override
+    protected Call<JsonObject> getApiCall(Map<String, String> params) {
+        return apiService.getClubs(params);
+    }
+
+    @Override
+    protected Call<JsonObject> createRecordCall(JsonObject data) {
+        return apiService.createClub(data);
+    }
+
+    @Override
+    protected Call<JsonObject> updateRecordCall(int id, JsonObject data) {
+        return apiService.updateClub(id, data);
+    }
+
+    @Override
+    protected Call<JsonObject> deleteRecordCall(int id) {
+        return apiService.deleteClub(id);
     }
 }

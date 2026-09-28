@@ -1,4 +1,6 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import java.util.Map;
+import retrofit2.Call;
 
 import android.widget.LinearLayout;
 import android.widget.Spinner;
@@ -93,5 +95,25 @@ public class CertificationsFragment extends BaseRecordFragment {
                !getTextValue(formFields.get("title_of_course")).isEmpty() &&
                !getTextValue(formFields.get("agency")).isEmpty() &&
                !getTextValue(formFields.get("credly_proof_link")).isEmpty();
+    }
+
+    @Override
+    protected Call<JsonObject> getApiCall(Map<String, String> params) {
+        return apiService.getCertifications(params);
+    }
+
+    @Override
+    protected Call<JsonObject> createRecordCall(JsonObject data) {
+        return apiService.createCertification(data);
+    }
+
+    @Override
+    protected Call<JsonObject> updateRecordCall(int id, JsonObject data) {
+        return apiService.updateCertification(id, data);
+    }
+
+    @Override
+    protected Call<JsonObject> deleteRecordCall(int id) {
+        return apiService.deleteCertification(id);
     }
 }

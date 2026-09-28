@@ -8,8 +8,8 @@ from django.apps import apps
 
 from apps.audit.models import AuditRequest
 from apps.audit.serializers import AuditRequestSerializer
-from apps.accounts.permissions import IsDeleteAuth, IsMasterOrSuperAdmin
-from apps.accounts.throttles import AuditThrottle
+from apps.accounts.permissions import RolePermission
+from apps.accounts.throttles import FixedWindowThrottle
 from apps.schools.utils import get_user_school_ids
 from apps.records.cache_utils import invalidate_dashboard_cache
 from config.pagination import StandardPagination
@@ -17,7 +17,7 @@ from config.pagination import StandardPagination
 
 class AuditRequestListView(generics.ListAPIView):
     serializer_class   = AuditRequestSerializer
-    permission_classes = [IsDeleteAuth]
+    permission_classes = [RolePermission(['delete_auth'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -34,7 +34,7 @@ class AuditRequestListView(generics.ListAPIView):
 
 class AuditRequestDetailView(generics.RetrieveAPIView):
     serializer_class   = AuditRequestSerializer
-    permission_classes = [IsDeleteAuth]
+    permission_classes = [RolePermission(['delete_auth'])]
 
     def get_queryset(self):
         school_ids = get_user_school_ids(self.request.user)
@@ -45,8 +45,9 @@ class AuditRequestDetailView(generics.RetrieveAPIView):
 
 
 class AuditApproveView(APIView):
-    permission_classes = [IsDeleteAuth]
-    throttle_classes   = [AuditThrottle]  # 60/min per user — well above human review speed
+    permission_classes = [RolePermission(['delete_auth'])]
+    throttle_classes   = [FixedWindowThrottle]
+    throttle_scope     = "audit"  # 60/min per user — well above human review speed
     serializer_class = serializers.Serializer
 
     def post(self, request, pk):
@@ -158,8 +159,9 @@ class AuditApproveView(APIView):
 
 
 class AuditRejectView(APIView):
-    permission_classes = [IsDeleteAuth]
-    throttle_classes   = [AuditThrottle]  # 60/min per user — well above human review speed
+    permission_classes = [RolePermission(['delete_auth'])]
+    throttle_classes   = [FixedWindowThrottle]
+    throttle_scope     = "audit"  # 60/min per user — well above human review speed
     serializer_class = serializers.Serializer
 
     def post(self, request, pk):
@@ -208,7 +210,7 @@ class AuditRejectView(APIView):
 
 class AuditHistoryView(generics.ListAPIView):
     serializer_class   = AuditRequestSerializer
-    permission_classes = [IsMasterOrSuperAdmin | IsDeleteAuth]
+    permission_classes = [RolePermission(['master', 'super_admin'], exclude_service_admin=True) | RolePermission(['delete_auth'])]
     pagination_class   = StandardPagination  # server-side pagination — history can grow to thousands of rows
 
     def get_queryset(self):

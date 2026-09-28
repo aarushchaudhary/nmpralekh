@@ -1,4 +1,6 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import java.util.Map;
+import retrofit2.Call;
 
 import android.widget.LinearLayout;
 import android.widget.Spinner;
@@ -90,5 +92,25 @@ public class FDPFragment extends BaseRecordFragment {
                !getTextValue(formFields.get("name")).isEmpty() &&
                !getTextValue(formFields.get("date_start")).isEmpty() &&
                !getTextValue(formFields.get("details")).isEmpty();
+    }
+
+    @Override
+    protected Call<JsonObject> getApiCall(Map<String, String> params) {
+        return apiService.getFdp(params);
+    }
+
+    @Override
+    protected Call<JsonObject> createRecordCall(JsonObject data) {
+        return apiService.createFdp(data);
+    }
+
+    @Override
+    protected Call<JsonObject> updateRecordCall(int id, JsonObject data) {
+        return apiService.updateFdp(id, data);
+    }
+
+    @Override
+    protected Call<JsonObject> deleteRecordCall(int id) {
+        return apiService.deleteFdp(id);
     }
 }

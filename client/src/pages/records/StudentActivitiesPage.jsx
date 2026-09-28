@@ -29,7 +29,7 @@ export default function StudentActivitiesPage({ readOnly = false }) {
     const { user } = useAuth()
     const { data, loading, create, fetch, totalPages, currentPage, goToPage } = useRecords('/records/student-activities/')
     const { schoolOptions } = useSchools()
-    const { exportFile, exporting } = useExport('/export/student-activities/', 'student_activities.xlsx')
+    const { exportFile, exporting } = useExport('/export/student-activities/', { filename: 'student_activities.xlsx' })
 
     const [clubOptions, setClubOptions] = useState([])
     const [showOther, setShowOther] = useState(false)

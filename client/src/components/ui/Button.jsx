@@ -1,6 +1,6 @@
 const variants = {
-    primary: 'bg-primary-600 hover:bg-primary-700 text-white',
-    secondary: 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200',
+    primary: 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm hover:shadow active:scale-95 transition-all',
+    secondary: 'bg-white hover:bg-gray-50 text-gray-800 border border-gray-300 shadow-sm hover:shadow active:scale-95 transition-all',
     danger: 'bg-red-500 hover:bg-red-600 text-white',
     success: 'bg-green-600 hover:bg-green-700 text-white',
     ghost: 'hover:bg-gray-100 text-gray-600',
@@ -23,7 +23,7 @@ export default function Button({
             disabled={disabled || loading}
             className={`
         inline-flex items-center justify-center gap-2
-        font-medium rounded-lg transition-colors
+        font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1
         disabled:opacity-50 disabled:cursor-not-allowed
         ${variants[variant]} ${sizes[size]} ${className}
       `}

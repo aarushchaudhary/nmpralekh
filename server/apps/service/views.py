@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 from django.db.models import F
 
-from apps.accounts.permissions import IsMaster, IsAnyRole, IsServiceAdmin
+from apps.accounts.permissions import RolePermission
 from apps.service.models import ErrorTicket, ErrorOccurrence, BugReport
 from apps.service.serializers import (
     ErrorTicketListSerializer, ErrorTicketDetailSerializer,
@@ -139,7 +139,7 @@ class ErrorTicketListView(generics.ListAPIView):
     Returns paginated, filterable list of error tickets.
     """
     serializer_class   = ErrorTicketListSerializer
-    permission_classes = [IsServiceAdmin]
+    permission_classes = [RolePermission(['service_admin'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -175,7 +175,7 @@ class ErrorTicketDetailView(generics.RetrieveAPIView):
     GET /api/service/tickets/<id>/
     """
     serializer_class   = ErrorTicketDetailSerializer
-    permission_classes = [IsServiceAdmin]
+    permission_classes = [RolePermission(['service_admin'])]
     queryset           = ErrorTicket.objects.select_related('resolved_by')
 
 
@@ -184,7 +184,7 @@ class ErrorTicketStatusView(APIView):
     POST /api/service/tickets/<id>/status/
     Update ticket status (open → investigating → resolved → wontfix).
     """
-    permission_classes = [IsServiceAdmin]
+    permission_classes = [RolePermission(['service_admin'])]
     serializer_class = serializers.Serializer
 
     def post(self, request, pk):
@@ -215,7 +215,7 @@ class BugReportListView(generics.ListAPIView):
     GET /api/service/bug-reports/
     """
     serializer_class   = BugReportListSerializer
-    permission_classes = [IsServiceAdmin]
+    permission_classes = [RolePermission(['service_admin'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -240,7 +240,7 @@ class BugReportDetailView(generics.RetrieveUpdateAPIView):
     """
     GET / PATCH /api/service/bug-reports/<id>/
     """
-    permission_classes = [IsServiceAdmin]
+    permission_classes = [RolePermission(['service_admin'])]
     queryset           = BugReport.objects.select_related('user', 'linked_ticket')
 
     def get_serializer_class(self):
@@ -254,7 +254,7 @@ class ServiceDashboardStatsView(APIView):
     GET /api/service/stats/
     Quick stats card data for the service portal homepage.
     """
-    permission_classes = [IsServiceAdmin]
+    permission_classes = [RolePermission(['service_admin'])]
     serializer_class = serializers.Serializer
 
     def get(self, request):
@@ -359,7 +359,7 @@ class ApiStatusView(APIView):
     GET /api/service/api-status/
     Returns the status of major API groups (Online, Facing Issues, Offline).
     """
-    permission_classes = [IsServiceAdmin]
+    permission_classes = [RolePermission(['service_admin'])]
     serializer_class = serializers.Serializer
 
     def get(self, request):

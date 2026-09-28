@@ -2,26 +2,9 @@ import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
+import StatCard from '../../components/ui/StatCard';
 import useExport from '../../hooks/useExport'
 import { Link } from 'react-router-dom'
-
-function StatCard({ label, value, color = 'blue' }) {
-    const colors = {
-        blue: 'text-blue-600',
-        green: 'text-green-600',
-        purple: 'text-purple-600',
-        orange: 'text-orange-600',
-        red: 'text-red-600',
-        yellow: 'text-yellow-600',
-    }
-    return (
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-            <p className="text-sm text-gray-500 mb-1">{label}</p>
-            <p className={`text-3xl font-bold ${colors[color]}`}>{value ?? '—'}</p>
-        </div>
-    )
-}
-
 const modules = [
     { label: 'School Activities', path: 'school-activities', endpoint: '/records/school-activities/' },
     { label: 'Student Activities', path: 'student-activities', endpoint: '/records/student-activities/' },
@@ -36,7 +19,7 @@ export default function DashboardHome() {
     const { user } = useAuth()
     const [counts, setCounts] = useState({})
     const [schools, setSchools] = useState([])
-    const { exportFile: exportRecords, exporting: exportingRecords } = useExport('/export/all/', 'MIS_Dashboard.xlsx')
+    const { exportFile: exportRecords, exporting: exportingRecords } = useExport('/export/all/', { filename: 'MIS_Dashboard.xlsx' })
 
     useEffect(() => {
         api.get('/records/dashboard-counts/').then(res => {
@@ -63,7 +46,7 @@ export default function DashboardHome() {
                     <button
                         onClick={() => exportRecords()}
                         disabled={!!exportingRecords}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700
+                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 shadow-sm active:scale-95
                                    text-white text-sm font-medium rounded-lg
                                    transition-colors disabled:opacity-50
                                    disabled:cursor-not-allowed flex items-center gap-2"
@@ -75,17 +58,17 @@ export default function DashboardHome() {
 
             {/* Module counts */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <StatCard label="School Acts" value={counts['school-activities']} color="green" />
-                <StatCard label="Student Acts" value={counts['student-activities']} color="purple" />
-                <StatCard label="FDP/WS/GL" value={counts['fdp']} color="orange" />
-                <StatCard label="Publications" value={counts['publications']} color="red" />
-                <StatCard label="Patents" value={counts['patents']} color="yellow" />
-                <StatCard label="Certifications" value={counts['certifications']} color="blue" />
-                <StatCard label="Placements" value={counts['placements']} color="green" />
+                <StatCard label="School Acts" value={counts['school-activities']} accent="green" />
+                <StatCard label="Student Acts" value={counts['student-activities']} accent="purple" />
+                <StatCard label="FDP/WS/GL" value={counts['fdp']} accent="orange" />
+                <StatCard label="Publications" value={counts['publications']} accent="red" />
+                <StatCard label="Patents" value={counts['patents']} accent="yellow" />
+                <StatCard label="Certifications" value={counts['certifications']} accent="blue" />
+                <StatCard label="Placements" value={counts['placements']} accent="green" />
             </div>
 
             {/* Quick links to all modules */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <h2 className="text-sm font-semibold text-gray-700 mb-3">All Modules</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {modules.map(mod => (
@@ -93,8 +76,8 @@ export default function DashboardHome() {
                             key={mod.path}
                             to={`/admin/${mod.path}`}
                             className="block p-4 rounded-lg border border-gray-100
-                         hover:border-primary-200 hover:bg-primary-50
-                         text-sm text-gray-600 hover:text-primary-700
+                         hover:border-primary-500 hover:ring-1 hover:ring-primary-500 bg-gray-50/50 hover:bg-white
+                         text-sm font-medium text-gray-900 hover:text-primary-700
                          transition-colors"
                         >
                             {mod.label} →

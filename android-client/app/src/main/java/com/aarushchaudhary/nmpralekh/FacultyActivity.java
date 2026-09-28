@@ -25,7 +25,7 @@ import com.aarushchaudhary.nmpralekh.fragments.SchoolActivitiesFragment;
 import com.aarushchaudhary.nmpralekh.fragments.StudentActivitiesFragment;
 import com.google.android.material.navigation.NavigationView;
 
-public class FacultyActivity extends AppCompatActivity
+public class FacultyActivity extends BaseAuthActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         HomeDashboardFragment.OnModuleClickListener {
 
@@ -182,34 +182,7 @@ public class FacultyActivity extends AppCompatActivity
                 .commit();
     }
 
-    private void performLogout() {
-        // Clear session
-        new SessionManager(this).clear();
-        ApiClient.clearCookies();
-
-        // Call logout API (fire and forget)
-        try {
-            ApiClient.getApiService(this).logout().enqueue(new retrofit2.Callback<com.google.gson.JsonObject>() {
-                @Override
-                public void onResponse(retrofit2.Call<com.google.gson.JsonObject> call,
-                        retrofit2.Response<com.google.gson.JsonObject> response) {
-                }
-
-                @Override
-                public void onFailure(retrofit2.Call<com.google.gson.JsonObject> call, Throwable t) {
-                }
-            });
-        } catch (Exception ignored) {
-        }
-
-        // Go to login
-        Toast.makeText(this, "Signed out", Toast.LENGTH_SHORT).show();
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
-    }
-
+    
     @Override
     public void onBackPressed() {
         if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {

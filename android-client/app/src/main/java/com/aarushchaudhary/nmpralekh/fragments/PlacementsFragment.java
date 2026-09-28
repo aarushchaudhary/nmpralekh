@@ -1,4 +1,6 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import java.util.Map;
+import retrofit2.Call;
 
 import android.widget.LinearLayout;
 import android.widget.Spinner;
@@ -86,5 +88,25 @@ public class PlacementsFragment extends BaseRecordFragment {
                !getTextValue(formFields.get("name")).isEmpty() &&
                !getTextValue(formFields.get("date")).isEmpty() &&
                !getTextValue(formFields.get("details")).isEmpty();
+    }
+
+    @Override
+    protected Call<JsonObject> getApiCall(Map<String, String> params) {
+        return apiService.getPlacements(params);
+    }
+
+    @Override
+    protected Call<JsonObject> createRecordCall(JsonObject data) {
+        return apiService.createPlacement(data);
+    }
+
+    @Override
+    protected Call<JsonObject> updateRecordCall(int id, JsonObject data) {
+        return apiService.updatePlacement(id, data);
+    }
+
+    @Override
+    protected Call<JsonObject> deleteRecordCall(int id) {
+        return apiService.deletePlacement(id);
     }
 }

@@ -13,13 +13,7 @@ from apps.accounts.serializers import (
     UserUpdateSerializer, LoginSerializer, ChangePasswordSerializer,
     ChronicleAccumulatorSerializer,
 )
-from apps.accounts.permissions import (
-    IsMaster, IsSuperAdmin, IsAdmin, IsUser, IsDeleteAuth,
-    IsMasterOrSuperAdmin, IsAdminOrUser, IsAdminOrUserOrSuperAdmin,
-    IsAnyRole, IsMISCoordinator, IsMISAccumulator, IsServiceAdmin,
-    IsChronicleMaster, IsMISCoordinatorReadOnly,
-    IsAdminOrUserOrSuperAdminOrCoordinator,
-)
+from apps.accounts.permissions import RolePermission, IsAnyRole
 from apps.schools.models import Campus, School, UserSchoolMapping
 
 User = get_user_model()
@@ -207,133 +201,133 @@ class IsMasterPermissionTests(PermissionTestBase):
     def test_master_allowed(self):
         user = self._make_user("master")
         req = self._mock_request(user)
-        self.assertTrue(IsMaster().has_permission(req, None))
+        self.assertTrue(RolePermission(['master'], exclude_service_admin=True)().has_permission(req, None))
 
     def test_service_admin_with_master_role_denied(self):
         user = self._make_user("master", is_service_admin=True)
         req = self._mock_request(user)
-        self.assertFalse(IsMaster().has_permission(req, None))
+        self.assertFalse(RolePermission(['master'], exclude_service_admin=True)().has_permission(req, None))
 
     def test_non_master_denied(self):
         for role in ['admin', 'user', 'super_admin', 'delete_auth']:
             user = self._make_user(role)
             req = self._mock_request(user)
-            self.assertFalse(IsMaster().has_permission(req, None))
+            self.assertFalse(RolePermission(['master'], exclude_service_admin=True)().has_permission(req, None))
 
 
 class IsSuperAdminPermissionTests(PermissionTestBase):
     def test_super_admin_allowed(self):
         user = self._make_user("super_admin")
         req = self._mock_request(user)
-        self.assertTrue(IsSuperAdmin().has_permission(req, None))
+        self.assertTrue(RolePermission(['super_admin'])().has_permission(req, None))
 
     def test_non_super_admin_denied(self):
         user = self._make_user("admin")
         req = self._mock_request(user)
-        self.assertFalse(IsSuperAdmin().has_permission(req, None))
+        self.assertFalse(RolePermission(['super_admin'])().has_permission(req, None))
 
 
 class IsAdminPermissionTests(PermissionTestBase):
     def test_admin_allowed(self):
         user = self._make_user("admin")
         req = self._mock_request(user)
-        self.assertTrue(IsAdmin().has_permission(req, None))
+        self.assertTrue(RolePermission(['admin'])().has_permission(req, None))
 
     def test_non_admin_denied(self):
         user = self._make_user("user")
         req = self._mock_request(user)
-        self.assertFalse(IsAdmin().has_permission(req, None))
+        self.assertFalse(RolePermission(['admin'])().has_permission(req, None))
 
 
 class IsUserPermissionTests(PermissionTestBase):
     def test_user_allowed(self):
         user = self._make_user("user")
         req = self._mock_request(user)
-        self.assertTrue(IsUser().has_permission(req, None))
+        self.assertTrue(RolePermission(['user'])().has_permission(req, None))
 
     def test_admin_denied(self):
         user = self._make_user("admin")
         req = self._mock_request(user)
-        self.assertFalse(IsUser().has_permission(req, None))
+        self.assertFalse(RolePermission(['user'])().has_permission(req, None))
 
 
 class IsDeleteAuthPermissionTests(PermissionTestBase):
     def test_delete_auth_allowed(self):
         user = self._make_user("delete_auth")
         req = self._mock_request(user)
-        self.assertTrue(IsDeleteAuth().has_permission(req, None))
+        self.assertTrue(RolePermission(['delete_auth'])().has_permission(req, None))
 
 
 class IsMasterOrSuperAdminPermissionTests(PermissionTestBase):
     def test_master_allowed(self):
         user = self._make_user("master")
         req = self._mock_request(user)
-        self.assertTrue(IsMasterOrSuperAdmin().has_permission(req, None))
+        self.assertTrue(RolePermission(['master', 'super_admin'], exclude_service_admin=True)().has_permission(req, None))
 
     def test_super_admin_allowed(self):
         user = self._make_user("super_admin")
         req = self._mock_request(user)
-        self.assertTrue(IsMasterOrSuperAdmin().has_permission(req, None))
+        self.assertTrue(RolePermission(['master', 'super_admin'], exclude_service_admin=True)().has_permission(req, None))
 
     def test_service_admin_denied(self):
         user = self._make_user("master", is_service_admin=True)
         req = self._mock_request(user)
-        self.assertFalse(IsMasterOrSuperAdmin().has_permission(req, None))
+        self.assertFalse(RolePermission(['master', 'super_admin'], exclude_service_admin=True)().has_permission(req, None))
 
 
 class IsAdminOrUserPermissionTests(PermissionTestBase):
     def test_admin_allowed(self):
         user = self._make_user("admin")
         req = self._mock_request(user)
-        self.assertTrue(IsAdminOrUser().has_permission(req, None))
+        self.assertTrue(RolePermission(['admin', 'user'])().has_permission(req, None))
 
     def test_user_allowed(self):
         user = self._make_user("user")
         req = self._mock_request(user)
-        self.assertTrue(IsAdminOrUser().has_permission(req, None))
+        self.assertTrue(RolePermission(['admin', 'user'])().has_permission(req, None))
 
     def test_master_denied(self):
         user = self._make_user("master")
         req = self._mock_request(user)
-        self.assertFalse(IsAdminOrUser().has_permission(req, None))
+        self.assertFalse(RolePermission(['admin', 'user'])().has_permission(req, None))
 
 
 class IsServiceAdminPermissionTests(PermissionTestBase):
     def test_service_admin_allowed(self):
         user = self._make_user("service_admin", is_service_admin=True)
         req = self._mock_request(user)
-        self.assertTrue(IsServiceAdmin().has_permission(req, None))
+        self.assertTrue(RolePermission(['service_admin'])().has_permission(req, None))
 
     def test_non_service_admin_denied(self):
         user = self._make_user("master")
         req = self._mock_request(user)
-        self.assertFalse(IsServiceAdmin().has_permission(req, None))
+        self.assertFalse(RolePermission(['service_admin'])().has_permission(req, None))
 
 
 class IsChronicleMasterPermissionTests(PermissionTestBase):
     def test_chronicle_master_allowed(self):
         user = self._make_user("chronicle_master", is_chronicle_master=True)
         req = self._mock_request(user)
-        self.assertTrue(IsChronicleMaster().has_permission(req, None))
+        self.assertTrue(RolePermission(['chronicle_master'])().has_permission(req, None))
 
     def test_non_chronicle_denied(self):
         user = self._make_user("master")
         req = self._mock_request(user)
-        self.assertFalse(IsChronicleMaster().has_permission(req, None))
+        self.assertFalse(RolePermission(['chronicle_master'])().has_permission(req, None))
 
 
 class IsMISCoordinatorPermissionTests(PermissionTestBase):
     def test_coordinator_allowed(self):
         user = self._make_user("mis_coordinator")
         req = self._mock_request(user)
-        self.assertTrue(IsMISCoordinator().has_permission(req, None))
+        self.assertTrue(RolePermission(['mis_coordinator'])().has_permission(req, None))
 
 
 class IsMISAccumulatorPermissionTests(PermissionTestBase):
     def test_accumulator_allowed(self):
         user = self._make_user("mis_accumulator")
         req = self._mock_request(user)
-        self.assertTrue(IsMISAccumulator().has_permission(req, None))
+        self.assertTrue(RolePermission(['mis_accumulator'])().has_permission(req, None))
 
 
 class IsMISCoordinatorReadOnlyTests(PermissionTestBase):
@@ -341,13 +335,13 @@ class IsMISCoordinatorReadOnlyTests(PermissionTestBase):
         user = self._make_user("mis_coordinator")
         req = self._mock_request(user)
         req.method = 'GET'
-        self.assertTrue(IsMISCoordinatorReadOnly().has_permission(req, None))
+        self.assertTrue(RolePermission([], read_only_roles=['mis_coordinator'])().has_permission(req, None))
 
     def test_post_denied(self):
         user = self._make_user("mis_coordinator")
         req = self._mock_request(user)
         req.method = 'POST'
-        self.assertFalse(IsMISCoordinatorReadOnly().has_permission(req, None))
+        self.assertFalse(RolePermission([], read_only_roles=['mis_coordinator'])().has_permission(req, None))
 
 
 class IsAdminOrUserOrSuperAdminOrCoordinatorTests(PermissionTestBase):
@@ -355,15 +349,15 @@ class IsAdminOrUserOrSuperAdminOrCoordinatorTests(PermissionTestBase):
         user = self._make_user("admin")
         req = self._mock_request(user)
         req.method = 'POST'
-        self.assertTrue(IsAdminOrUserOrSuperAdminOrCoordinator().has_permission(req, None))
+        self.assertTrue(RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])().has_permission(req, None))
 
     def test_coordinator_read_only(self):
         user = self._make_user("mis_coordinator")
         req = self._mock_request(user)
         req.method = 'GET'
-        self.assertTrue(IsAdminOrUserOrSuperAdminOrCoordinator().has_permission(req, None))
+        self.assertTrue(RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])().has_permission(req, None))
         req.method = 'POST'
-        self.assertFalse(IsAdminOrUserOrSuperAdminOrCoordinator().has_permission(req, None))
+        self.assertFalse(RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])().has_permission(req, None))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

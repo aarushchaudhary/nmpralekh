@@ -27,7 +27,7 @@ const empty = {
 
 export default function FDPPage({ readOnly = false }) {
     const { user } = useAuth()
-    const { exportFile, exporting } = useExport('/export/fdp/', 'fdp.xlsx')
+    const { exportFile, exporting } = useExport('/export/fdp/', { filename: 'fdp.xlsx' })
     const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/fdp/')
     const { schoolOptions } = useSchools()
 

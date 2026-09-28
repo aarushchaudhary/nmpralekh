@@ -166,7 +166,7 @@ export default function SendMISDataPage() {
                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                                             report.sent_to_admin 
                                             ? 'bg-green-50 text-green-700 cursor-not-allowed' 
-                                            : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                                            : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
                                         }`}
                                     >
                                         {report.sent_to_admin ? 'Sent to Admin ✓' : 'Send to School Admin'}

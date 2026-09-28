@@ -94,7 +94,7 @@ export default function ErrorTickets() {
                                                 t.status === 'open' ? 'bg-red-50 text-red-700 border-red-200' :
                                                 t.status === 'planning' ? 'bg-orange-50 text-orange-700 border-orange-200' :
                                                 t.status === 'fixing' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                                                t.status === 'testing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                t.status === 'testing' ? 'bg-primary-50 text-primary-700 border-primary-200' :
                                                 'bg-green-50 text-green-700 border-green-200'
                                             }`}>
                                                 {t.status}
@@ -172,7 +172,7 @@ export default function ErrorTickets() {
                                                             {ticketDetails[t.id].component_stack && (
                                                                 <div>
                                                                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Component Stack (React)</h4>
-                                                                    <pre className="text-xs font-mono bg-gray-900 text-blue-300 p-4 rounded-lg overflow-x-auto max-h-32 border border-gray-800">
+                                                                    <pre className="text-xs font-mono bg-gray-900 text-primary-300 p-4 rounded-lg overflow-x-auto max-h-32 border border-gray-800">
                                                                         {ticketDetails[t.id].component_stack}
                                                                     </pre>
                                                                 </div>

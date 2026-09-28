@@ -1,4 +1,6 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import java.util.Map;
+import retrofit2.Call;
 
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
@@ -89,5 +91,25 @@ public class SchoolActivitiesFragment extends BaseRecordFragment {
                !getTextValue(formFields.get("name")).isEmpty() &&
                !getTextValue(formFields.get("date")).isEmpty() &&
                !getTextValue(formFields.get("details")).isEmpty();
+    }
+
+    @Override
+    protected Call<JsonObject> getApiCall(Map<String, String> params) {
+        return apiService.getSchoolActivities(params);
+    }
+
+    @Override
+    protected Call<JsonObject> createRecordCall(JsonObject data) {
+        return apiService.createSchoolActivity(data);
+    }
+
+    @Override
+    protected Call<JsonObject> updateRecordCall(int id, JsonObject data) {
+        return apiService.updateSchoolActivity(id, data);
+    }
+
+    @Override
+    protected Call<JsonObject> deleteRecordCall(int id) {
+        return apiService.deleteSchoolActivity(id);
     }
 }

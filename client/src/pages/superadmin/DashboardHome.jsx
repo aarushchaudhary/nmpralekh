@@ -90,7 +90,7 @@ export default function DashboardHome() {
             </div>
 
             {/* Schools overview */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
                 <h2 className="text-sm font-semibold text-gray-700 mb-3">
                     Active Schools ({schools.filter(s => s.is_active).length})
                 </h2>
@@ -114,7 +114,7 @@ export default function DashboardHome() {
                     <Link
                         key={mod.path}
                         to={`/superadmin/${mod.path}`}
-                        className="bg-white rounded-xl border border-gray-100 p-5
+                        className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm
                        hover:border-primary-200 hover:shadow-sm
                        transition-all group"
                     >
@@ -132,7 +132,7 @@ export default function DashboardHome() {
             </div>
 
             {/* Export section */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-semibold text-gray-700">
                         Export Data

@@ -1,4 +1,6 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import java.util.Map;
+import retrofit2.Call;
 
 import android.widget.LinearLayout;
 import com.aarushchaudhary.nmpralekh.adapters.RecordAdapter;
@@ -81,5 +83,25 @@ public class FacultiesFragment extends BaseRecordFragment {
     @Override
     protected boolean validateForm() {
         return true;
+    }
+
+    @Override
+    protected Call<JsonObject> getApiCall(Map<String, String> params) {
+        return apiService.getSchoolFaculties(params);
+    }
+
+    @Override
+    protected Call<JsonObject> createRecordCall(JsonObject data) {
+        return null;
+    }
+
+    @Override
+    protected Call<JsonObject> updateRecordCall(int id, JsonObject data) {
+        return null;
+    }
+
+    @Override
+    protected Call<JsonObject> deleteRecordCall(int id) {
+        return null;
     }
 }

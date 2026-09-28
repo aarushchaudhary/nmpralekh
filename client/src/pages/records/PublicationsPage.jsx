@@ -29,7 +29,7 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
   const { user }                         = useAuth()
   const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/publications/')
   const { schoolOptions }                = useSchools()
-  const { exportFile, exporting }        = useExport('/export/publications/', 'publications.xlsx')
+  const { exportFile, exporting }        = useExport('/export/publications/', { filename: 'publications.xlsx' })
 
   const [showForm,          setShowForm]          = useState(false)
   const [showEditConfirm,   setShowEditConfirm]   = useState(false)
@@ -244,8 +244,8 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
       />
 
       {selfOnly && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
-          <p className="text-sm text-blue-700">
+        <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-6">
+          <p className="text-sm text-primary-700">
             You can only view and manage your own publications.
             Add co-authors to link other contributors — if a co-author is a
             registered faculty member, search and select them so the publication

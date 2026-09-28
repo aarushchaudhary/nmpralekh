@@ -1,4 +1,6 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import java.util.Map;
+import retrofit2.Call;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -28,7 +30,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import retrofit2.Call;
+
+
 import retrofit2.Callback;
 import retrofit2.Response;
 

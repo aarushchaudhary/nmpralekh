@@ -24,7 +24,7 @@ const empty = {
 
 export default function CertificationsPage({ readOnly = false, selfOnly = false }) {
     const { user } = useAuth()
-    const { exportFile, exporting } = useExport('/export/certifications/', 'certifications.xlsx')
+    const { exportFile, exporting } = useExport('/export/certifications/', { filename: 'certifications.xlsx' })
     const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/certifications/')
     const { schoolOptions } = useSchools()
 

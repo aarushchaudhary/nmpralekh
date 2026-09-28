@@ -14,7 +14,7 @@ from apps.accounts.serializers import (
     UserCreateSerializer, UserUpdateSerializer, LoginSerializer,
     ChronicleAccumulatorSerializer
 )
-from apps.accounts.permissions import IsMaster, IsAdmin, IsSuperAdmin, IsAnyRole, IsMISAccumulator, IsChronicleMaster
+from apps.accounts.permissions import RolePermission
 from config.pagination import StandardPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
@@ -171,7 +171,7 @@ class MeView(APIView):
 
 
 class UserListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     queryset = User.objects.all().select_related('campus').order_by('-id')
 
     def get_serializer_class(self):
@@ -181,7 +181,7 @@ class UserListCreateView(generics.ListCreateAPIView):
 
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     queryset = User.objects.all().select_related('campus')
 
     def get_serializer_class(self):
@@ -205,7 +205,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
 class SchoolFacultiesView(generics.ListAPIView):
     """Admin sees all faculty users assigned to their school(s)"""
     serializer_class   = UserVisibilitySerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [RolePermission(['admin'])]
     pagination_class   = StandardPagination
     filter_backends    = [DjangoFilterBackend, SearchFilter]
     search_fields      = ['full_name', 'username', 'email']
@@ -248,7 +248,7 @@ class SchoolFacultiesView(generics.ListAPIView):
 class CampusUsersView(generics.ListAPIView):
     """Super Admin sees all users in their campus"""
     serializer_class   = UserVisibilitySerializer
-    permission_classes = [IsSuperAdmin]
+    permission_classes = [RolePermission(['super_admin'])]
     pagination_class   = StandardPagination
     filter_backends    = [DjangoFilterBackend, SearchFilter]
     search_fields      = ['full_name', 'username', 'email']
@@ -289,7 +289,7 @@ class CampusUsersView(generics.ListAPIView):
 class AccumulatorCoordinatorsView(generics.ListAPIView):
     """MIS Accumulator sees all MIS Coordinators in their campus"""
     serializer_class   = UserVisibilitySerializer
-    permission_classes = [IsMISAccumulator]
+    permission_classes = [RolePermission(['mis_accumulator'])]
     pagination_class   = StandardPagination
     filter_backends    = [DjangoFilterBackend, SearchFilter]
     search_fields      = ['full_name', 'username', 'email']
@@ -318,7 +318,7 @@ class AccumulatorCoordinatorsView(generics.ListAPIView):
 class ChronicleAccumulatorsView(generics.ListAPIView):
     """Chronicle Master sees all MIS Accumulators and their coordinator counts"""
     serializer_class   = ChronicleAccumulatorSerializer
-    permission_classes = [IsChronicleMaster]
+    permission_classes = [RolePermission(['chronicle_master'])]
     pagination_class   = StandardPagination
     filter_backends    = [DjangoFilterBackend, SearchFilter]
     search_fields      = ['full_name', 'username', 'email']
@@ -335,7 +335,7 @@ class ChronicleAccumulatorsView(generics.ListAPIView):
         ).select_related('campus').order_by('full_name')
 
 class ServiceUserManagementView(APIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
     def get(self, request):
@@ -377,7 +377,7 @@ class ServiceUserManagementView(APIView):
             return Response({"detail": "Service user does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
 class ChronicleMasterManagementView(APIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
     def get(self, request):

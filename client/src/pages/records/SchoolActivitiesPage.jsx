@@ -19,7 +19,7 @@ const empty = {
 
 export default function SchoolActivitiesPage({ readOnly = false }) {
     const { user } = useAuth()
-    const { exportFile, exporting } = useExport('/export/school-activities/', 'school_activities.xlsx')
+    const { exportFile, exporting } = useExport('/export/school-activities/', { filename: 'school_activities.xlsx' })
     const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/school-activities/')
     const { schoolOptions } = useSchools()
 

@@ -259,7 +259,7 @@ export default function FinalizeMISPage() {
                                         <button 
                                             onClick={() => handleSendChronicle(report.id)}
                                             disabled={report.sent_to_chronicle_master}
-                                            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                                            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-primary-200 text-primary-700 bg-primary-50 hover:bg-primary-100 disabled:opacity-50 transition-colors"
                                         >
                                             {report.sent_to_chronicle_master ? 'Sent to Chronicle Master' : 'Send to Chronicle Master'}
                                         </button>

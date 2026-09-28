@@ -1,5 +1,5 @@
 const colors = {
-    blue: 'bg-blue-50 text-blue-700',
+    blue: 'bg-primary-50 text-primary-700',
     green: 'bg-green-50 text-green-700',
     red: 'bg-red-50 text-red-700',
     yellow: 'bg-yellow-50 text-yellow-700',

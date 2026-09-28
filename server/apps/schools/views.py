@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
-from apps.accounts.permissions import IsAdminOrUser
+from apps.accounts.permissions import RolePermission
 
 from apps.schools.models import Campus, School, UserSchoolMapping
 from apps.schools.serializers import (
@@ -14,12 +14,12 @@ from apps.schools.serializers import (
     CampusSerializer, CampusCreateSerializer
 )
 from apps.schools.utils import get_user_school_ids
-from apps.accounts.permissions import IsMaster, IsMasterOrSuperAdmin, IsAnyRole
+from apps.accounts.permissions import RolePermission
 from config.pagination import StandardPagination
 
 
 class CampusListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -42,7 +42,7 @@ class CampusListCreateView(generics.ListCreateAPIView):
 
 
 class CampusDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
 
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
@@ -71,7 +71,7 @@ class CampusDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class CampusReactivateView(APIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
     def post(self, request, pk):
@@ -86,7 +86,7 @@ class CampusReactivateView(APIView):
 
 class CampusSchoolsView(generics.ListAPIView):
     """All schools belonging to a specific campus"""
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class   = SchoolSerializer
     pagination_class   = StandardPagination
 
@@ -96,7 +96,7 @@ class CampusSchoolsView(generics.ListAPIView):
 
 class CampusUsersView(generics.ListAPIView):
     """All users belonging to a specific campus"""
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     pagination_class   = StandardPagination
 
     def get_serializer_class(self):
@@ -109,7 +109,7 @@ class CampusUsersView(generics.ListAPIView):
 
 
 class SchoolListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsMasterOrSuperAdmin]
+    permission_classes = [RolePermission(['master', 'super_admin'], exclude_service_admin=True)]
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -135,7 +135,7 @@ class SchoolListCreateView(generics.ListCreateAPIView):
 
 
 class SchoolDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     queryset = School.objects.all().select_related('campus')
 
     def get_serializer_class(self):
@@ -151,7 +151,7 @@ class SchoolDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class SchoolReactivateView(APIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
     def post(self, request, pk):
@@ -165,7 +165,7 @@ class SchoolReactivateView(APIView):
 
 
 class UserSchoolMappingListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     pagination_class   = StandardPagination
 
     def get_serializer_class(self):
@@ -182,7 +182,7 @@ class UserSchoolMappingListCreateView(generics.ListCreateAPIView):
 
 
 class UserSchoolMappingDetailView(generics.RetrieveDestroyAPIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     queryset           = UserSchoolMapping.objects.all().select_related(
                              'user__campus',
                              'school__campus',
@@ -208,7 +208,7 @@ class MySchoolsView(generics.ListAPIView):
 
 
 class SchoolFacultyView(generics.ListAPIView):
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [RolePermission(['admin', 'user'])]
     pagination_class   = StandardPagination
 
     def get_serializer_class(self):

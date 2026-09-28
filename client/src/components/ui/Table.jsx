@@ -51,7 +51,7 @@ export default function Table({
     return (
       <div className="flex items-center justify-center py-16">
         <div className="animate-spin rounded-full h-8 w-8
-                        border-b-2 border-primary-600" />
+                        border-b-2 border-primary-500" />
       </div>
     )
   }
@@ -64,15 +64,14 @@ export default function Table({
       <div className="hidden md:block overflow-x-auto rounded-xl
                       border border-gray-100">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-100/50 border-b border-gray-200">
             <tr>
               {columns.map(col => (
                 <th key={col.key}
                   onClick={() => col.sortable !== false && handleSort(col.key)}
-                  className={`px-4 py-3 text-left text-xs font-medium
-                              text-gray-500 uppercase tracking-wide
+                  className={`px-4 py-3 text-left text-xs font-semibold text-gray-800 uppercase tracking-wider
                               ${col.sortable !== false
-                                ? 'cursor-pointer hover:text-gray-700 select-none'
+                                ? 'cursor-pointer hover:text-gray-800 select-none'
                                 : ''}`}>
                   {col.label}
                   {sortKey === col.key && (
@@ -82,14 +81,14 @@ export default function Table({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50 bg-white">
+          <tbody className="divide-y divide-gray-100 bg-white">
             {paginated.map((row, i) => (
               <tr key={row.id ?? i}
                 onClick={() => onRowClick?.(row)}
                 className={`${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
                             transition-colors`}>
                 {columns.map(col => (
-                  <td key={col.key} className="px-4 py-3 text-gray-700">
+                  <td key={col.key} className="px-4 py-3 text-gray-800">
                     {col.render ? col.render(row) : row[col.key] ?? '—'}
                   </td>
                 ))}
@@ -110,7 +109,7 @@ export default function Table({
                 <div key={col.key}
                   className="flex justify-between text-sm">
                   <span className="text-gray-400 font-medium">{col.label}</span>
-                  <span className="text-gray-700 text-right ml-4">
+                  <span className="text-gray-800 text-right ml-4">
                     {col.render ? col.render(row) : row[col.key] ?? '—'}
                   </span>
                 </div>

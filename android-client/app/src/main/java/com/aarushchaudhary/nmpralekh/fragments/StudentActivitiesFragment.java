@@ -1,4 +1,6 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import java.util.Map;
+import retrofit2.Call;
 
 import android.view.View;
 import android.widget.AdapterView;
@@ -14,8 +16,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import retrofit2.Call;
+
+
 import retrofit2.Callback;
 import retrofit2.Response;
 
@@ -208,5 +210,25 @@ public class StudentActivitiesFragment extends BaseRecordFragment {
             Spinner clubSpinner = (Spinner) formFields.get("club_spinner");
             return clubSpinner != null && clubSpinner.getSelectedItemPosition() >= 0 && !currentClubs.isEmpty();
         }
+    }
+
+    @Override
+    protected Call<JsonObject> getApiCall(Map<String, String> params) {
+        return apiService.getStudentActivities(params);
+    }
+
+    @Override
+    protected Call<JsonObject> createRecordCall(JsonObject data) {
+        return apiService.createStudentActivity(data);
+    }
+
+    @Override
+    protected Call<JsonObject> updateRecordCall(int id, JsonObject data) {
+        return apiService.updateStudentActivity(id, data);
+    }
+
+    @Override
+    protected Call<JsonObject> deleteRecordCall(int id) {
+        return apiService.deleteStudentActivity(id);
     }
 }

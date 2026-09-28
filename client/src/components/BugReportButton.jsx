@@ -52,13 +52,13 @@ export default function BugReportButton() {
                 onClick={() => setOpen(true)}
                 title="Report a bug"
                 className="fixed bottom-6 right-6 z-40
-                           w-11 h-11 rounded-full shadow-lg
-                           bg-gray-800 hover:bg-gray-700
-                           text-white transition-colors
-                           flex items-center justify-center"
+                           w-12 h-12 rounded-full shadow-lg shadow-primary-900/20
+                           bg-primary-600 hover:bg-primary-700
+                           text-white transition-all hover:scale-105 active:scale-95
+                           flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
                 {/* Bug icon */}
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                         d="M12 8v4m0 4h.01M9 3h6M3 8l3 2m12-2l-3 2M3 16l3-2m12 2l-3-2M6 6l-1-1m14 1l1-1M6 18l-1 1m14-1l1 1M12 21c-3.866 0-7-3.134-7-7V8a7 7 0 0114 0v6c0 3.866-3.134 7-7 7z" />
                 </svg>

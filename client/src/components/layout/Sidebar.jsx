@@ -123,42 +123,46 @@ export default function Sidebar({ isOpen, onClose }) {
         <>
             {/* Mobile overlay */}
             {isOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-30 z-20 md:hidden"
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 md:hidden transition-opacity"
                     onClick={onClose} />
             )}
 
             <aside className={`
-        fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-100
-        z-30 flex flex-col transition-transform duration-200
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:translate-x-0 md:static md:z-auto
-      `}>
+                fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200
+                z-30 flex flex-col transition-transform duration-300 ease-in-out shadow-sm
+                ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+                md:translate-x-0 md:static md:z-auto
+            `}>
 
                 {/* Logo */}
-                <div className="px-6 py-5 border-b border-gray-100">
-                    <h1 className="text-lg font-bold text-primary-700">NMPralekh</h1>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                        {user?.is_service_admin ? 'Service Portal' : user?.is_chronicle_master ? 'Chronicle Portal' : 'MIS Portal'}
-                    </p>
+                <div className="px-6 py-6 border-b border-gray-100 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+                            <span className="w-2.5 h-6 bg-primary-600 rounded-full"></span>
+                            NMPralekh
+                        </h1>
+                        <p className="text-[11px] text-gray-500 mt-1 font-semibold ml-4 tracking-wider uppercase">
+                            {user?.is_service_admin ? 'Service Portal' : user?.is_chronicle_master ? 'Chronicle Portal' : 'MIS Portal'}
+                        </p>
+                    </div>
                 </div>
 
                 {/* User info */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-800 truncate">
+                <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+                    <p className="text-sm font-semibold text-gray-800 truncate">
                         {user?.full_name}
                     </p>
-                    <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full
-                           bg-primary-50 text-primary-700 font-medium capitalize">
+                    <span className="inline-flex mt-1.5 text-[10px] px-2 py-0.5 rounded
+                           bg-gray-900 text-white font-bold capitalize tracking-wide">
                         {user?.role?.replace(/_/g, ' ')}
                     </span>
                 </div>
 
                 {/* Nav links */}
-                <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+                <nav className="flex-1 overflow-y-auto px-3 py-6 space-y-1 custom-scrollbar">
                     {links.map((link, i) => (
                         link.path === null ? (
-                            <p key={i} className="px-3 pt-4 pb-1 text-xs font-semibold
-                                    text-gray-400 uppercase tracking-wider">
+                            <p key={i} className="px-3 pt-5 pb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                 {link.label.replace('— ', '')}
                             </p>
                         ) : (
@@ -168,12 +172,12 @@ export default function Sidebar({ isOpen, onClose }) {
                                 end={link.path.split('/').length === 2}
                                 onClick={onClose}
                                 className={({ isActive }) => `
-                   block px-3 py-2 rounded-lg text-sm transition-colors
-                   ${isActive
-                                        ? 'bg-primary-50 text-primary-700 font-medium'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    group flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-l-4
+                                    ${isActive
+                                        ? 'bg-primary-50 text-primary-700 border-primary-600'
+                                        : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300'
                                     }
-                `}
+                                `}
                             >
                                 {link.label}
                             </NavLink>
@@ -182,10 +186,10 @@ export default function Sidebar({ isOpen, onClose }) {
                 </nav>
 
                 {/* Logout */}
-                <div className="px-3 py-4 border-t border-gray-100">
+                <div className="p-4 border-t border-gray-100 bg-gray-50/50">
                     <button onClick={handleLogout}
-                        className="w-full px-3 py-2 text-sm text-left text-red-500
-                       hover:bg-red-50 rounded-lg transition-colors">
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600
+                       hover:bg-red-50 hover:text-red-600 rounded-md transition-colors border border-gray-200 hover:border-red-200 bg-white shadow-sm">
                         Sign Out
                     </button>
                 </div>

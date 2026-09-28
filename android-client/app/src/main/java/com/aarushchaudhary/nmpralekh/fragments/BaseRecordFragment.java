@@ -1,4 +1,6 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import java.util.Map;
+import retrofit2.Call;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
@@ -37,9 +39,9 @@ import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import retrofit2.Call;
+
+
 import retrofit2.Callback;
 import retrofit2.Response;
 
@@ -75,6 +77,10 @@ public abstract class BaseRecordFragment extends Fragment {
     protected abstract void buildForm(LinearLayout container, JsonObject existingData);
     protected abstract JsonObject collectFormData();
     protected abstract boolean validateForm();
+    protected abstract Call<JsonObject> getApiCall(Map<String, String> params);
+    protected abstract Call<JsonObject> createRecordCall(JsonObject data);
+    protected abstract Call<JsonObject> updateRecordCall(int id, JsonObject data);
+    protected abstract Call<JsonObject> deleteRecordCall(int id);
 
     @Nullable
     @Override
@@ -219,21 +225,7 @@ public abstract class BaseRecordFragment extends Fragment {
         });
     }
 
-    protected Call<JsonObject> getApiCall(Map<String, String> params) {
-        String endpoint = getEndpoint();
-        if (endpoint.contains("school-activities")) return apiService.getSchoolActivities(params);
-        if (endpoint.contains("student-activities")) return apiService.getStudentActivities(params);
-        if (endpoint.contains("fdp")) return apiService.getFdp(params);
-        if (endpoint.contains("placements")) return apiService.getPlacements(params);
-        if (endpoint.contains("publications")) return apiService.getPublications(params);
-        if (endpoint.contains("patents")) return apiService.getPatents(params);
-        if (endpoint.contains("certifications")) return apiService.getCertifications(params);
-        if (endpoint.contains("clubs")) return apiService.getClubs(params);
-        if (endpoint.contains("school-faculties")) return apiService.getSchoolFaculties(params);
-        if (endpoint.contains("campus-users")) return apiService.getCampusUsers(params);
-        if (endpoint.contains("reports/received")) return apiService.getReceivedReports(params);
-        return apiService.getSchoolActivities(params); // fallback
-    }
+    
 
     protected void showFormDialog(JsonObject existingData) {
         boolean isEdit = existingData != null;
@@ -296,17 +288,8 @@ public abstract class BaseRecordFragment extends Fragment {
     }
 
     protected void createRecord(JsonObject data) {
-        String endpoint = getEndpoint();
-        Call<JsonObject> call;
-        if (endpoint.contains("school-activities")) call = apiService.createSchoolActivity(data);
-        else if (endpoint.contains("student-activities")) call = apiService.createStudentActivity(data);
-        else if (endpoint.contains("fdp")) call = apiService.createFdp(data);
-        else if (endpoint.contains("placements")) call = apiService.createPlacement(data);
-        else if (endpoint.contains("publications")) call = apiService.createPublication(data);
-        else if (endpoint.contains("patents")) call = apiService.createPatent(data);
-        else if (endpoint.contains("certifications")) call = apiService.createCertification(data);
-        else return;
-
+        Call<JsonObject> call = createRecordCall(data);
+        if (call == null) return;
         call.enqueue(new Callback<JsonObject>() {
             @Override
             public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
@@ -330,17 +313,8 @@ public abstract class BaseRecordFragment extends Fragment {
 
     protected void updateRecord(JsonObject original, JsonObject updated) {
         int id = original.get("id").getAsInt();
-        String endpoint = getEndpoint();
-        Call<JsonObject> call;
-        if (endpoint.contains("school-activities")) call = apiService.updateSchoolActivity(id, updated);
-        else if (endpoint.contains("student-activities")) call = apiService.updateStudentActivity(id, updated);
-        else if (endpoint.contains("fdp")) call = apiService.updateFdp(id, updated);
-        else if (endpoint.contains("placements")) call = apiService.updatePlacement(id, updated);
-        else if (endpoint.contains("publications")) call = apiService.updatePublication(id, updated);
-        else if (endpoint.contains("patents")) call = apiService.updatePatent(id, updated);
-        else if (endpoint.contains("certifications")) call = apiService.updateCertification(id, updated);
-        else return;
-
+        Call<JsonObject> call = updateRecordCall(id, updated);
+        if (call == null) return;
         call.enqueue(new Callback<JsonObject>() {
             @Override
             public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
@@ -363,17 +337,8 @@ public abstract class BaseRecordFragment extends Fragment {
 
     protected void deleteRecord(JsonObject record) {
         int id = record.get("id").getAsInt();
-        String endpoint = getEndpoint();
-        Call<JsonObject> call;
-        if (endpoint.contains("school-activities")) call = apiService.deleteSchoolActivity(id);
-        else if (endpoint.contains("student-activities")) call = apiService.deleteStudentActivity(id);
-        else if (endpoint.contains("fdp")) call = apiService.deleteFdp(id);
-        else if (endpoint.contains("placements")) call = apiService.deletePlacement(id);
-        else if (endpoint.contains("publications")) call = apiService.deletePublication(id);
-        else if (endpoint.contains("patents")) call = apiService.deletePatent(id);
-        else if (endpoint.contains("certifications")) call = apiService.deleteCertification(id);
-        else return;
-
+        Call<JsonObject> call = deleteRecordCall(id);
+        if (call == null) return;
         call.enqueue(new Callback<JsonObject>() {
             @Override
             public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {

@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
-from apps.accounts.permissions import IsAdminOrUser, IsAdminOrUserOrSuperAdmin, IsAdminOrUserOrSuperAdminOrCoordinator
+from apps.accounts.permissions import RolePermission
 from apps.schools.utils import get_user_school_ids
 from apps.records.cache_utils import get_dashboard_counts, invalidate_dashboard_cache
 from config.pagination import StandardPagination
@@ -124,12 +124,12 @@ class InvalidateDashboardCacheMixin:
 # ─────────────────────────────────────────────
 # CLUBS & COMMITTEES
 # ─────────────────────────────────────────────
-from apps.accounts.permissions import IsAdmin
+from apps.accounts.permissions import RolePermission
 
 
 class ClubListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = ClubSerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [RolePermission(['admin', 'user'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -153,13 +153,13 @@ class ClubListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAdmin()]
-        return [IsAdminOrUser()]
+            return [RolePermission(['admin'])()]
+        return [RolePermission(['admin', 'user'])()]
 
 
 class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = ClubSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [RolePermission(['admin'])]
 
     def get_queryset(self):
         school_ids = get_user_school_ids(self.request.user)
@@ -171,7 +171,7 @@ class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
 # ─────────────────────────────────────────────
 class SchoolActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = SchoolActivitySerializer
-    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -182,13 +182,13 @@ class SchoolActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMi
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
+            return [RolePermission(['admin', 'user'])()]
+        return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
 class SchoolActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = SchoolActivitySerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         return self.get_base_queryset(SchoolActivity)
@@ -215,7 +215,7 @@ class SchoolActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroy
 # ─────────────────────────────────────────────
 class StudentActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = StudentActivitySerializer
-    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -226,13 +226,13 @@ class StudentActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedM
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
+            return [RolePermission(['admin', 'user'])()]
+        return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
 class StudentActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = StudentActivitySerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         return self.get_base_queryset(StudentActivity)
@@ -259,7 +259,7 @@ class StudentActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestro
 # ─────────────────────────────────────────────
 class FDPListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = FacultyFDPWorkshopGLSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -268,13 +268,13 @@ class FDPListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generi
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
+            return [RolePermission(['admin', 'user'])()]
+        return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
 class FDPDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = FacultyFDPWorkshopGLSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         return self.get_base_queryset(FacultyFDPWorkshopGL)
@@ -301,7 +301,7 @@ class FDPDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
 # ─────────────────────────────────────────────
 class PublicationAuthorListCreateView(generics.ListCreateAPIView):
     serializer_class   = PublicationAuthorSerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [RolePermission(['admin', 'user'])]
 
     def get_publication(self):
         from rest_framework.exceptions import NotFound
@@ -331,7 +331,7 @@ class PublicationAuthorListCreateView(generics.ListCreateAPIView):
 
 class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PublicationAuthorSerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [RolePermission(['admin', 'user'])]
 
     def get_queryset(self):
         school_ids     = get_user_school_ids(self.request.user)
@@ -352,7 +352,7 @@ class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = FacultyPublicationSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -377,13 +377,13 @@ class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
+            return [RolePermission(['admin', 'user'])()]
+        return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
 class PublicationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = FacultyPublicationSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         qs = self.get_base_queryset(FacultyPublication)
@@ -413,7 +413,7 @@ class PublicationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPI
 # ─────────────────────────────────────────────
 class PatentApplicantListCreateView(generics.ListCreateAPIView):
     serializer_class   = PatentApplicantSerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [RolePermission(['admin', 'user'])]
 
     def get_patent(self):
         from rest_framework.exceptions import NotFound
@@ -443,7 +443,7 @@ class PatentApplicantListCreateView(generics.ListCreateAPIView):
 
 class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PatentApplicantSerializer
-    permission_classes = [IsAdminOrUser]
+    permission_classes = [RolePermission(['admin', 'user'])]
 
     def get_queryset(self):
         school_ids = get_user_school_ids(self.request.user)
@@ -464,7 +464,7 @@ class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = PatentSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -489,13 +489,13 @@ class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, gen
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
+            return [RolePermission(['admin', 'user'])()]
+        return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
 class PatentDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PatentSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         qs = self.get_base_queryset(Patent)
@@ -525,7 +525,7 @@ class PatentDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView)
 # ─────────────────────────────────────────────
 class CertificationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = CertificationSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -541,13 +541,13 @@ class CertificationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMix
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
+            return [RolePermission(['admin', 'user'])()]
+        return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
 class CertificationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = CertificationSerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         qs = self.get_base_queryset(Certification)
@@ -577,7 +577,7 @@ class CertificationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyA
 # ─────────────────────────────────────────────
 class PlacementListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
     serializer_class   = PlacementActivitySerializer
-    permission_classes = [IsAdminOrUserOrSuperAdminOrCoordinator]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])]
     pagination_class   = StandardPagination
 
     def get_queryset(self):
@@ -586,13 +586,13 @@ class PlacementListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, 
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAdminOrUser()]
-        return [IsAdminOrUserOrSuperAdminOrCoordinator()]
+            return [RolePermission(['admin', 'user'])()]
+        return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
 class PlacementDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PlacementActivitySerializer
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         return self.get_base_queryset(PlacementActivity)
@@ -615,11 +615,12 @@ class PlacementDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIVi
 
 
 from rest_framework.views import APIView
-from apps.accounts.throttles import DashboardThrottle
+from apps.accounts.throttles import FixedWindowThrottle
 
 class DashboardCountsView(APIView):
     permission_classes  = [IsAuthenticated]
-    throttle_classes    = [DashboardThrottle]  # 120/min — Redis-cached endpoint, cache misses only
+    throttle_classes    = [FixedWindowThrottle]
+    throttle_scope      = "dashboard"  # 120/min — Redis-cached endpoint, cache misses only
     serializer_class    = serializers.Serializer
 
     def get(self, request):
@@ -635,14 +636,14 @@ class DashboardCountsView(APIView):
 import json
 from django.conf import settings as django_settings
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
-from apps.accounts.permissions import IsMaster
+from apps.accounts.permissions import RolePermission
 from .models import BackupConfiguration
 from .serializers import BackupConfigurationSerializer
 from .tasks import perform_db_backup
 
 
 class BackupConfigurationView(APIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = BackupConfigurationSerializer
 
     def _get_or_create_config(self):
@@ -715,7 +716,7 @@ from rest_framework.exceptions import ValidationError
 import re
 
 class TriggerManualBackupView(APIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
     def post(self, request):

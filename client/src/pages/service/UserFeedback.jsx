@@ -74,7 +74,7 @@ export default function UserFeedback() {
                                                 r.status === 'open' ? 'bg-red-50 text-red-700 border-red-200' :
                                                 r.status === 'planning' ? 'bg-orange-50 text-orange-700 border-orange-200' :
                                                 r.status === 'fixing' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                                                r.status === 'testing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                r.status === 'testing' ? 'bg-primary-50 text-primary-700 border-primary-200' :
                                                 'bg-green-50 text-green-700 border-green-200'
                                             }`}>
                                                 {r.status}
@@ -97,7 +97,7 @@ export default function UserFeedback() {
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                             r.severity === 'critical' || r.severity === 'high' ? 'bg-red-100 text-red-700' :
-                                            'bg-blue-100 text-blue-700'
+                                            'bg-primary-100 text-primary-700'
                                         }`}>
                                             {r.severity.toUpperCase()}
                                         </span>

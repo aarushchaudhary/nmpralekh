@@ -90,7 +90,7 @@ function FacultySearchInput({ person, personKey, idx, updatePerson }) {
       {/* Linked badge */}
       {person.user && (
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs
-                         bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full
+                         bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded-full
                          whitespace-nowrap pointer-events-none">
           ✓ linked
         </span>

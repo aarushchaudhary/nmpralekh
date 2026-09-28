@@ -34,7 +34,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
   const { user }                         = useAuth()
   const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/patents/')
   const { schoolOptions }                = useSchools()
-  const { exportFile, exporting }        = useExport('/export/patents/', 'patents.xlsx')
+  const { exportFile, exporting }        = useExport('/export/patents/', { filename: 'patents.xlsx' })
 
   const [showForm,          setShowForm]          = useState(false)
   const [showEditConfirm,   setShowEditConfirm]   = useState(false)
@@ -232,8 +232,8 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
       />
 
       {selfOnly && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
-          <p className="text-sm text-blue-700">
+        <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-6">
+          <p className="text-sm text-primary-700">
             You can only view and manage your own patents.
             Add co-applicants to link other inventors — if a co-applicant is a
             registered faculty member, search and select them so the patent

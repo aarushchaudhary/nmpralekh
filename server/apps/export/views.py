@@ -16,7 +16,7 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework import serializers
 
-from apps.accounts.permissions import IsAdminOrUserOrSuperAdmin
+from apps.accounts.permissions import RolePermission, IsAnyRole
 from apps.schools.utils import get_user_school_ids
 from apps.records.models import (
     SchoolActivity, StudentActivity,
@@ -88,7 +88,7 @@ def build_apply_filters(school_id, date_from, date_to):
 
 
 class ExportSchoolActivitiesView(APIView):
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
     serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
@@ -123,7 +123,7 @@ class ExportSchoolActivitiesView(APIView):
 
 
 class ExportStudentActivitiesView(APIView):
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
     serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
@@ -159,7 +159,7 @@ class ExportStudentActivitiesView(APIView):
 
 
 class ExportFDPView(APIView):
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
     serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
@@ -197,7 +197,7 @@ class ExportFDPView(APIView):
 
 
 class ExportPublicationsView(APIView):
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
     serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
@@ -238,7 +238,7 @@ class ExportPublicationsView(APIView):
 
 
 class ExportPatentsView(APIView):
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
     serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
@@ -278,7 +278,7 @@ class ExportPatentsView(APIView):
 
 
 class ExportCertificationsView(APIView):
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
     serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
@@ -317,7 +317,7 @@ class ExportCertificationsView(APIView):
 
 
 class ExportPlacementsView(APIView):
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
     serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='GET', block=True))
@@ -354,7 +354,7 @@ class ExportPlacementsView(APIView):
 from .tasks import build_campus_workbook
 
 class ExportAllView(APIView):
-    permission_classes = [IsAdminOrUserOrSuperAdmin]
+    permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
     serializer_class = serializers.Serializer
 
     # Heaviest endpoint — cap at 5 exports per minute per user
@@ -378,7 +378,7 @@ from apps.export.tasks import (
     generate_nightly_exports,
     generate_manual_export
 )
-from apps.accounts.permissions import IsMaster
+from apps.accounts.permissions import RolePermission, IsAnyRole
 
 
 from rest_framework import generics, serializers as drf_serializers
@@ -406,7 +406,7 @@ class ExportHistorySerializer(drf_serializers.ModelSerializer):
 
 
 class ExportHistoryView(generics.ListAPIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class   = ExportHistorySerializer
     pagination_class   = StandardPagination
 
@@ -420,7 +420,7 @@ class ExportHistoryView(generics.ListAPIView):
 
 
 class ExportDownloadView(APIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
     def get(self, request, pk):
@@ -458,7 +458,7 @@ class ExportDownloadView(APIView):
 
 
 class TriggerManualExportView(APIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
     def post(self, request):
@@ -511,7 +511,7 @@ class TriggerManualExportView(APIView):
 
 
 class TriggerNightlyExportView(APIView):
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
     def post(self, request):
@@ -524,7 +524,7 @@ class TriggerNightlyExportView(APIView):
 
 class ExportTaskStatusView(APIView):
     """Frontend polls this to check if export is ready"""
-    permission_classes = [IsMaster]
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
     def get(self, request, task_id):
@@ -545,7 +545,7 @@ class ExportTaskStatusView(APIView):
 # MIS COORDINATOR EXPORT
 # ─────────────────────────────────────────────
 import json as json_module
-from apps.accounts.permissions import IsMISCoordinator
+from apps.accounts.permissions import RolePermission, IsAnyRole
 from apps.records.serializers import (
     SchoolActivitySerializer,
     StudentActivitySerializer,
@@ -692,9 +692,9 @@ class CoordinatorExportView(APIView):
     """
     GET /api/export/coordinator/
     Query params: date_from, date_to, format (excel|json)
-    Protected: IsMISCoordinator only
+    Protected: RolePermission(['mis_coordinator']) only
     """
-    permission_classes = [IsMISCoordinator]
+    permission_classes = [RolePermission(['mis_coordinator'])]
     serializer_class = serializers.Serializer
 
     # Heaviest endpoint — cap at 5 exports per minute per user
@@ -766,7 +766,7 @@ class CoordinatorExportView(APIView):
 
 from .models import MISDataRequest
 from .serializers import MISDataRequestSerializer
-from apps.accounts.permissions import IsMISAccumulator, IsMISCoordinator, IsAnyRole
+from apps.accounts.permissions import RolePermission, IsAnyRole
 
 class MISDataRequestListCreateView(generics.ListCreateAPIView):
     serializer_class = MISDataRequestSerializer
@@ -774,10 +774,10 @@ class MISDataRequestListCreateView(generics.ListCreateAPIView):
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [(IsMISAccumulator | IsMISCoordinator)()]
+            return [(RolePermission(['mis_accumulator']) | RolePermission(['mis_coordinator']))()]
         if getattr(self.request.user, 'role', None) == 'mis_accumulator':
-            return [IsMISAccumulator()]
-        return [IsMISCoordinator()]
+            return [RolePermission(['mis_accumulator'])()]
+        return [RolePermission(['mis_coordinator'])()]
 
     def get_queryset(self):
         user = self.request.user
@@ -791,7 +791,7 @@ class MISDataRequestListCreateView(generics.ListCreateAPIView):
 
 class MISDataRequestDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = MISDataRequestSerializer
-    permission_classes = [IsMISCoordinator]
+    permission_classes = [RolePermission(['mis_coordinator'])]
     
     def get_queryset(self):
         return MISDataRequest.objects.filter(coordinator=self.request.user)
@@ -805,8 +805,8 @@ class MISReportListCreateView(generics.ListCreateAPIView):
 
     def get_permissions(self):
         if getattr(self.request.user, 'role', None) == 'mis_accumulator':
-            return [IsMISAccumulator()]
-        return [IsMISCoordinator()]
+            return [RolePermission(['mis_accumulator'])()]
+        return [RolePermission(['mis_coordinator'])()]
 
     def get_queryset(self):
         if not self.request.user.is_authenticated:
@@ -814,7 +814,7 @@ class MISReportListCreateView(generics.ListCreateAPIView):
         return MISReport.objects.filter(created_by=self.request.user)
 
 class MISReportSendAdminView(APIView):
-    permission_classes = [IsMISCoordinator]
+    permission_classes = [RolePermission(['mis_coordinator'])]
     serializer_class = serializers.Serializer
 
     def post(self, request, pk):
@@ -829,7 +829,7 @@ class MISReportSendAdminView(APIView):
         return Response({'detail': 'Sent to Admin successfully.'})
 
 class MISReportSendAccumulatorView(APIView):
-    permission_classes = [IsMISCoordinator]
+    permission_classes = [RolePermission(['mis_coordinator'])]
     serializer_class = serializers.Serializer
 
     def post(self, request, pk):
@@ -858,7 +858,7 @@ class MISReportSendAccumulatorView(APIView):
         return Response({'detail': 'Sent to Accumulator successfully and requests fulfilled.'})
 
 class MISReportSendSuperAdminView(APIView):
-    permission_classes = [IsMISAccumulator]
+    permission_classes = [RolePermission(['mis_accumulator'])]
     serializer_class = serializers.Serializer
 
     def post(self, request, pk):
@@ -873,7 +873,7 @@ class MISReportSendSuperAdminView(APIView):
         return Response({'detail': 'Sent to Super Admin successfully.'})
 
 class MISReportSendChronicleMasterView(APIView):
-    permission_classes = [IsMISAccumulator]
+    permission_classes = [RolePermission(['mis_accumulator'])]
     serializer_class = serializers.Serializer
 
     def post(self, request, pk):
@@ -932,7 +932,7 @@ class ReceivedMISReportsView(generics.ListAPIView):
 # ─────────────────────────────────────────────
 from .models import ChronicleDataRequest
 from .serializers import ChronicleDataRequestSerializer
-from apps.accounts.permissions import IsChronicleMaster
+from apps.accounts.permissions import RolePermission, IsAnyRole
 from apps.accounts.models import User
 
 
@@ -942,7 +942,7 @@ class ChronicleDataRequestListCreateView(generics.ListCreateAPIView):
     POST: Create a new chronicle data request -> fans out to all accumulators & coordinators
     """
     serializer_class = ChronicleDataRequestSerializer
-    permission_classes = [IsChronicleMaster]
+    permission_classes = [RolePermission(['chronicle_master'])]
     pagination_class = StandardPagination
 
     def get_queryset(self):
@@ -981,7 +981,7 @@ class ChronicleDashboardView(APIView):
     GET /api/export/chronicle/dashboard/?chronicle_request_id=<id>
     Returns tracking data: each accumulator's submission status + coordinator counts.
     """
-    permission_classes = [IsChronicleMaster]
+    permission_classes = [RolePermission(['chronicle_master'])]
     serializer_class = serializers.Serializer
 
     def get(self, request):
@@ -1059,7 +1059,7 @@ class AccumulatorBulkRequestView(APIView):
     Body: { date_from, date_to }
     Creates MISDataRequest for ALL coordinators under this accumulator's campus.
     """
-    permission_classes = [IsMISAccumulator]
+    permission_classes = [RolePermission(['mis_accumulator'])]
     serializer_class = serializers.Serializer
 
     def post(self, request):
@@ -1120,7 +1120,7 @@ class AccumulatorDashboardView(APIView):
     GET /api/export/accumulator/dashboard/
     Returns tracking data: each coordinator's submission status.
     """
-    permission_classes = [IsMISAccumulator]
+    permission_classes = [RolePermission(['mis_accumulator'])]
     serializer_class = serializers.Serializer
 
     def get(self, request):
@@ -1187,7 +1187,7 @@ class AccumulatorExportView(APIView):
     GET /api/export/accumulator/export/?format=excel|json&date_from=&date_to=
     Exports all received MIS reports for this accumulator.
     """
-    permission_classes = [IsMISAccumulator]
+    permission_classes = [RolePermission(['mis_accumulator'])]
     serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='5/m', method='GET', block=True))
@@ -1277,7 +1277,7 @@ class ChronicleExportView(APIView):
     GET /api/export/chronicle/export/?format=excel|json&date_from=&date_to=
     Exports all MIS reports sent to chronicle master.
     """
-    permission_classes = [IsChronicleMaster]
+    permission_classes = [RolePermission(['chronicle_master'])]
     serializer_class = serializers.Serializer
 
     @method_decorator(ratelimit(key='user', rate='5/m', method='GET', block=True))
