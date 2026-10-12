@@ -45,6 +45,31 @@ jobs:
       run:
         working-directory: server
 
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: nmpralekh
+          POSTGRES_USER: mis_user
+          POSTGRES_PASSWORD: NMPralekh
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -64,11 +89,29 @@ jobs:
           cp config/settings.example.py config/settings.py
           cp config/wsgi.example.py config/wsgi.py
 
+      - name: Apply Redis configuration
+        run: |
+          redis-cli CONFIG SET maxmemory 512mb
+          redis-cli CONFIG SET maxmemory-policy allkeys-lru
+
+      - name: Set up and start pgBouncer
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq pgbouncer postgresql-client
+          sudo mkdir -p /etc/pgbouncer /var/log/pgbouncer /var/run/pgbouncer
+          echo '"mis_user" "NMPralekh"' | sudo tee /etc/pgbouncer/userlist.txt
+          sudo cp config/pgbouncer.example.ini /etc/pgbouncer/pgbouncer.ini
+          sudo sed -i 's/auth_type = scram-sha-256/auth_type = trust/' /etc/pgbouncer/pgbouncer.ini
+          sudo chown -R pgbouncer:pgbouncer /etc/pgbouncer /var/log/pgbouncer /var/run/pgbouncer
+          sudo chmod 600 /etc/pgbouncer/userlist.txt
+          sudo systemctl restart pgbouncer || sudo -u pgbouncer pgbouncer -d /etc/pgbouncer/pgbouncer.ini
+          sleep 2
+          pg_isready -h 127.0.0.1 -p 6432
+
       - name: Django system check
         run: python manage.py check
 
       - name: Run Django tests
-        run: python manage.py test --verbosity=2
+        run: python manage.py test --verbosity=1
 
   # ── Android client ─────────────────────────────────────────────────
   android-client:
