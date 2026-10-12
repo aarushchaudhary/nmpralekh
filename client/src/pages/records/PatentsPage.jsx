@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import useRecords        from '../../hooks/useRecords'
 import useSchools        from '../../hooks/useSchools'
 import useExport         from '../../hooks/useExport'

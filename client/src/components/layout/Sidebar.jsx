@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const roleNavLinks = {
     master: [
         { label: 'Dashboard', path: '/master' },

@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       await authApi.post('/auth/logout/', {})
-    } catch {}
+    } catch { /* logout silently */ }
     setUser(null)
     window.location.href = '/login'
   }
@@ -47,6 +47,7 @@ export function AuthProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext)
 }

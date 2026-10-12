@@ -52,8 +52,7 @@ export default function DashboardHome() {
             a.download = filename
             a.click()
             window.URL.revokeObjectURL(url)
-        } catch {
-        } finally {
+        } catch { /* download error swallowed */ } finally {
             setExporting(null)
         }
     }
@@ -68,8 +67,7 @@ export default function DashboardHome() {
             a.download = 'MIS_Dashboard.xlsx'
             a.click()
             window.URL.revokeObjectURL(url)
-        } catch {
-        } finally {
+        } catch { /* download error swallowed */ } finally {
             setExporting(null)
         }
     }

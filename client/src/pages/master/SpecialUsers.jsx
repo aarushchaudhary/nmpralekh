@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 
-function SpecialUserCard({ title, description, apiEndpoint, lockMessage }) {
+function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
     const [exists, setExists] = useState(null)
     const [loading, setLoading] = useState(true)
     const [message, setMessage] = useState({ type: '', text: '' })
@@ -19,7 +19,7 @@ function SpecialUserCard({ title, description, apiEndpoint, lockMessage }) {
         try {
             const res = await api.get(apiEndpoint)
             setExists(res.data.exists)
-        } catch (error) {
+        } catch {
             setMessage({ type: 'error', text: `Failed to fetch status.` })
         } finally {
             setLoading(false)

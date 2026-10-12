@@ -22,7 +22,7 @@ function useDebounce(value, delay) {
  * FacultySearchInput — shown when personKey value is 'faculty'.
  * Provides a live search dropdown backed by /api/records/faculty-users/.
  */
-function FacultySearchInput({ person, personKey, idx, updatePerson }) {
+function FacultySearchInput({ person, idx, updatePerson }) {
   const [query,       setQuery]       = useState(person.name || '')
   const [results,     setResults]     = useState([])
   const [open,        setOpen]        = useState(false)
@@ -33,6 +33,7 @@ function FacultySearchInput({ person, personKey, idx, updatePerson }) {
   // Fetch suggestions whenever query changes
   useEffect(() => {
     if (!debouncedQ || debouncedQ.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResults([]); setOpen(false); return
     }
     setSearching(true)

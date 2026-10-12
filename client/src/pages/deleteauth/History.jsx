@@ -17,6 +17,7 @@ export default function History() {
     const [totalPages, setTotalPages] = useState(1)
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true)
         api.get('/audit/history/', { params: { page: currentPage, page_size: 25 } })
             .then(res => {

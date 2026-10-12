@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
-import { reportError, reportApiError } from './hooks/useErrorReporter'
+import { reportError } from './hooks/useErrorReporter'
 
 // Global error handlers for uncaught errors and rejections
 window.addEventListener('error', (event) => {
