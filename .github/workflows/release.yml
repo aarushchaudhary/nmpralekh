@@ -89,14 +89,11 @@ jobs:
           cp config/settings.example.py config/settings.py
           cp config/wsgi.example.py config/wsgi.py
 
-      - name: Apply Redis configuration
+      - name: Set up and configure Redis & pgBouncer
         run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq redis-tools pgbouncer postgresql-client
           redis-cli CONFIG SET maxmemory 512mb
           redis-cli CONFIG SET maxmemory-policy allkeys-lru
-
-      - name: Set up and start pgBouncer
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq pgbouncer postgresql-client
           sudo mkdir -p /etc/pgbouncer /var/log/pgbouncer /var/run/pgbouncer
           echo '"mis_user" "NMPralekh"' | sudo tee /etc/pgbouncer/userlist.txt
           sudo cp config/pgbouncer.example.ini /etc/pgbouncer/pgbouncer.ini
