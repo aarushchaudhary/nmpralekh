@@ -95,12 +95,12 @@ jobs:
           redis-cli CONFIG SET maxmemory 512mb
           redis-cli CONFIG SET maxmemory-policy allkeys-lru
           sudo mkdir -p /etc/pgbouncer /var/log/pgbouncer /var/run/pgbouncer
+          sudo chmod 777 /var/log/pgbouncer /var/run/pgbouncer
           echo '"mis_user" "NMPralekh"' | sudo tee /etc/pgbouncer/userlist.txt
           sudo cp config/pgbouncer.example.ini /etc/pgbouncer/pgbouncer.ini
           sudo sed -i 's/auth_type = scram-sha-256/auth_type = trust/' /etc/pgbouncer/pgbouncer.ini
-          sudo chown -R pgbouncer:pgbouncer /etc/pgbouncer /var/log/pgbouncer /var/run/pgbouncer
-          sudo chmod 600 /etc/pgbouncer/userlist.txt
-          sudo systemctl restart pgbouncer || sudo -u pgbouncer pgbouncer -d /etc/pgbouncer/pgbouncer.ini
+          sudo chmod 644 /etc/pgbouncer/userlist.txt /etc/pgbouncer/pgbouncer.ini
+          sudo systemctl restart pgbouncer || true
           sleep 2
           pg_isready -h 127.0.0.1 -p 6432
 
