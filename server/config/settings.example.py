@@ -177,11 +177,8 @@ REST_FRAMEWORK = {
     # Single round-trip per request, no race conditions, O(1) memory per user.
     # See apps/accounts/throttles.py for implementation details.
     'DEFAULT_THROTTLE_CLASSES': [
-        'apps.accounts.throttles.AnonRateThrottle',
-        'apps.accounts.throttles.UserRateThrottle',
+        'apps.accounts.throttles.FixedWindowThrottle',
     ],
-    # DEFAULT_THROTTLE_RATES is not used by our custom throttles (limits are
-    # set directly on each class), but kept here as a reference/documentation.
     'DEFAULT_THROTTLE_RATES': {
         'anon':               '60/minute',    # AnonRateThrottle
         'user':               '300/minute',   # UserRateThrottle

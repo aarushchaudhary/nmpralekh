@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Set up client environment
+        run: cp .env.example .env
+
       - name: Lint
         run: npm run lint
 
@@ -54,6 +57,12 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Set up Django environment and settings
+        run: |
+          cp .env.example .env
+          cp config/settings.example.py config/settings.py
+          cp config/wsgi.example.py config/wsgi.py
 
       - name: Django system check
         run: python manage.py check
