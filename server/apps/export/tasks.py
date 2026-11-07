@@ -3,9 +3,11 @@ import os
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.cell import WriteOnlyCell
-from datetime import date, datetime
 from celery import shared_task, group
 from django.conf import settings
+from django.utils import timezone
+
+from apps.schools.utils import scope_to_faculty
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,19 @@ def _append_styled_headers(ws, headers):
     ws.append(styled_row)
 
 
-def build_campus_workbook(school_ids, date_from=None, date_to=None):
+def append_safe_row(ws, row):
+    """Append a data row. openpyxl writes any string starting with '=' as a formula,
+    so user-entered text like '=HYPERLINK(...)' is forced to stay plain text."""
+    cells = []
+    for value in row:
+        if isinstance(value, str) and value.startswith('='):
+            value = WriteOnlyCell(ws, value=value)
+            value.data_type = 's'
+        cells.append(value)
+    ws.append(cells)
+
+
+def build_campus_workbook(school_ids, date_from=None, date_to=None, user=None):
     """
     Builds a streaming write-only workbook for the given school IDs.
     Uses write_only=True so openpyxl never holds the full DOM in RAM,
@@ -42,6 +56,7 @@ def build_campus_workbook(school_ids, date_from=None, date_to=None):
         date_to:    optional upper bound (inclusive) applied to each sheet's
                     primary date field.  Passed as a date/str understood by
                     Django's ORM (``lte`` lookup).
+        user:       optional requesting user; faculty only get their own rows.
     """
     from apps.records.models import (
         SchoolActivity, StudentActivity,
@@ -169,9 +184,9 @@ def build_campus_workbook(school_ids, date_from=None, date_to=None):
         count = 0
         # .iterator() streams rows from Postgres one-by-one instead of
         # loading the entire result set into a Python list.
-        for record in queryset.iterator(chunk_size=2000):
+        for record in scope_to_faculty(queryset, user).iterator(chunk_size=2000):
             try:
-                ws.append(row_fn(record))
+                append_safe_row(ws, row_fn(record))
                 count += 1
             except Exception as e:
                 logger.warning(
@@ -201,7 +216,7 @@ def export_single_campus(self, campus_id):
     from apps.export.models import GeneratedExport
 
     ensure_export_dir()
-    today = date.today().strftime('%Y-%m-%d')
+    today = timezone.localdate().strftime('%Y-%m-%d')
 
     campus = Campus.objects.get(pk=campus_id)
     school_ids = list(
@@ -274,8 +289,8 @@ def generate_manual_export(campus_id, school_ids,
     ensure_export_dir()
 
     campus   = Campus.objects.get(pk=campus_id)
-    today    = date.today().strftime('%Y-%m-%d')
-    now      = datetime.now().strftime('%H%M%S')
+    today    = timezone.localdate().strftime('%Y-%m-%d')
+    now      = timezone.localtime().strftime('%H%M%S')
 
     wb, total_records = build_campus_workbook(
         school_ids,

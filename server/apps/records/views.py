@@ -1,12 +1,11 @@
 from django.db import transaction
-from django.db import models as django_models
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
 from apps.accounts.permissions import RolePermission
-from apps.schools.utils import get_user_school_ids
+from apps.schools.utils import get_user_school_ids, scope_to_faculty
 from apps.records.cache_utils import get_dashboard_counts, invalidate_dashboard_cache
 from config.pagination import StandardPagination
 from apps.audit.models import AuditRequest
@@ -43,7 +42,7 @@ def create_audit_request(user, table_name, record, action, new_data=None):
     """
     # Explicitly cast to plain dict — request.data can be a QueryDict (form-encoded)
     # which stores multiple values per key; JSONField needs a plain dict.
-    safe_new_data = dict(new_data) if new_data else None
+    safe_new_data = dict(new_data) if new_data is not None else None
 
     with transaction.atomic():
         # Re-fetch with a row-level lock.  A concurrent request that reaches
@@ -86,6 +85,12 @@ def create_audit_request(user, table_name, record, action, new_data=None):
     return audit
 
 
+def check_school(user, school):
+    if school.id not in get_user_school_ids(user):
+        from rest_framework.exceptions import PermissionDenied
+        raise PermissionDenied('You can only add records to your own schools.')
+
+
 # ─────────────────────────────────────────────
 # BASE MIXIN — shared logic for all modules
 # ─────────────────────────────────────────────
@@ -111,11 +116,40 @@ class SchoolScopedMixin:
                     raise PermissionDenied("Records created by deactivated users can only be modified or deleted by a super admin.")
 
 
+class AuditedDetailMixin(SchoolScopedMixin):
+    """
+    Detail views never write directly: every UPDATE/DELETE becomes a pending
+    audit request. The model's db_table is the audit table_name.
+    """
+    def validated_new_data(self, record):
+        # Validate the edit now, not at approval time; store raw values for validated keys only
+        serializer = self.get_serializer(record, data=self.request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        return {k: self.request.data[k] for k in serializer.validated_data}
+
+    def update(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, record._meta.db_table, record, 'UPDATE', self.validated_new_data(record))
+        return Response({
+            'detail': 'Update request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
+
+    def destroy(self, request, *args, **kwargs):
+        record = self.get_object()
+        audit  = create_audit_request(request.user, record._meta.db_table, record, 'DELETE')
+        return Response({
+            'detail': 'Delete request submitted and pending approval',
+            'audit_id': audit.id
+        }, status=status.HTTP_202_ACCEPTED)
+
+
 class InvalidateDashboardCacheMixin:
     """
     Mixin to invalidate the dashboard cache whenever a new record is created.
     """
     def perform_create(self, serializer):
+        check_school(self.request.user, serializer.validated_data['school'])
         instance = serializer.save()
         if hasattr(instance, 'school_id'):
             invalidate_dashboard_cache([instance.school_id])
@@ -156,6 +190,10 @@ class ClubListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
             return [RolePermission(['admin'])()]
         return [RolePermission(['admin', 'user'])()]
 
+    def perform_create(self, serializer):
+        check_school(self.request.user, serializer.validated_data['school'])
+        serializer.save()
+
 
 class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = ClubSerializer
@@ -164,6 +202,11 @@ class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         school_ids = get_user_school_ids(self.request.user)
         return Club.objects.filter(school_id__in=school_ids).select_related('school', 'created_by')
+
+    def perform_update(self, serializer):
+        if 'school' in serializer.validated_data:
+            check_school(self.request.user, serializer.validated_data['school'])
+        serializer.save()
 
 
 # ─────────────────────────────────────────────
@@ -186,28 +229,12 @@ class SchoolActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMi
         return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
-class SchoolActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
+class SchoolActivityDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = SchoolActivitySerializer
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         return self.get_base_queryset(SchoolActivity)
-
-    def update(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'school_activities', record, 'UPDATE', request.data)
-        return Response({
-            'detail': 'Update request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
-
-    def destroy(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'school_activities', record, 'DELETE')
-        return Response({
-            'detail': 'Delete request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -230,28 +257,12 @@ class StudentActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedM
         return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
-class StudentActivityDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
+class StudentActivityDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = StudentActivitySerializer
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         return self.get_base_queryset(StudentActivity)
-
-    def update(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'student_activities', record, 'UPDATE', request.data)
-        return Response({
-            'detail': 'Update request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
-
-    def destroy(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'student_activities', record, 'DELETE')
-        return Response({
-            'detail': 'Delete request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -272,28 +283,12 @@ class FDPListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generi
         return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
-class FDPDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
+class FDPDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = FacultyFDPWorkshopGLSerializer
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         return self.get_base_queryset(FacultyFDPWorkshopGL)
-
-    def update(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'faculty_fdp_workshop_gl', record, 'UPDATE', request.data)
-        return Response({
-            'detail': 'Update request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
-
-    def destroy(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'faculty_fdp_workshop_gl', record, 'DELETE')
-        return Response({
-            'detail': 'Delete request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -364,16 +359,7 @@ class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin
                      ).select_related(
                          'school', 'created_by'
                      ).prefetch_related('authors')
-        if user.role == 'user':
-            # Faculty see publications they created OR ones where they are
-            # linked as a co-author via PublicationAuthor.user FK.
-            co_authored_ids = PublicationAuthor.objects.filter(
-                user=user
-            ).values_list('publication_id', flat=True)
-            qs = qs.filter(
-                django_models.Q(created_by=user) | django_models.Q(id__in=co_authored_ids)
-            )
-        return qs
+        return scope_to_faculty(qs, user)
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -381,7 +367,7 @@ class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin
         return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
-class PublicationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
+class PublicationDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = FacultyPublicationSerializer
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
@@ -390,22 +376,6 @@ class PublicationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPI
         if self.request.user.role == 'user':
             qs = qs.filter(created_by=self.request.user)
         return qs
-
-    def update(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'faculty_publications', record, 'UPDATE', request.data)
-        return Response({
-            'detail': 'Update request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
-
-    def destroy(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'faculty_publications', record, 'DELETE')
-        return Response({
-            'detail': 'Delete request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -476,16 +446,7 @@ class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, gen
                      ).select_related(
                          'school', 'created_by'
                      ).prefetch_related('applicants')
-        if user.role == 'user':
-            # Faculty see patents they created OR ones where they are
-            # linked as a co-applicant via PatentApplicant.user FK.
-            co_applied_ids = PatentApplicant.objects.filter(
-                user=user
-            ).values_list('patent_id', flat=True)
-            qs = qs.filter(
-                django_models.Q(created_by=user) | django_models.Q(id__in=co_applied_ids)
-            )
-        return qs
+        return scope_to_faculty(qs, user)
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -493,7 +454,7 @@ class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, gen
         return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
-class PatentDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
+class PatentDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PatentSerializer
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
@@ -502,22 +463,6 @@ class PatentDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView)
         if self.request.user.role == 'user':
             qs = qs.filter(created_by=self.request.user)
         return qs
-
-    def update(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'patents', record, 'UPDATE', request.data)
-        return Response({
-            'detail': 'Update request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
-
-    def destroy(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'patents', record, 'DELETE')
-        return Response({
-            'detail': 'Delete request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -535,9 +480,7 @@ class CertificationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMix
                          school_id__in=school_ids,
                          is_deleted=False
                      ).select_related('school', 'created_by')
-        if user.role == 'user':
-            qs = qs.filter(created_by=user)
-        return qs
+        return scope_to_faculty(qs, user)
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -545,7 +488,7 @@ class CertificationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMix
         return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
-class CertificationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
+class CertificationDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = CertificationSerializer
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
@@ -554,22 +497,6 @@ class CertificationDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyA
         if self.request.user.role == 'user':
             qs = qs.filter(created_by=self.request.user)
         return qs
-
-    def update(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'certifications', record, 'UPDATE', request.data)
-        return Response({
-            'detail': 'Update request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
-
-    def destroy(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'certifications', record, 'DELETE')
-        return Response({
-            'detail': 'Delete request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
 
 
 # ─────────────────────────────────────────────
@@ -590,28 +517,12 @@ class PlacementListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, 
         return [RolePermission(['admin', 'user', 'super_admin'], read_only_roles=['mis_coordinator'])()]
 
 
-class PlacementDetailView(SchoolScopedMixin, generics.RetrieveUpdateDestroyAPIView):
+class PlacementDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PlacementActivitySerializer
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
         return self.get_base_queryset(PlacementActivity)
-
-    def update(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'placement_activities', record, 'UPDATE', request.data)
-        return Response({
-            'detail': 'Update request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
-
-    def destroy(self, request, *args, **kwargs):
-        record = self.get_object()
-        audit  = create_audit_request(request.user, 'placement_activities', record, 'DELETE')
-        return Response({
-            'detail': 'Delete request submitted and pending approval',
-            'audit_id': audit.id
-        }, status=status.HTTP_202_ACCEPTED)
 
 
 from rest_framework.views import APIView
@@ -706,37 +617,18 @@ class BackupConfigurationView(APIView):
                 'crontab':  schedule,
                 'task':     TASK_PATH,
                 'args':     json.dumps([]),
-                'kwargs':   json.dumps({'scope': config.backup_scope}),
+                'kwargs':   json.dumps({'scope': 'full'}),
                 'enabled':  True,
             },
         )
 
-
-from rest_framework.exceptions import ValidationError
-import re
 
 class TriggerManualBackupView(APIView):
     permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
     def post(self, request):
-        scope     = request.data.get('backup_scope', 'full')
-        date_from = request.data.get('date_from')
-        date_to   = request.data.get('date_to')
-
-        if scope not in ('full', 'date_range'):
-            return Response({'detail': 'scope must be full or date_range'},
-                            status=400)
-
-        date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
-        if date_from and not date_pattern.match(str(date_from)):
-            return Response({'detail': 'Invalid date_from'}, status=400)
-        if date_to and not date_pattern.match(str(date_to)):
-            return Response({'detail': 'Invalid date_to'}, status=400)
-
-        perform_db_backup.delay(
-            scope=scope, date_from=date_from, date_to=date_to
-        )
+        perform_db_backup.delay(scope='full')
         return Response({"message": "Backup task has been added to the queue."})
 
 

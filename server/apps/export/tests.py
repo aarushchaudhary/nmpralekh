@@ -211,24 +211,6 @@ class MISReportModelTests(ExportTestMixin, TestCase):
 # SERIALIZER TESTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class GeneratedExportSerializerTests(ExportTestMixin, TestCase):
-    def setUp(self):
-        self._setup_base()
-
-    def test_serialization(self):
-        from apps.export.serializers import GeneratedExportSerializer
-        exp = GeneratedExport.objects.create(
-            campus=self.campus, export_type='nightly',
-            filename='test.xlsx', filepath='/x',
-            generated_by=self.master,
-        )
-        exp = GeneratedExport.objects.select_related('campus', 'generated_by').get(pk=exp.pk)
-        data = GeneratedExportSerializer(exp).data
-        self.assertEqual(data['campus_name'], 'Export Campus')
-        self.assertEqual(data['generated_by_name'], 'Master')
-        self.assertEqual(data['filename'], 'test.xlsx')
-
-
 class MISDataRequestSerializerTests(ExportTestMixin, TestCase):
     def setUp(self):
         self._setup_base()
@@ -497,3 +479,18 @@ class NewExportEndpointsTests(ExportTestMixin, APITestCase):
             'message': 'Please submit Q1/Q2 MIS data'
         })
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+    def test_chronicle_fan_out_stays_within_each_campus(self):
+        other_campus = Campus.objects.create(name="Other", code="OTH", city="Y")
+        User.objects.create_user(
+            username="othcoord", email="oc@t.com", password="p",
+            full_name="Other Coord", role="mis_coordinator", campus=other_campus,
+        )
+        self.client.force_authenticate(user=self.chronicle_master)
+        resp = self.client.post('/api/export/chronicle/data-requests/', {
+            'date_from': '2025-01-01', 'date_to': '2025-06-30',
+        })
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        pairs = list(MISDataRequest.objects.values_list('accumulator', 'coordinator'))
+        # the other campus has no accumulator, so its coordinator gets nothing
+        self.assertEqual(pairs, [(self.accumulator.pk, self.coordinator.pk)])

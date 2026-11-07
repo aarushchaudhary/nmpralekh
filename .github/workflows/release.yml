@@ -89,25 +89,22 @@ jobs:
           cp config/settings.example.py config/settings.py
           cp config/wsgi.example.py config/wsgi.py
 
-      - name: Set up and configure Redis & pgBouncer
+      - name: Configure Redis
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq redis-tools pgbouncer postgresql-client
+          sudo apt-get update -qq && sudo apt-get install -y -qq redis-tools
           redis-cli CONFIG SET maxmemory 512mb
           redis-cli CONFIG SET maxmemory-policy allkeys-lru
-          sudo mkdir -p /etc/pgbouncer /var/log/pgbouncer /var/run/pgbouncer
-          sudo chmod 777 /var/log/pgbouncer /var/run/pgbouncer
-          echo '"mis_user" "NMPralekh"' | sudo tee /etc/pgbouncer/userlist.txt
-          sudo cp config/pgbouncer.example.ini /etc/pgbouncer/pgbouncer.ini
-          sudo sed -i 's/auth_type = scram-sha-256/auth_type = trust/' /etc/pgbouncer/pgbouncer.ini
-          sudo chmod 644 /etc/pgbouncer/userlist.txt /etc/pgbouncer/pgbouncer.ini
-          sudo systemctl restart pgbouncer || true
-          sleep 2
-          pg_isready -h 127.0.0.1 -p 6432
 
       - name: Django system check
         run: python manage.py check
 
+      # Tests use the postgres service directly (settings force port 5432 under `test`)
       - name: Run Django tests
+        env:
+          DB_NAME: nmpralekh
+          DB_USER: mis_user
+          DB_PASSWORD: NMPralekh
+          DB_HOST: 127.0.0.1
         run: python manage.py test --verbosity=1
 
   # ── Android client ─────────────────────────────────────────────────

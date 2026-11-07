@@ -6,7 +6,7 @@ from datetime import date
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APITransactionTestCase
 from rest_framework import status
 
 from apps.schools.models import Campus, School, UserSchoolMapping
@@ -93,10 +93,9 @@ class AuditRequestModelTests(AuditTestMixin, TestCase):
 
     def test_table_name_choices(self):
         valid_tables = [
-            'exams_conducted', 'school_activities', 'student_activities',
+            'school_activities', 'student_activities',
             'faculty_fdp_workshop_gl', 'faculty_publications', 'patents',
-            'certifications', 'placement_activities', 'courses', 'academic_years',
-            'semesters', 'subjects', 'class_groups', 'exam_groups', 'clubs',
+            'certifications', 'placement_activities',
         ]
         for t in valid_tables:
             ar = AuditRequest(
@@ -589,3 +588,46 @@ class AuditHistoryPaginationTests(AuditTestMixin, APITestCase):
         resp = self.client.get('/api/audit/history/')
         self.assertEqual(resp.data['count'], 3,
             "Pending audit requests must be excluded from history count")
+
+
+class AuditRowLockTests(AuditTestMixin, APITransactionTestCase):
+    """Needs real Postgres row locks and committed data visible across threads."""
+    def setUp(self):
+        self._setup_base()
+
+    def test_approve_waits_for_concurrent_reject_then_404s(self):
+        import threading, time
+        from django.db import connection, transaction
+
+        activity = SchoolActivity.objects.create(
+            school=self.school, name="Race", date=date(2025, 1, 1),
+            details="d", created_by=self.admin_user,
+        )
+        ar = AuditRequest.objects.create(
+            table_name="school_activities", record_id=activity.pk,
+            action="DELETE", old_data={}, school=self.school,
+            requested_by=self.admin_user,
+        )
+        locked = threading.Event()
+
+        def other_reviewer_rejects():
+            try:
+                with transaction.atomic():
+                    held = AuditRequest.objects.select_for_update().get(pk=ar.pk)
+                    locked.set()
+                    time.sleep(0.5)  # the approve below must block on the row lock meanwhile
+                    held.status = 'rejected'
+                    held.save()
+            finally:
+                connection.close()
+
+        t = threading.Thread(target=other_reviewer_rejects)
+        t.start()
+        self.assertTrue(locked.wait(5))
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.post(f'/api/audit/{ar.pk}/approve/')
+        t.join()
+
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        activity.refresh_from_db()
+        self.assertFalse(activity.is_deleted, "a rejected request must not be applied")

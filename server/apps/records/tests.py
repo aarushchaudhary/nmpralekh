@@ -511,16 +511,14 @@ class BackupConfigurationModelTests(RecordTestMixin, TestCase):
         bc = BackupConfiguration.objects.create(updated_by=self.master)
         self.assertTrue(bc.is_active)
         self.assertEqual(bc.schedule_type, 'weekly')
-        self.assertEqual(bc.backup_scope, 'full')
         self.assertIsNone(bc.last_run)
         self.assertIsNone(bc.schedule_day)
 
     def test_str(self):
         bc = BackupConfiguration.objects.create(
-            schedule_type='monthly', backup_scope='date_range',
-            updated_by=self.master,
+            schedule_type='monthly', updated_by=self.master,
         )
-        self.assertEqual(str(bc), "Backup Config (Monthly, Scope: Date Range)")
+        self.assertEqual(str(bc), "Backup Config (Monthly)")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1217,3 +1215,159 @@ class CoApplicantVisibilityTests(RecordTestMixin, APITestCase):
         ids = [r['id'] for r in resp.data['results']]
         self.assertNotIn(self.patent.pk, ids,
             "Unrelated faculty must not see a patent they did not create or co-apply")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TRUST-BOUNDARY TESTS — school scoping, edit validation, export safety, backups
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@override_settings(RATELIMIT_ENABLE=False)
+class TrustBoundaryTests(RecordTestMixin, APITestCase):
+    def setUp(self):
+        self._setup_base()
+        self.activity = SchoolActivity.objects.create(
+            school=self.school, name="Act", date=date(2025, 1, 1),
+            details="d", created_by=self.admin_user,
+        )
+
+    def _sheet_rows(self, resp):
+        import io, openpyxl
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        return list(openpyxl.load_workbook(io.BytesIO(resp.content)).active.iter_rows())
+
+    def test_create_record_in_unassigned_school_denied(self):
+        self.client.force_authenticate(user=self.faculty)
+        resp = self.client.post('/api/records/school-activities/', {
+            'school': self.school2.pk, 'name': 'X', 'date': '2025-03-15', 'details': 'd',
+        })
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(SchoolActivity.objects.filter(school=self.school2).exists())
+
+    def test_create_club_in_unassigned_school_denied(self):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.post('/api/records/clubs/', {
+            'name': 'C', 'type': 'club', 'school': self.school2.pk,
+        })
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_pending_audit_cannot_be_set_on_create(self):
+        self.client.force_authenticate(user=self.admin_user)
+        self.client.patch(f'/api/records/school-activities/{self.activity.pk}/', {'name': 'N'})
+        audit_id = SchoolActivity.objects.get(pk=self.activity.pk).pending_audit_id
+        resp = self.client.post('/api/records/school-activities/', {
+            'school': self.school.pk, 'name': 'Y', 'date': '2025-03-15',
+            'details': 'd', 'pending_audit': audit_id,
+        })
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(SchoolActivity.objects.get(name='Y').pending_audit_id)
+
+    def test_invalid_edit_rejected_before_audit(self):
+        from apps.audit.models import AuditRequest
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.patch(
+            f'/api/records/school-activities/{self.activity.pk}/', {'date': 'tomorrow'},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(AuditRequest.objects.exists())
+
+    def test_edit_stores_only_validated_fields_as_plain_values(self):
+        from apps.audit.models import AuditRequest
+        self.client.force_authenticate(user=self.admin_user)
+        # form-encoded on purpose: dict(QueryDict) used to store lists
+        resp = self.client.patch(
+            f'/api/records/school-activities/{self.activity.pk}/',
+            {'name': 'Renamed', 'bogus': 'x'},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(AuditRequest.objects.get().new_data, {'name': 'Renamed'})
+
+    def test_student_activity_club_must_match_school(self):
+        other_club = Club.objects.create(
+            name="Other", type="club", school=self.school2, created_by=self.master,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+        resp = self.client.post('/api/records/student-activities/', {
+            'school': self.school.pk, 'name': 'S', 'date': '2025-03-15',
+            'details': 'd', 'club': other_club.pk, 'activity_type': 'club',
+        })
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('club', resp.data)
+
+    def test_export_keeps_formula_like_text_as_text(self):
+        SchoolActivity.objects.create(
+            school=self.school, name='=HYPERLINK("http://x","y")', date=date(2025, 1, 2),
+            details="d", created_by=self.admin_user,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+        rows = self._sheet_rows(self.client.get('/api/export/school-activities/'))
+        cells = [c for row in rows[1:] for c in row if str(c.value).startswith('=')]
+        self.assertEqual(len(cells), 1)
+        self.assertEqual(cells[0].data_type, 's')
+
+    def test_faculty_export_excludes_colleagues_certifications(self):
+        Certification.objects.create(
+            school=self.school, date=date(2025, 1, 1), name="Colleague",
+            title_of_course="C", agency="A", person_type="faculty",
+            created_by=self.admin_user,
+        )
+        self.client.force_authenticate(user=self.faculty)
+        rows = self._sheet_rows(self.client.get('/api/export/certifications/'))
+        self.assertEqual(len(rows), 1, "Only the header row should be exported")
+
+    def test_backup_failure_marks_task_failed(self):
+        import subprocess
+        from unittest.mock import patch
+        from apps.records.tasks import perform_db_backup
+        err = subprocess.CalledProcessError(1, 'pg_dump')
+        with patch('apps.records.tasks.subprocess.run', side_effect=err):
+            with self.assertRaises(subprocess.CalledProcessError):
+                perform_db_backup(scope='full')
+
+    def test_rate_limit_uses_real_client_ip_behind_nginx(self):
+        from django.test import RequestFactory
+        from django_ratelimit.core import _get_ip
+        rf = RequestFactory()
+        self.assertEqual(_get_ip(rf.get('/', HTTP_X_REAL_IP='203.0.113.7')), '203.0.113.7')
+        self.assertEqual(_get_ip(rf.get('/')), '127.0.0.1')  # direct hit (tests, locust) falls back
+
+
+@override_settings(
+    RATELIMIT_ENABLE=False,
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class DashboardCountsCacheTests(RecordTestMixin, APITestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self._setup_base()
+
+    def _counts(self, user):
+        self.client.force_authenticate(user=user)
+        resp = self.client.get('/api/records/dashboard-counts/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        return resp.data
+
+    def test_faculty_counts_refresh_right_after_create(self):
+        self.assertEqual(self._counts(self.faculty)['certifications'], 0)
+        resp = self.client.post('/api/records/certifications/', {
+            'school': self.school.pk, 'date': '2025-01-01', 'name': 'N',
+            'title_of_course': 'C', 'agency': 'A', 'person_type': 'faculty',
+        })
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self._counts(self.faculty)['certifications'], 1)
+
+    def test_faculty_counts_only_their_own_certifications(self):
+        Certification.objects.create(
+            school=self.school, date=date(2025, 1, 1), name="Colleague",
+            title_of_course="C", agency="A", created_by=self.admin_user,
+        )
+        self.assertEqual(self._counts(self.faculty)['certifications'], 0)
+        self.assertEqual(self._counts(self.admin_user)['certifications'], 1)
+
+    def test_master_query_count_does_not_grow_with_schools(self):
+        for i in range(10):
+            School.objects.create(campus=self.campus, name=f"S{i}", code=f"S{i}")
+        self.client.force_authenticate(user=self.master)
+        # 1 school-id lookup + 7 grouped counts; was 7 per school (84 here)
+        with self.assertNumQueries(8):
+            self.client.get('/api/records/dashboard-counts/')

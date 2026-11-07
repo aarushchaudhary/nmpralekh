@@ -24,7 +24,7 @@ api.interceptors.request.use(config => {
     return config
 })
 
-let isRefreshing = false
+let refreshPromise = null
 
 api.interceptors.response.use(
     response => response,
@@ -57,18 +57,14 @@ api.interceptors.response.use(
         if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
             original._retry = true
 
-            if (isRefreshing) {
-                window.location.href = '/login'
-                return Promise.reject(error)
-            }
-
-            isRefreshing = true
+            // Parallel 401s all wait on the same refresh instead of each kicking to /login
+            refreshPromise ??= axios
+                .post(`${baseURL}/auth/refresh/`, {}, { withCredentials: true })
+                .finally(() => { refreshPromise = null })
             try {
-                await axios.post(`${baseURL}/auth/refresh/`, {}, { withCredentials: true })
-                isRefreshing = false
+                await refreshPromise
                 return api(original)
             } catch {
-                isRefreshing = false
                 window.location.href = '/login'
                 return Promise.reject(error)
             }

@@ -5,6 +5,7 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.cell import WriteOnlyCell
 from celery.result import AsyncResult
 from django.conf import settings
+from django.db import transaction
 from django.core.cache import cache
 from django.http import HttpResponse, FileResponse
 from django.utils.decorators import method_decorator
@@ -16,13 +17,14 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework import serializers
 
-from apps.accounts.permissions import RolePermission, IsAnyRole
-from apps.schools.utils import get_user_school_ids
+from apps.accounts.permissions import RolePermission
+from apps.schools.utils import get_user_school_ids, scope_to_faculty
 from apps.records.models import (
     SchoolActivity, StudentActivity,
     FacultyFDPWorkshopGL, FacultyPublication,
     Patent, Certification, PlacementActivity,
 )
+from apps.export.tasks import append_safe_row
 
 
 def append_styled_headers(ws, headers):
@@ -39,10 +41,10 @@ def append_styled_headers(ws, headers):
 
 def get_scoped_queryset(model, user):
     school_ids = get_user_school_ids(user)
-    return model.objects.filter(
+    return scope_to_faculty(model.objects.filter(
         school_id__in=school_ids,
         is_deleted=False
-    ).select_related('school')
+    ).select_related('school'), user)
 
 
 def validate_export_params(school_id, date_from, date_to):
@@ -106,7 +108,7 @@ class ExportSchoolActivitiesView(APIView):
 
         queryset = apply_filters(get_scoped_queryset(SchoolActivity, request.user))
         for act in queryset.iterator():
-            ws.append([
+            append_safe_row(ws, [
                 act.school.name,
                 act.name,
                 str(act.date),
@@ -141,7 +143,7 @@ class ExportStudentActivitiesView(APIView):
 
         queryset = apply_filters(get_scoped_queryset(StudentActivity, request.user))
         for act in queryset.iterator():
-            ws.append([
+            append_safe_row(ws, [
                 act.school.name,
                 act.name,
                 str(act.date),
@@ -177,7 +179,7 @@ class ExportFDPView(APIView):
 
         queryset = apply_filters(get_scoped_queryset(FacultyFDPWorkshopGL, request.user))
         for fdp in queryset.iterator():
-            ws.append([
+            append_safe_row(ws, [
                 fdp.school.name,
                 fdp.faculty_name,
                 str(fdp.date_start),
@@ -216,7 +218,7 @@ class ExportPublicationsView(APIView):
 
         queryset = apply_filters(get_scoped_queryset(FacultyPublication, request.user)).prefetch_related('authors')
         for pub in queryset.iterator(chunk_size=2000):
-            ws.append([
+            append_safe_row(ws, [
                 pub.school.name,
                 pub.author_name,
                 ", ".join(a.name for a in pub.authors.all()),
@@ -257,7 +259,7 @@ class ExportPatentsView(APIView):
 
         queryset = apply_filters(get_scoped_queryset(Patent, request.user)).prefetch_related('applicants')
         for patent in queryset.iterator(chunk_size=2000):
-            ws.append([
+            append_safe_row(ws, [
                 patent.school.name,
                 patent.applicant_name,
                 ", ".join(a.name for a in patent.applicants.all()),
@@ -297,7 +299,7 @@ class ExportCertificationsView(APIView):
 
         queryset = apply_filters(get_scoped_queryset(Certification, request.user))
         for cert in queryset.iterator():
-            ws.append([
+            append_safe_row(ws, [
                 cert.school.name,
                 str(cert.date),
                 cert.name,
@@ -335,7 +337,7 @@ class ExportPlacementsView(APIView):
 
         queryset = apply_filters(get_scoped_queryset(PlacementActivity, request.user))
         for placement in queryset.iterator():
-            ws.append([
+            append_safe_row(ws, [
                 placement.school.name,
                 placement.name,
                 str(placement.date),
@@ -362,7 +364,7 @@ class ExportAllView(APIView):
     def get(self, request):
         school_ids = list(get_user_school_ids(request.user))
 
-        wb, total_records = build_campus_workbook(school_ids)
+        wb, total_records = build_campus_workbook(school_ids, user=request.user)
 
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -378,7 +380,6 @@ from apps.export.tasks import (
     generate_nightly_exports,
     generate_manual_export
 )
-from apps.accounts.permissions import RolePermission, IsAnyRole
 
 
 from rest_framework import generics, serializers as drf_serializers
@@ -545,7 +546,6 @@ class ExportTaskStatusView(APIView):
 # MIS COORDINATOR EXPORT
 # ─────────────────────────────────────────────
 import json as json_module
-from apps.accounts.permissions import RolePermission, IsAnyRole
 from apps.records.serializers import (
     SchoolActivitySerializer,
     StudentActivitySerializer,
@@ -738,7 +738,7 @@ class CoordinatorExportView(APIView):
             # .iterator() prevents Django from loading all 5,000 rows into memory at once
             for record in mod['qs'][:5000].iterator(chunk_size=2000):
                 try:
-                    ws.append(mod['row_fn'](record))
+                    append_safe_row(ws, mod['row_fn'](record))
                 except Exception:
                     continue
 
@@ -766,7 +766,6 @@ class CoordinatorExportView(APIView):
 
 from .models import MISDataRequest
 from .serializers import MISDataRequestSerializer
-from apps.accounts.permissions import RolePermission, IsAnyRole
 
 class MISDataRequestListCreateView(generics.ListCreateAPIView):
     serializer_class = MISDataRequestSerializer
@@ -799,6 +798,11 @@ from django.utils import timezone
 from .models import MISReport
 from .serializers import MISReportSerializer
 
+def _with_author(qs):
+    # MISReportSerializer and the report exports read the author's campus and schools on every row
+    return qs.select_related('created_by__campus').prefetch_related('created_by__school_mappings__school')
+
+
 class MISReportListCreateView(generics.ListCreateAPIView):
     serializer_class = MISReportSerializer
     pagination_class = StandardPagination
@@ -811,7 +815,7 @@ class MISReportListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         if not self.request.user.is_authenticated:
             return MISReport.objects.none()
-        return MISReport.objects.filter(created_by=self.request.user)
+        return _with_author(MISReport.objects.filter(created_by=self.request.user))
 
 class MISReportSendAdminView(APIView):
     permission_classes = [RolePermission(['mis_coordinator'])]
@@ -891,9 +895,12 @@ class ReceivedMISReportsView(generics.ListAPIView):
     pagination_class = StandardPagination
 
     def get_permissions(self):
-        return [IsAnyRole()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
+        return _with_author(self._received_reports())
+
+    def _received_reports(self):
         user = self.request.user
         if not user.is_authenticated:
             return MISReport.objects.none()
@@ -932,7 +939,6 @@ class ReceivedMISReportsView(generics.ListAPIView):
 # ─────────────────────────────────────────────
 from .models import ChronicleDataRequest
 from .serializers import ChronicleDataRequestSerializer
-from apps.accounts.permissions import RolePermission, IsAnyRole
 from apps.accounts.models import User
 
 
@@ -951,29 +957,26 @@ class ChronicleDataRequestListCreateView(generics.ListCreateAPIView):
         ).select_related('created_by')
 
     def perform_create(self, serializer):
-        chronicle_request = serializer.save(created_by=self.request.user)
+        # all-or-nothing: a failure must not leave some campuses requested and others not
+        with transaction.atomic():
+            chronicle_request = serializer.save(created_by=self.request.user)
 
-        # Fan out: for each accumulator, create MISDataRequests to all their coordinators
-        accumulators = User.objects.filter(
-            role='mis_accumulator', is_active=True
-        ).select_related('campus')
-
-        for acc in accumulators:
-            if not acc.campus:
-                continue
-            coordinators = User.objects.filter(
-                role='mis_coordinator',
-                is_active=True,
-                campus=acc.campus
+            # Fan out: for each accumulator, create MISDataRequests to all their coordinators
+            accumulators = User.objects.filter(
+                role='mis_accumulator', is_active=True, campus__isnull=False
             )
-            for coord in coordinators:
-                MISDataRequest.objects.create(
+            coordinators = User.objects.filter(role='mis_coordinator', is_active=True)
+            MISDataRequest.objects.bulk_create([
+                MISDataRequest(
                     accumulator=acc,
                     coordinator=coord,
                     date_from=chronicle_request.date_from,
                     date_to=chronicle_request.date_to,
                     chronicle_request=chronicle_request,
                 )
+                for acc in accumulators
+                for coord in coordinators.filter(campus_id=acc.campus_id)
+            ])
 
 
 class ChronicleDashboardView(APIView):
@@ -1205,17 +1208,18 @@ class AccumulatorExportView(APIView):
         if export_type == 'campus_data':
             reports = MISReport.objects.filter(
                 created_by=user
-            ).select_related('created_by').order_by('date_from')
+            ).order_by('date_from')
         else:
             reports = MISReport.objects.filter(
                 sent_to_accumulator=True,
                 created_by__campus=user.campus
-            ).select_related('created_by').order_by('date_from')
+            ).order_by('date_from')
 
         if date_from:
             reports = reports.filter(date_to__gte=date_from)
         if date_to:
             reports = reports.filter(date_from__lte=date_to)
+        reports = _with_author(reports)
 
         if fmt == 'json':
             return self._export_json(reports)
@@ -1228,16 +1232,16 @@ class AccumulatorExportView(APIView):
             'Author', 'School/Campus', 'Report Title',
             'Period From', 'Period To', 'Date', 'Content'
         ])
-        for report in reports[:5000].iterator():
+        for report in reports[:5000].iterator(chunk_size=2000):
             school = self._get_school_name(report.created_by)
-            ws.append([
+            append_safe_row(ws, [
                 report.created_by.full_name,
                 school,
                 report.name or 'MIS Report',
                 str(report.date_from),
                 str(report.date_to),
                 str(report.created_at.date()),
-                report.data_content[:500],
+                report.data_content[:32767],  # Excel's hard per-cell limit
             ])
 
         response = HttpResponse(
@@ -1291,12 +1295,13 @@ class ChronicleExportView(APIView):
 
         reports = MISReport.objects.filter(
             sent_to_chronicle_master=True
-        ).select_related('created_by').order_by('date_from')
+        ).order_by('date_from')
 
         if date_from:
             reports = reports.filter(date_to__gte=date_from)
         if date_to:
             reports = reports.filter(date_from__lte=date_to)
+        reports = _with_author(reports)
 
         if fmt == 'json':
             return self._export_json(reports)
@@ -1309,16 +1314,16 @@ class ChronicleExportView(APIView):
             'Accumulator', 'Campus', 'Report Title',
             'Period From', 'Period To', 'Submitted At', 'Content'
         ])
-        for report in reports[:5000].iterator():
+        for report in reports[:5000].iterator(chunk_size=2000):
             campus = report.created_by.campus.name if report.created_by.campus else 'Unknown'
-            ws.append([
+            append_safe_row(ws, [
                 report.created_by.full_name,
                 campus,
                 report.name or 'MIS Report',
                 str(report.date_from),
                 str(report.date_to),
                 str(report.sent_to_chronicle_master_at or ''),
-                report.data_content[:500],
+                report.data_content[:32767],  # Excel's hard per-cell limit
             ])
 
         response = HttpResponse(

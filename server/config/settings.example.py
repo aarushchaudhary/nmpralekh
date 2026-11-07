@@ -34,7 +34,6 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_filters',
-    'sslserver',
     'drf_spectacular',
 
     # Local
@@ -52,6 +51,9 @@ INSTALLED_APPS = [
 # Rate limit settings
 RATELIMIT_USE_CACHE = 'default'
 RATELIMIT_ENABLE    = True
+# Behind nginx REMOTE_ADDR is always 127.0.0.1, so every user would share one bucket.
+# X-Real-IP is set by nginx and can't be spoofed because gunicorn binds to 127.0.0.1.
+RATELIMIT_IP_META_KEY = lambda r: r.META.get('HTTP_X_REAL_IP') or r.META['REMOTE_ADDR']
 
 
 # -----------------------------------------------------------------------------
@@ -317,8 +319,8 @@ if not DEBUG:
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 import sys
+# Tests run on Postgres (Django creates and drops test_<DB_NAME>). They connect
+# straight to port 5432: pgBouncer only routes the main database, and its
+# transaction pooling breaks test-database setup.
 if 'test' in sys.argv:
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    DATABASES['default']['PORT'] = '5432'

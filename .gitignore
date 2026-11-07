@@ -80,4 +80,5 @@ graphify-out/.graphify_cached.json
 graphify-out/.graphify_uncached.txt
 graphify-out/.graphify_analysis.json
 graphify-out/.graphify_chunk_*.json
-graphify-out/.needs_update
+graphify-out/.needs_update# Graphify extraction cache (rebuildable, ~10 MB)
+graphify-out/cache/

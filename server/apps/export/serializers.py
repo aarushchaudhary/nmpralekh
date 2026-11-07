@@ -1,18 +1,6 @@
 from rest_framework import serializers
-from .models import GeneratedExport, MISDataRequest, ChronicleDataRequest
+from .models import MISDataRequest, ChronicleDataRequest
 from apps.accounts.serializers import UserVisibilitySerializer
-
-class GeneratedExportSerializer(serializers.ModelSerializer):
-    campus_name = serializers.CharField(source='campus.name', read_only=True)
-    generated_by_name = serializers.CharField(source='generated_by.full_name', read_only=True)
-
-    class Meta:
-        model = GeneratedExport
-        fields = [
-            'id', 'export_type', 'campus_name', 'filename',
-            'generated_by_name', 'generated_at', 'file_size_kb',
-            'date_range_from', 'date_range_to', 'record_count'
-        ]
 
 class MISDataRequestSerializer(serializers.ModelSerializer):
     accumulator_name = serializers.CharField(source='accumulator.full_name', read_only=True)

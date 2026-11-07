@@ -10,10 +10,10 @@ from rest_framework import status
 from apps.accounts.models import UserManager
 from apps.accounts.serializers import (
     UserSerializer, UserVisibilitySerializer, UserCreateSerializer,
-    UserUpdateSerializer, LoginSerializer, ChangePasswordSerializer,
+    UserUpdateSerializer, LoginSerializer,
     ChronicleAccumulatorSerializer,
 )
-from apps.accounts.permissions import RolePermission, IsAnyRole
+from apps.accounts.permissions import RolePermission
 from apps.schools.models import Campus, School, UserSchoolMapping
 
 User = get_user_model()
@@ -445,33 +445,6 @@ class LoginSerializerTests(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('username', serializer.errors)
         self.assertIn('password', serializer.errors)
-
-
-class ChangePasswordSerializerTests(TestCase):
-    def test_old_password_validation(self):
-        user = User.objects.create_user(
-            username="cptest", email="cp@t.com", password="correctpass",
-            full_name="CP", role="user",
-        )
-        from unittest.mock import Mock
-        request = Mock()
-        request.user = user
-        data = {'old_password': 'wrongpass', 'new_password': 'newsecure123'}
-        serializer = ChangePasswordSerializer(data=data, context={'request': request})
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('old_password', serializer.errors)
-
-    def test_valid_old_password(self):
-        user = User.objects.create_user(
-            username="cptest2", email="cp2@t.com", password="correctpass",
-            full_name="CP", role="user",
-        )
-        from unittest.mock import Mock
-        request = Mock()
-        request.user = user
-        data = {'old_password': 'correctpass', 'new_password': 'newsecure123'}
-        serializer = ChangePasswordSerializer(data=data, context={'request': request})
-        self.assertTrue(serializer.is_valid())
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

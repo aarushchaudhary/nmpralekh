@@ -47,7 +47,7 @@ class SchoolActivitySerializer(serializers.ModelSerializer):
             'details', 'is_school_wide', 'collaborations',
             'pending_audit', 'created_by', 'created_by_is_active', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['pending_audit', 'created_by', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
@@ -79,7 +79,14 @@ class StudentActivitySerializer(serializers.ModelSerializer):
             'club', 'club_name', 'conducted_by', 'activity_type',
             'collaborations', 'pending_audit', 'created_by', 'created_by_is_active', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['pending_audit', 'created_by', 'created_at', 'updated_at']
+
+    def validate(self, data):
+        club   = data.get('club')
+        school = data.get('school') or getattr(self.instance, 'school', None)
+        if club and school and club.school_id != school.id:
+            raise serializers.ValidationError({'club': 'Club must belong to the same school.'})
+        return data
 
     def create(self, validated_data):
         # Auto-fill club_name from club FK if provided
@@ -108,7 +115,7 @@ class FacultyFDPWorkshopGLSerializer(serializers.ModelSerializer):
             'type', 'organizing_body',
             'pending_audit', 'created_by', 'created_by_is_active', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['pending_audit', 'created_by', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
@@ -142,7 +149,7 @@ class FacultyPublicationSerializer(serializers.ModelSerializer):
             'pending_audit', 'created_by', 'created_by_name', 'created_by_is_active',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['pending_audit', 'created_by', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
@@ -176,7 +183,7 @@ class PatentSerializer(serializers.ModelSerializer):
             'is_own_work', 'applicants',
             'pending_audit', 'created_by', 'created_by_name', 'created_by_is_active', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['pending_audit', 'created_by', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
@@ -198,7 +205,7 @@ class CertificationSerializer(serializers.ModelSerializer):
             'credly_or_proof_link', 'person_type',
             'pending_audit', 'created_by', 'created_by_name', 'created_by_is_active', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['pending_audit', 'created_by', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
@@ -216,7 +223,7 @@ class PlacementActivitySerializer(serializers.ModelSerializer):
             'details', 'company_name', 'placecom_name',
             'pending_audit', 'created_by', 'created_by_is_active', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['pending_audit', 'created_by', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user

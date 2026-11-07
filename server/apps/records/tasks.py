@@ -1,48 +1,31 @@
 import os
 import subprocess
 import tempfile
-from datetime import datetime
 from celery import shared_task
 from django.conf import settings
+from django.utils import timezone
 from .models import BackupConfiguration
 
 
 @shared_task
-def perform_db_backup(scope=None, date_from=None, date_to=None):
+def perform_db_backup(scope=None, **_ignored):
     """
-    Perform a PostgreSQL backup.
-    scope: 'full' or 'date_range'
-    date_from / date_to: used when scope='date_range' (YYYY-MM-DD strings)
+    Perform a full PostgreSQL backup (pg_dump cannot dump by date range).
+    scope=None means an automated run, which respects BackupConfiguration.is_active.
+    _ignored: date_from/date_to still sent by older queued or scheduled tasks.
     """
-    import re
-    date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
-
-    # Guard against invalid inputs when called directly (bypassing the view)
-    if scope is not None and scope not in ('full', 'date_range'):
-        return f"Invalid scope: {scope}"
-    if date_from and not date_pattern.match(str(date_from)):
-        return f"Invalid date_from: {date_from}"
-    if date_to and not date_pattern.match(str(date_to)):
-        return f"Invalid date_to: {date_to}"
-
     config = BackupConfiguration.objects.first()
 
     # For automated runs, check if active
-    if scope is None:
-        if not config or not config.is_active:
-            return "Automated backups disabled."
-        scope = 'full'
+    if scope is None and (not config or not config.is_active):
+        return "Automated backups disabled."
 
     # Create backup directory
     backup_dir = os.path.join(settings.BASE_DIR, 'backups')
     os.makedirs(backup_dir, exist_ok=True)
 
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    scope_label = scope
-    if scope == 'date_range' and date_from and date_to:
-        scope_label = f"range_{date_from}_to_{date_to}"
-
-    filename = f"nmpralekh_backup_{scope_label}_{timestamp}.dump"
+    timestamp = timezone.localtime().strftime('%Y%m%d_%H%M%S')
+    filename = f"nmpralekh_backup_full_{timestamp}.dump"
     filepath = os.path.join(backup_dir, filename)
 
     # Database connection details
@@ -77,16 +60,14 @@ def perform_db_backup(scope=None, date_from=None, date_to=None):
         env.pop('PGPASSWORD', None)          # ensure legacy variable is absent
         env['PGPASSFILE'] = pgpass_path
 
+        # check=True raises on failure so Celery marks the task FAILED instead of SUCCESS
         subprocess.run(command, env=env, check=True)
 
         # Update last run timestamp
         if config:
-            config.last_run = datetime.now()
+            config.last_run = timezone.now()
             config.save()
         return f"Backup created successfully: {filename}"
-
-    except subprocess.CalledProcessError as e:
-        return f"Backup failed: {str(e)}"
 
     finally:
         # Always remove the temporary directory and credentials file from disk

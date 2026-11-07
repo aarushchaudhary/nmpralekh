@@ -1094,12 +1094,11 @@ The project ships with a Locust test script at `server/locustfile.py` that simul
 
 ### Install Locust
 
-Locust is **not** in `requirements.txt` (it is a dev-only tool). Install it separately inside the virtualenv:
+Locust is included in `requirements.txt`, so it is already installed in the virtualenv:
 
 ```bash
 cd server
 source venv/bin/activate
-pip install locust
 ```
 
 ### Set up tokens
@@ -1195,7 +1194,7 @@ locust -f locustfile.py \
 | Failure rate | < 1 % |
 | Gunicorn worker CPU | < 80 % sustained |
 
-> **Note:** The test script disables SSL verification (`urllib3.disable_warnings`) because the dev server uses a self-signed certificate via `django-sslserver`. Remove that line when testing against a properly signed staging environment.
+> **Note:** The test script disables SSL verification (`urllib3.disable_warnings`) because the dev server uses a self-signed certificate. Remove that line when testing against a properly signed staging environment.
 
 ---
 

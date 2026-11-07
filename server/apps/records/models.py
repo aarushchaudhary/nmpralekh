@@ -424,10 +424,6 @@ class BackupConfiguration(models.Model):
         (5, 'Saturday'),
         (6, 'Sunday'),
     ]
-    BACKUP_SCOPE_CHOICES = [
-        ('full', 'From Beginning (Full Backup)'),
-        ('date_range', 'Date Range'),
-    ]
 
     # Automated backup settings
     is_active = models.BooleanField(default=True)
@@ -440,14 +436,6 @@ class BackupConfiguration(models.Model):
         help_text="Day of week for weekly backups"
     )
 
-    # Manual backup scope
-    backup_scope = models.CharField(
-        max_length=15, choices=BACKUP_SCOPE_CHOICES, default='full',
-        help_text="Scope for manual backups"
-    )
-    date_from = models.DateField(null=True, blank=True)
-    date_to = models.DateField(null=True, blank=True)
-
     last_run = models.DateTimeField(null=True, blank=True)
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -456,4 +444,4 @@ class BackupConfiguration(models.Model):
         verbose_name = "Backup Configuration"
 
     def __str__(self):
-        return f"Backup Config ({self.get_schedule_type_display()}, Scope: {self.get_backup_scope_display()})"
+        return f"Backup Config ({self.get_schedule_type_display()})"

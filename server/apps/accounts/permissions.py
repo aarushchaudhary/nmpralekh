@@ -18,11 +18,3 @@ def RolePermission(allowed_roles, read_only_roles=None, exclude_service_admin=Fa
                 return request.method in SAFE_METHODS
             return False
     return Perm
-
-class IsAnyRole(BasePermission):
-    """Any authenticated user regardless of role"""
-    def has_permission(self, request, view):
-        return bool(
-            request.user and
-            request.user.is_authenticated
-        )

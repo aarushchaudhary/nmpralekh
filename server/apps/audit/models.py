@@ -15,8 +15,8 @@ class AuditRequest(models.Model):
         ('rejected', 'Rejected'),
     ]
 
+    # Only the record tables that go through the approve/reject flow
     TABLE_CHOICES = [
-        ('exams_conducted',                'Exams Conducted'),
         ('school_activities',              'School Activities'),
         ('student_activities',             'Student Activities'),
         ('faculty_fdp_workshop_gl',        'Faculty FDP / Workshop / GL'),
@@ -24,13 +24,6 @@ class AuditRequest(models.Model):
         ('patents',                        'Patents'),
         ('certifications',                 'Certifications'),
         ('placement_activities',           'Placement Activities'),
-        ('courses',                        'Courses'),
-        ('academic_years',                 'Academic Years'),
-        ('semesters',                      'Semesters'),
-        ('subjects',                       'Subjects'),
-        ('class_groups',                   'Class Groups'),
-        ('exam_groups',                    'Exam Groups'),
-        ('clubs',                          'Clubs'),
     ]
 
     table_name   = models.CharField(max_length=100, choices=TABLE_CHOICES)

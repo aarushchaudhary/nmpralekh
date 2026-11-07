@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import PageHeader from '../../components/ui/PageHeader'
 import Button     from '../../components/ui/Button'
-import FormInput  from '../../components/ui/FormInput'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import api        from '../../api/axios'
 
@@ -21,7 +20,6 @@ export default function BackupSettings() {
   const [triggering, setTriggering] = useState(false)
   const [message,    setMessage]    = useState(null)
   const [lastRun,    setLastRun]    = useState(null)
-  const [dateErrors, setDateErrors] = useState({})
 
   // Automated backup config
   const [autoConfig, setAutoConfig] = useState({
@@ -29,22 +27,6 @@ export default function BackupSettings() {
     schedule_type: 'weekly',
     schedule_day: 6,
   })
-
-  // Manual backup scope
-  const [manualScope, setManualScope] = useState('full')
-  const [dateFrom,    setDateFrom]    = useState('')
-  const [dateTo,      setDateTo]      = useState('')
-
-  const validateDates = () => {
-    if (manualScope !== 'date_range') return true
-    const e = {}
-    if (!dateFrom) e.dateFrom = 'Start date is required'
-    if (!dateTo)   e.dateTo   = 'End date is required'
-    if (dateFrom && dateTo && dateTo < dateFrom)
-      e.dateTo = 'End date cannot be before start date'
-    setDateErrors(e)
-    return !Object.keys(e).length
-  }
 
   const showMessage = (text, type = 'success') => {
     setMessage({ text, type })
@@ -60,9 +42,6 @@ export default function BackupSettings() {
           schedule_type: d.schedule_type || 'weekly',
           schedule_day:  d.schedule_day ?? 6,
         })
-        setManualScope(d.backup_scope || 'full')
-        setDateFrom(d.date_from || '')
-        setDateTo(d.date_to || '')
         setLastRun(d.last_run)
       })
       .catch(() => showMessage('Failed to load backup config', 'error'))
@@ -79,16 +58,12 @@ export default function BackupSettings() {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault()
-    if (!validateDates()) return
     setSaving(true)
     try {
       await api.put('/records/backup-config/', {
         ...autoConfig,
         schedule_day: autoConfig.schedule_type === 'weekly'
           ? Number(autoConfig.schedule_day) : null,
-        backup_scope: manualScope,
-        date_from: manualScope === 'date_range' ? dateFrom : null,
-        date_to:   manualScope === 'date_range' ? dateTo   : null,
       })
       showMessage('Settings updated successfully')
     } catch {
@@ -99,14 +74,9 @@ export default function BackupSettings() {
   }
 
   const handleTriggerBackup = async () => {
-    if (!validateDates()) return
     setTriggering(true)
     try {
-      await api.post('/records/backup-manual/', {
-        backup_scope: manualScope,
-        date_from: manualScope === 'date_range' ? dateFrom : null,
-        date_to:   manualScope === 'date_range' ? dateTo   : null,
-      })
+      await api.post('/records/backup-manual/', {})
       showMessage('Backup task queued successfully! Check server logs.')
     } catch {
       showMessage('Failed to queue backup', 'error')
@@ -209,61 +179,6 @@ export default function BackupSettings() {
             <h3 className="text-lg font-medium mb-4">Manual Backup</h3>
             <div className="space-y-4">
 
-              {/* Scope selector */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Backup Scope
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="backup_scope"
-                      value="full"
-                      checked={manualScope === 'full'}
-                      onChange={() => setManualScope('full')}
-                      className="h-4 w-4 text-indigo-600"
-                    />
-                    <span className="text-sm text-gray-800">
-                      From Beginning (Full Backup)
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="backup_scope"
-                      value="date_range"
-                      checked={manualScope === 'date_range'}
-                      onChange={() => setManualScope('date_range')}
-                      className="h-4 w-4 text-indigo-600"
-                    />
-                    <span className="text-sm text-gray-800">Date Range</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Date range fields */}
-              {manualScope === 'date_range' && (
-                <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-lg">
-                  <FormInput
-                    label="From"
-                    name="date_from"
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => { setDateFrom(e.target.value); setDateErrors({}) }}
-                    error={dateErrors.dateFrom}
-                  />
-                  <FormInput
-                    label="To"
-                    name="date_to"
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => { setDateTo(e.target.value); setDateErrors({}) }}
-                    error={dateErrors.dateTo}
-                  />
-                </div>
-              )}
-
               {/* Status */}
               <div className="pt-2 border-t border-gray-100">
                 <p className="text-sm text-gray-600">Last Backup Run:</p>
@@ -281,7 +196,7 @@ export default function BackupSettings() {
                 {triggering ? 'Queuing...' : 'Trigger Manual Backup Now'}
               </Button>
               <p className="text-xs text-gray-500">
-                Creates a compressed database dump in the server's /backups directory.
+                Creates a full compressed database dump in the server's /backups directory.
               </p>
             </div>
           </div>
