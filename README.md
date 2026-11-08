@@ -189,36 +189,39 @@ There is only one Service Admin and one Chronicle Master; the database enforces 
 Records are never changed or deleted directly. The original stays as it is until a reviewer decides.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'actorBkg':'#ECEFF1','actorBorder':'#5A5A5A','actorTextColor':'#1F1F1F','actorLineColor':'#8A8A8A','signalColor':'#2A2A2A','signalTextColor':'#1F1F1F','sequenceNumberColor':'#FFFFFF','labelBoxBkgColor':'#FFFFFF','labelBoxBorderColor':'#5A5A5A','labelTextColor':'#1F1F1F','loopTextColor':'#1F1F1F','noteBkgColor':'#FFF59D','noteBorderColor':'#F9A825','noteTextColor':'#1F1F1F'}}}%%
 sequenceDiagram
     autonumber
-    actor U as Admin / Faculty
+    participant U as Admin / Faculty
     participant S as Server
     participant DB as PostgreSQL
-    actor R as Delete Auth reviewer
+    participant R as Delete Auth reviewer
 
-    rect rgb(227, 242, 253)
-    U->>S: Edit or delete a record
-    S->>DB: Save a snapshot of the current row
-    S->>DB: Create AuditRequest (pending) and mark the record
-    Note over S,DB: The record itself is unchanged
-    end
-
-    rect rgb(255, 248, 225)
-    R->>S: Open pending requests
-    S-->>R: Field-by-field difference
-    end
-
-    alt Approved
-        rect rgb(232, 245, 233)
-        R->>S: Approve
-        S->>DB: Apply the change in one transaction
-        S->>DB: Clear the mark, request = approved
+    rect rgb(255, 255, 255)
+        rect rgb(227, 242, 253)
+        U->>S: Edit or delete a record
+        S->>DB: Save a snapshot of the current row
+        S->>DB: Create AuditRequest (pending) and mark the record
+        Note over S,DB: The record itself is unchanged
         end
-    else Rejected
-        rect rgb(253, 236, 236)
-        R->>S: Reject
-        S->>DB: Record stays as it was
-        S->>DB: Clear the mark, request = rejected
+
+        rect rgb(255, 248, 225)
+        R->>S: Open pending requests
+        S-->>R: Field-by-field difference
+        end
+
+        alt Approved
+            rect rgb(232, 245, 233)
+            R->>S: Approve
+            S->>DB: Apply the change in one transaction
+            S->>DB: Clear the mark, request = approved
+            end
+        else Rejected
+            rect rgb(253, 236, 236)
+            R->>S: Reject
+            S->>DB: Record stays as it was
+            S->>DB: Clear the mark, request = rejected
+            end
         end
     end
 ```
@@ -250,6 +253,7 @@ Each report records when it was sent to each recipient. A retried or double-clic
 Large exports run in Celery so they never block the web server.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'actorBkg':'#ECEFF1','actorBorder':'#5A5A5A','actorTextColor':'#1F1F1F','actorLineColor':'#8A8A8A','signalColor':'#2A2A2A','signalTextColor':'#1F1F1F','sequenceNumberColor':'#FFFFFF','labelBoxBkgColor':'#FFFFFF','labelBoxBorderColor':'#5A5A5A','labelTextColor':'#1F1F1F','loopTextColor':'#1F1F1F','noteBkgColor':'#FFF59D','noteBorderColor':'#F9A825','noteTextColor':'#1F1F1F'}}}%%
 sequenceDiagram
     autonumber
     participant B as Browser
@@ -257,22 +261,24 @@ sequenceDiagram
     participant Q as Redis queue
     participant W as Celery worker
 
-    rect rgb(227, 242, 253)
-    B->>D: POST /api/export/all/
-    D->>Q: queue export job
-    D-->>B: 202 { task_id }
-    end
-    rect rgb(243, 229, 245)
-    Q->>W: job
-    W->>W: build the Excel file (kept for 1 day)
-    end
-    rect rgb(232, 245, 233)
-    loop every 1.5 s, up to 5 min
-        B->>D: GET /api/export/jobs/{task_id}/
-        D-->>B: processing / ready / failed
-    end
-    B->>D: GET /api/export/jobs/{task_id}/download/
-    D-->>B: MIS_Dashboard.xlsx (only to the user who started it)
+    rect rgb(255, 255, 255)
+        rect rgb(227, 242, 253)
+        B->>D: POST /api/export/all/
+        D->>Q: queue export job
+        D-->>B: 202 { task_id }
+        end
+        rect rgb(243, 229, 245)
+        Q->>W: job
+        W->>W: build the Excel file (kept for 1 day)
+        end
+        rect rgb(232, 245, 233)
+        loop every 1.5 s, up to 5 min
+            B->>D: GET /api/export/jobs/{task_id}/
+            D-->>B: processing / ready / failed
+        end
+        B->>D: GET /api/export/jobs/{task_id}/download/
+        D-->>B: MIS_Dashboard.xlsx (only to the user who started it)
+        end
     end
 ```
 
@@ -281,23 +287,26 @@ sequenceDiagram
 Both clients use the same cookies: a 30-minute **access token** and a 6-hour **refresh token** that rotates on every use.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'actorBkg':'#ECEFF1','actorBorder':'#5A5A5A','actorTextColor':'#1F1F1F','actorLineColor':'#8A8A8A','signalColor':'#2A2A2A','signalTextColor':'#1F1F1F','sequenceNumberColor':'#FFFFFF','labelBoxBkgColor':'#FFFFFF','labelBoxBorderColor':'#5A5A5A','labelTextColor':'#1F1F1F','loopTextColor':'#1F1F1F','noteBkgColor':'#FFF59D','noteBorderColor':'#F9A825','noteTextColor':'#1F1F1F'}}}%%
 sequenceDiagram
     participant C as Web or Android client
     participant A as /api/auth/
 
-    rect rgb(232, 245, 233)
-    C->>A: POST login/ (username, password)
-    A-->>C: httpOnly cookies: access_token, refresh_token
-    end
-    rect rgb(255, 243, 224)
-    C->>A: any request after 30 min → 401
-    C->>A: POST refresh/ (once, even if many requests failed)
-    A-->>C: new access + new refresh token (old one blacklisted)
-    C->>A: retry the original request
-    end
-    rect rgb(253, 236, 236)
-    C->>A: POST logout/
-    A-->>C: refresh token blacklisted, cookies cleared
+    rect rgb(255, 255, 255)
+        rect rgb(232, 245, 233)
+        C->>A: POST login/ (username, password)
+        A-->>C: httpOnly cookies: access_token, refresh_token
+        end
+        rect rgb(255, 243, 224)
+        C->>A: any request after 30 min → 401
+        C->>A: POST refresh/ (once, even if many requests failed)
+        A-->>C: new access + new refresh token (old one blacklisted)
+        C->>A: retry the original request
+        end
+        rect rgb(253, 236, 236)
+        C->>A: POST logout/
+        A-->>C: refresh token blacklisted, cookies cleared
+        end
     end
 ```
 
@@ -379,7 +388,7 @@ nmpralekh/
 │
 ├── graphify-out/                   code knowledge graph
 │   ├── graph.json                  the graph (used by graphify query)
-│   ├── graph.html                  open in a browser to explore it
+│   ├── graph.html                  browsable view, built locally (gitignored)
 │   ├── GRAPH_REPORT.md             architecture summary
 │   └── .graphify_labels.json(.sig) cluster names
 │

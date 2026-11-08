@@ -63,14 +63,12 @@ server/gunicorn.ctl
 # Graphify knowledge graph: commit only what is the same on every machine and costs
 # an LLM run (labels) or a full rebuild to recreate. Everything else is ignored:
 # machine-specific (.graphify_python, manifest.json mtimes, .graphify_root, cost.json run log)
-# or rebuilt by `graphify update .` (pending labels, cache/, dated backups). graph.html is kept
-# so the graph can be browsed straight from the repo.
+# or rebuilt by `graphify update .` (graph.html, pending labels, cache/, dated backups).
 graphify-out/*
 !graphify-out/graph.json
 !graphify-out/GRAPH_REPORT.md
 !graphify-out/.graphify_labels.json
 !graphify-out/.graphify_labels.json.sig
-!graphify-out/graph.html
 
 # Local Claude Code setup (graphify instructions and hooks)
 CLAUDE.md
