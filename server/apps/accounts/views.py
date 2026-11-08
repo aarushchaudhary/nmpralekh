@@ -78,7 +78,11 @@ class LoginView(APIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+    # Logging out only clears the caller's own cookies, so it must always work:
+    # cookie auth would demand a CSRF header (the SPA's logout call sends none) and
+    # would reject an expired access token, leaving the refresh cookie alive.
+    authentication_classes = []
+    permission_classes     = []
     serializer_class = serializers.Serializer
 
     def post(self, request):

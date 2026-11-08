@@ -500,8 +500,27 @@ class LogoutViewTests(APITestCase):
         self.assertIn('detail', resp.data)
 
     def test_logout_unauthenticated(self):
+        # nothing to log out of, but it must still succeed and clear cookies
         resp = self.client.post(self.url)
-        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_logout_with_cookies_and_no_csrf_header_clears_session(self):
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
+        browser = APIClient(enforce_csrf_checks=True)
+        login = browser.post('/api/auth/login/', {'username': 'logoutuser', 'password': 'testpass123'}, format='json')
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+
+        resp = browser.post(self.url)          # no X-CSRFToken, like the web app's logout call
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for name in ('access_token', 'refresh_token'):
+            self.assertEqual(resp.cookies[name].value, '')
+            self.assertEqual(resp.cookies[name]['max-age'], 0)
+        self.assertEqual(BlacklistedToken.objects.count(), 1)
+
+        # the old session can't come back via refresh
+        self.assertEqual(browser.get('/api/auth/me/').status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(browser.post('/api/auth/refresh/').status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 @override_settings(RATELIMIT_ENABLE=False)
