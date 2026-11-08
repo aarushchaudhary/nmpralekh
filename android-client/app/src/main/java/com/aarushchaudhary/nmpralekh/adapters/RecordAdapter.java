@@ -23,8 +23,23 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.ViewHolder
         String getSubtitle(JsonObject record);
         String getBadgeText(JsonObject record);  // return null to hide badge
         String getExtraData(JsonObject record);  // return null to hide extra
-        int getBadgeColor(JsonObject record); // background color resource or 0
-        int getBadgeTextColor(JsonObject record); // text color or 0
+        // what the badge means; the style comes from the brand palette (web Badge.jsx)
+        default BadgeStyle getBadgeStyle(JsonObject record) { return BadgeStyle.GRAY; }
+    }
+
+    /** DARK = done/approved/active, OUTLINE = pending, RED = rejected/deletion, GRAY = neutral category. */
+    public enum BadgeStyle { DARK, OUTLINE, RED, GRAY }
+
+    public static void applyBadgeStyle(TextView badge, BadgeStyle style) {
+        int bg, text;
+        switch (style) {
+            case DARK:    bg = R.drawable.badge_dark;    text = R.color.white;    break;
+            case OUTLINE: bg = R.drawable.badge_outline; text = R.color.gray_700; break;
+            case RED:     bg = R.drawable.badge_red;     text = R.color.red_700;  break;
+            default:      bg = R.drawable.badge_gray;    text = R.color.gray_700; break;
+        }
+        badge.setBackgroundResource(bg);
+        badge.setTextColor(badge.getContext().getColor(text));
     }
 
     public interface OnRecordActionListener {
@@ -72,14 +87,7 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.ViewHolder
         if (badge != null && !badge.isEmpty()) {
             holder.tvBadge.setText(badge);
             holder.tvBadge.setVisibility(View.VISIBLE);
-            int bgColor = binder.getBadgeColor(record);
-            if (bgColor != 0) {
-                holder.tvBadge.getBackground().setTint(bgColor);
-            }
-            int textColor = binder.getBadgeTextColor(record);
-            if (textColor != 0) {
-                holder.tvBadge.setTextColor(textColor);
-            }
+            applyBadgeStyle(holder.tvBadge, binder.getBadgeStyle(record));
         } else {
             holder.tvBadge.setVisibility(View.GONE);
         }

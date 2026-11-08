@@ -41,19 +41,14 @@ public class SchoolActivitiesFragment extends BaseRecordFragment {
                 return jsonStr(record, "school_name") + " · " + jsonStr(record, "date");
             }
             @Override
+            public RecordAdapter.BadgeStyle getBadgeStyle(JsonObject record) {
+                boolean isSchoolWide = record.has("is_school_wide") && !record.get("is_school_wide").isJsonNull() && record.get("is_school_wide").getAsBoolean();
+                return isSchoolWide ? RecordAdapter.BadgeStyle.DARK : RecordAdapter.BadgeStyle.GRAY;
+            }
+            @Override
             public String getBadgeText(JsonObject record) {
                 boolean isSchoolWide = record.has("is_school_wide") && !record.get("is_school_wide").isJsonNull() && record.get("is_school_wide").getAsBoolean();
                 return isSchoolWide ? "Yes" : "No";
-            }
-            @Override
-            public int getBadgeColor(JsonObject record) {
-                boolean isSchoolWide = record.has("is_school_wide") && !record.get("is_school_wide").isJsonNull() && record.get("is_school_wide").getAsBoolean();
-                return isSchoolWide ? 0xFFD1FAE5 : 0xFFF3F4F6; // green : gray
-            }
-            @Override
-            public int getBadgeTextColor(JsonObject record) {
-                boolean isSchoolWide = record.has("is_school_wide") && !record.get("is_school_wide").isJsonNull() && record.get("is_school_wide").getAsBoolean();
-                return isSchoolWide ? 0xFF065F46 : 0xFF4B5563;
             }
             @Override
             public String getExtraData(JsonObject record) {

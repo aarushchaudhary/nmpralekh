@@ -1,93 +1,168 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<!-- Sign in (web LoginPage): red top rule, bar mark, labelled fields, one red primary button -->
+<!-- scrolls so the Sign in button stays reachable while the keyboard is open -->
+<ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
-    android:background="#FFFFFF">
+    android:background="@color/white"
+    android:fillViewport="true"
+    android:fitsSystemWindows="true">
 
-    <!-- Main Content Container -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="32dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.4">
+<androidx.constraintlayout.widget.ConstraintLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
 
-        <!-- Header -->
-        <ImageView
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="16dp"
-            android:src="@drawable/nmpralekh" />
+    <View
+        android:id="@+id/topRule"
+        android:layout_width="0dp"
+        android:layout_height="4dp"
+        android:background="@color/red_600"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="48dp"
-            android:text="NMPralekh"
-            android:textColor="#111827"
-            android:textSize="36sp"
-            android:textStyle="bold" />
-
-        <!-- Username Input -->
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/etUsername"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginBottom="16dp"
-            android:background="@drawable/fluent_input_bg"
-            android:hint="Username"
-            android:paddingHorizontal="16dp"
-            android:textColor="#111827"
-            android:textColorHint="#9CA3AF"
-            android:textSize="16sp" />
-
-        <!-- Password Input -->
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/etPassword"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginBottom="32dp"
-            android:background="@drawable/fluent_input_bg"
-            android:hint="Password"
-            android:inputType="textPassword"
-            android:paddingHorizontal="16dp"
-            android:textColor="#111827"
-            android:textColorHint="#9CA3AF"
-            android:textSize="16sp" />
-
-        <!-- Login Button -->
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnLogin"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@drawable/fluent_button_bg"
-            android:text="Sign In"
-            android:textAllCaps="false"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-    </LinearLayout>
-
-    <!-- Settings Button (Top Right) -->
     <ImageButton
         android:id="@+id/btnSettings"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_margin="16dp"
+        android:layout_margin="8dp"
         android:padding="12dp"
         android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Server settings"
         android:src="@drawable/ic_settings"
-        android:elevation="10dp"
-        app:tint="#4B5563"
+        app:tint="@color/gray_600"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/topRule" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintWidth_max="420dp"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.38">
+
+        <!-- Brand mark -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="40dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="6dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="10dp"
+                android:background="@color/red_600" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="NMPralekh"
+                    android:textColor="@color/gray_900"
+                    android:textSize="20sp"
+                    android:fontFamily="sans-serif-medium" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Management Information System"
+                    android:textColor="@color/gray_600"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:accessibilityHeading="true"
+            android:text="Sign in"
+            android:textColor="@color/gray_900"
+            android:textSize="24sp"
+            android:fontFamily="sans-serif-medium" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="24dp"
+            android:text="Use your NMPralekh username and password."
+            android:textColor="@color/gray_600"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/lblUsername"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
+            android:labelFor="@id/etUsername"
+            android:text="Username"
+            android:textColor="@color/gray_800"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium" />
+
+        <androidx.appcompat.widget.AppCompatEditText
+            android:id="@+id/etUsername"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="16dp"
+            android:autofillHints="username"
+            android:background="@drawable/input_bg"
+            android:inputType="text"
+            android:paddingHorizontal="12dp"
+            android:textColor="@color/gray_900"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/lblPassword"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
+            android:labelFor="@id/etPassword"
+            android:text="Password"
+            android:textColor="@color/gray_800"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium" />
+
+        <androidx.appcompat.widget.AppCompatEditText
+            android:id="@+id/etPassword"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="24dp"
+            android:autofillHints="password"
+            android:background="@drawable/input_bg"
+            android:inputType="textPassword"
+            android:imeOptions="actionDone"
+            android:paddingHorizontal="12dp"
+            android:textColor="@color/gray_900"
+            android:textSize="15sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogin"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Sign in" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="© NMIMS. All rights reserved."
+            android:textColor="@color/gray_500"
+            android:textSize="12sp" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

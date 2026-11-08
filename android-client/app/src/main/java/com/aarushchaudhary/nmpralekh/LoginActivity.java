@@ -1,5 +1,6 @@
 package com.aarushchaudhary.nmpralekh;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -49,6 +50,13 @@ public class LoginActivity extends AppCompatActivity {
 
         binding.btnSettings.setOnClickListener(v -> showSettingsDialog());
 
+        // keyboard's Done key on the password field signs in
+        binding.etPassword.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId != android.view.inputmethod.EditorInfo.IME_ACTION_DONE) return false;
+            binding.btnLogin.performClick();
+            return true;
+        });
+
         binding.btnLogin.setOnClickListener(v -> {
             String username = binding.etUsername.getText().toString().trim();
             String password = binding.etPassword.getText().toString().trim();
@@ -58,7 +66,7 @@ public class LoginActivity extends AppCompatActivity {
                 return;
             }
 
-            binding.btnLogin.setText("Logging in...");
+            binding.btnLogin.setText("Signing in…");
             binding.btnLogin.setEnabled(false);
 
             // Reset ApiClient in case server URL changed
@@ -73,7 +81,7 @@ public class LoginActivity extends AppCompatActivity {
                 @Override
                 public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
                     runOnUiThread(() -> {
-                        binding.btnLogin.setText("Sign In");
+                        binding.btnLogin.setText("Sign in");
                         binding.btnLogin.setEnabled(true);
 
                         if (response.isSuccessful() && response.body() != null) {
@@ -99,7 +107,7 @@ public class LoginActivity extends AppCompatActivity {
                 @Override
                 public void onFailure(Call<JsonObject> call, Throwable t) {
                     runOnUiThread(() -> {
-                        binding.btnLogin.setText("Sign In");
+                        binding.btnLogin.setText("Sign in");
                         binding.btnLogin.setEnabled(true);
                         Toast.makeText(LoginActivity.this, "Connection failed: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                     });
@@ -128,7 +136,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void showSettingsDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        AlertDialog.Builder builder = new MaterialAlertDialogBuilder(this);
         builder.setTitle("Server Configuration");
 
         final EditText input = new EditText(this);

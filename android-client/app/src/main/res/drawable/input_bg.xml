@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Text input: white, 1dp gray_300 border; red border while focused (web FormInput) -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/white" />
+            <stroke android:width="2dp" android:color="@color/red_600" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/white" />
+            <stroke android:width="1dp" android:color="@color/gray_300" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+</selector>

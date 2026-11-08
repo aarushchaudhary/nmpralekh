@@ -47,6 +47,14 @@ public class CampusUsersFragment extends BaseRecordFragment {
             }
 
             @Override
+
+            public RecordAdapter.BadgeStyle getBadgeStyle(JsonObject record) {
+
+                return "super_admin".equals(jsonStr(record, "role")) ? RecordAdapter.BadgeStyle.DARK : RecordAdapter.BadgeStyle.GRAY;
+
+            }
+
+            @Override
             public String getBadgeText(JsonObject record) {
                 String role = jsonStr(record, "role");
                 if (role == null) return "Unknown";
@@ -56,32 +64,6 @@ public class CampusUsersFragment extends BaseRecordFragment {
                     case "super_admin": return "Super Admin";
                     case "delete_auth": return "Delete Auth";
                     default: return role;
-                }
-            }
-
-            @Override
-            public int getBadgeColor(JsonObject record) {
-                String role = jsonStr(record, "role");
-                if (role == null) return 0xFFF3F4F6;
-                switch (role) {
-                    case "admin": return 0xFFDBEAFE; // blue-50
-                    case "user": return 0xFFF3E8FF; // purple-50
-                    case "super_admin": return 0xFFD1FAE5; // green-50
-                    case "delete_auth": return 0xFFFEF3C7; // yellow-50
-                    default: return 0xFFF3F4F6; // gray-50
-                }
-            }
-
-            @Override
-            public int getBadgeTextColor(JsonObject record) {
-                String role = jsonStr(record, "role");
-                if (role == null) return 0xFF374151;
-                switch (role) {
-                    case "admin": return 0xFF1D4ED8; // blue-700
-                    case "user": return 0xFF7E22CE; // purple-700
-                    case "super_admin": return 0xFF047857; // green-700
-                    case "delete_auth": return 0xFFB45309; // yellow-700
-                    default: return 0xFF374151; // gray-700
                 }
             }
 

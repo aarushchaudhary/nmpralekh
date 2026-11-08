@@ -46,14 +46,6 @@ public class CertificationsFragment extends BaseRecordFragment {
                 return jsonStr(record, "person_type");
             }
             @Override
-            public int getBadgeColor(JsonObject record) {
-                return 0xFFD1FAE5; // green
-            }
-            @Override
-            public int getBadgeTextColor(JsonObject record) {
-                return 0xFF065F46;
-            }
-            @Override
             public String getExtraData(JsonObject record) {
                 return jsonStr(record, "date");
             }

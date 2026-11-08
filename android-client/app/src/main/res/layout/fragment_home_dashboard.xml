@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Dashboard (web DashboardHome): title + schools, one ruled strip of KPI tiles, plain note -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FAFAFA"
+    android:background="@color/gray_50"
     android:fillViewport="true">
 
     <LinearLayout
@@ -12,63 +12,52 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Welcome Header -->
         <TextView
             android:id="@+id/tvWelcome"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:accessibilityHeading="true"
             android:text="Welcome"
-            android:textColor="#111827"
-            android:textSize="24sp"
-            android:textStyle="bold" />
+            android:textColor="@color/gray_900"
+            android:textSize="20sp"
+            android:fontFamily="sans-serif-medium" />
 
         <TextView
             android:id="@+id/tvSchools"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:text="Loading schools..."
-            android:textColor="#6B7280"
-            android:textSize="14sp" />
+            android:textColor="@color/gray_600"
+            android:textSize="13sp" />
 
-        <!-- Info Banner -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="#EFF6FF"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="You can create and view records for your school. Any updates or deletions require approval from the authorized reviewer."
-                android:textColor="#1D4ED8"
-                android:textSize="13sp" />
-        </androidx.cardview.widget.CardView>
-
-        <!-- Loading indicator -->
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_marginTop="32dp"
+            android:indeterminateTint="@color/red_600"
             android:visibility="visible" />
 
-        <!-- Module Cards Grid -->
+        <!-- KPI strip: 1dp gaps over gray_200 draw the rules between white tiles -->
         <GridLayout
             android:id="@+id/gridModules"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:background="@drawable/kpi_strip_bg"
             android:columnCount="2"
-            android:visibility="gone">
+            android:padding="1dp"
+            android:visibility="gone" />
 
-            <!-- Cards will be added programmatically -->
-        </GridLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="You can create and view records for your school. Updates and deletions are sent for approval before they apply."
+            android:textColor="@color/gray_600"
+            android:textSize="13sp" />
 
     </LinearLayout>
 </ScrollView>

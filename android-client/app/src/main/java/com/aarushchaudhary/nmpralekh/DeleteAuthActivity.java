@@ -2,6 +2,8 @@ package com.aarushchaudhary.nmpralekh;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.TextView;
+import android.view.View;
 import android.view.MenuItem;
 import android.widget.Toast;
 
@@ -47,6 +49,21 @@ public class DeleteAuthActivity extends BaseAuthActivity
 
         // Setup Navigation View
         binding.navView.setNavigationItemSelectedListener(this);
+
+        // Set nav header user info (otherwise the layout's placeholder text shows)
+        View headerView = binding.navView.getHeaderView(0);
+        if (headerView != null) {
+            padBelowStatusBar(headerView);
+            SessionManager session = new SessionManager(this);
+            TextView tvName = headerView.findViewById(R.id.tvNavHeaderName);
+            TextView tvSubtitle = headerView.findViewById(R.id.tvNavHeaderSubtitle);
+            if (tvName != null && !session.getFullName().isEmpty()) {
+                tvName.setText(session.getFullName());
+            }
+            if (tvSubtitle != null) {
+                tvSubtitle.setText("Delete Authority");
+            }
+        }
         binding.navView.setCheckedItem(R.id.nav_dashboard);
 
         // Load Default Fragment

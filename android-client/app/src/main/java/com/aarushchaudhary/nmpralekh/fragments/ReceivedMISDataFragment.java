@@ -50,18 +50,16 @@ public class ReceivedMISDataFragment extends BaseRecordFragment {
             }
 
             @Override
+
+            public RecordAdapter.BadgeStyle getBadgeStyle(JsonObject record) {
+
+                return RecordAdapter.BadgeStyle.DARK; // "Received"
+
+            }
+
+            @Override
             public String getBadgeText(JsonObject record) {
                 return "Received";
-            }
-
-            @Override
-            public int getBadgeColor(JsonObject record) {
-                return 0xFFD1FAE5; // emerald-50 (or green)
-            }
-
-            @Override
-            public int getBadgeTextColor(JsonObject record) {
-                return 0xFF065F46; // emerald-700
             }
 
             @Override

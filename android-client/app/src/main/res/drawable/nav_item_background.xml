@@ -1,9 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Drawer item on dark grey: active = faint white fill + 3dp NMIMS red bar on the left (web sidebar) -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_checked="true">
+        <layer-list>
+            <item android:left="8dp" android:right="8dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/white_10" />
+                    <corners android:radius="6dp" />
+                </shape>
+            </item>
+            <item android:left="8dp" android:gravity="start|fill_vertical" android:width="3dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/red_600" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    <item android:state_pressed="true" android:left="8dp" android:right="8dp">
         <shape android:shape="rectangle">
-            <solid android:color="@color/colorNavItemSelected" />
-            <corners android:radius="8dp" />
+            <solid android:color="@color/white_10" />
+            <corners android:radius="6dp" />
         </shape>
     </item>
     <item>

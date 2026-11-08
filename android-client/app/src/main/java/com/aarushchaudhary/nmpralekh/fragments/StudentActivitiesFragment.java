@@ -61,14 +61,6 @@ public class StudentActivitiesFragment extends BaseRecordFragment {
                 return jsonStr(record, "activity_type");
             }
             @Override
-            public int getBadgeColor(JsonObject record) {
-                return 0xFFDBEAFE; // blue
-            }
-            @Override
-            public int getBadgeTextColor(JsonObject record) {
-                return 0xFF1D4ED8;
-            }
-            @Override
             public String getExtraData(JsonObject record) {
                 String club = jsonStr(record, "club_name");
                 if (club.isEmpty()) return jsonStr(record, "conducted_by");

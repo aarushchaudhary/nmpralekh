@@ -1,22 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- One record row: bordered panel, no shadow; status is text + badge style (web Table row) -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
-    android:layout_marginVertical="4dp"
-    app:cardBackgroundColor="#FFFFFF"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="1dp"
-    app:strokeColor="#F3F4F6"
-    app:strokeWidth="1dp">
+    android:layout_marginVertical="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="14dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -27,89 +22,76 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_marginEnd="8dp"
                 android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/tvTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="#111827"
+                    android:textColor="@color/gray_900"
                     android:textSize="15sp"
-                    android:textStyle="bold" />
+                    android:fontFamily="sans-serif-medium" />
 
                 <TextView
                     android:id="@+id/tvSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textColor="#6B7280"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@color/gray_600"
                     android:textSize="13sp" />
 
                 <TextView
                     android:id="@+id/tvExtra"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:textColor="#9CA3AF"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/gray_500"
                     android:textSize="12sp"
                     android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Badge for type/status -->
             <TextView
                 android:id="@+id/tvBadge"
+                style="@style/Widget.NMPralekh.Badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="top"
-                android:background="@drawable/badge_background"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="2dp"
-                android:textColor="#4B5563"
-                android:textSize="11sp"
                 android:visibility="gone" />
         </LinearLayout>
 
-        <!-- Pending approval banner -->
         <TextView
             android:id="@+id/tvPending"
+            style="@style/Widget.NMPralekh.Badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/badge_pending"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="4dp"
-            android:text="⏳ Pending Approval"
-            android:textColor="#92400E"
-            android:textSize="11sp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/badge_outline"
+            android:text="Pending approval"
             android:visibility="gone" />
 
-        <!-- Action buttons -->
         <LinearLayout
             android:id="@+id/layoutActions"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:gravity="end"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnEdit"
-                style="@style/Widget.Material3.Button.TonalButton"
+                style="@style/Widget.NMPralekh.Button.Small"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
-                android:text="Edit"
-                android:textSize="12sp" />
+                android:text="Edit" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDelete"
-                style="@style/Widget.Material3.Button.TonalButton"
+                style="@style/Widget.NMPralekh.Button.Small.Danger"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:backgroundTint="#FEE2E2"
-                android:text="Delete"
-                android:textColor="#DC2626"
-                android:textSize="12sp" />
+                android:layout_height="wrap_content"
+                android:text="Delete" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

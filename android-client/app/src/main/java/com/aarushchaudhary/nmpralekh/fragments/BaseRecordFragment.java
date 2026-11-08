@@ -1,8 +1,10 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.Map;
 import retrofit2.Call;
 
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
+import android.util.TypedValue;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,7 +31,7 @@ import com.aarushchaudhary.nmpralekh.adapters.RecordAdapter;
 import com.aarushchaudhary.nmpralekh.api.ApiService;
 import com.aarushchaudhary.nmpralekh.auth.SessionManager;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.gson.JsonArray;
@@ -112,7 +114,7 @@ public abstract class BaseRecordFragment extends Fragment {
         tvPageInfo = view.findViewById(R.id.tvPageInfo);
         btnPrevious = view.findViewById(R.id.btnPrevious);
         btnNext = view.findViewById(R.id.btnNext);
-        FloatingActionButton fabAdd = view.findViewById(R.id.fabAdd);
+        ExtendedFloatingActionButton fabAdd = view.findViewById(R.id.fabAdd);
 
         if (isReadOnly()) {
             fabAdd.setVisibility(View.GONE);
@@ -231,7 +233,7 @@ public abstract class BaseRecordFragment extends Fragment {
         boolean isEdit = existingData != null;
         formFields.clear();
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        AlertDialog.Builder builder = new MaterialAlertDialogBuilder(requireContext());
         builder.setTitle(isEdit ? "Edit Record" : "Add Record");
 
         // Inflate form layout
@@ -270,7 +272,7 @@ public abstract class BaseRecordFragment extends Fragment {
     }
 
     protected void showEditConfirmDialog(JsonObject original, JsonObject updated) {
-        new AlertDialog.Builder(requireContext())
+        new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Submit Update Request")
                 .setMessage("This update will be sent for approval before being applied. Continue?")
                 .setPositiveButton("Submit for Approval", (d, w) -> updateRecord(original, updated))
@@ -279,7 +281,7 @@ public abstract class BaseRecordFragment extends Fragment {
     }
 
     protected void showDeleteConfirmDialog(JsonObject record) {
-        new AlertDialog.Builder(requireContext())
+        new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Submit Delete Request")
                 .setMessage("This delete request will be sent for approval before the record is removed.")
                 .setPositiveButton("Submit for Approval", (d, w) -> deleteRecord(record))
@@ -364,17 +366,25 @@ public abstract class BaseRecordFragment extends Fragment {
         TextInputLayout layout = new TextInputLayout(requireContext(), null, com.google.android.material.R.attr.textInputOutlinedStyle);
         layout.setHint(label + (required ? " *" : ""));
         layout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
-        layout.setBoxCornerRadii(8, 8, 8, 8);
+        float radius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics());
+        layout.setBoxCornerRadii(radius, radius, radius, radius);
+        layout.setBoxStrokeColor(requireContext().getColor(R.color.red_600));
+        layout.setHintTextColor(android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.red_700)));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         params.setMargins(0, 0, 0, 16);
         layout.setLayoutParams(params);
 
-        TextInputEditText editText = new TextInputEditText(requireContext());
-        editText.setHint(hint != null ? hint : "");
+        // built with the box's themed context and no own background, or Android draws its
+        // default underline instead of the outlined box
+        TextInputEditText editText = new TextInputEditText(layout.getContext());
+        editText.setBackground(null);
         if (value != null) editText.setText(value);
         editText.setTextSize(14);
-        layout.addView(editText);
+        layout.addView(editText, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        // a format hint shows only once focused, so it never collides with the floating label
+        if (hint != null) layout.setPlaceholderText(hint);
 
         container.addView(layout);
         return editText;
@@ -414,7 +424,7 @@ public abstract class BaseRecordFragment extends Fragment {
         TextView labelView = new TextView(requireContext());
         labelView.setText(label);
         labelView.setTextSize(13);
-        labelView.setTextColor(0xFF374151);
+        labelView.setTextColor(requireContext().getColor(R.color.gray_800));
         LinearLayout.LayoutParams lblParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         lblParams.setMargins(4, 0, 0, 4);

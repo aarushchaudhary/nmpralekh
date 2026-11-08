@@ -59,6 +59,7 @@ public class AdminActivity extends BaseAuthActivity
         // Set nav header user info
         View headerView = binding.navView.getHeaderView(0);
         if (headerView != null) {
+            padBelowStatusBar(headerView);
             SessionManager session = new SessionManager(this);
             TextView tvName = headerView.findViewById(R.id.tvNavHeaderName);
             TextView tvSubtitle = headerView.findViewById(R.id.tvNavHeaderSubtitle);
@@ -66,7 +67,7 @@ public class AdminActivity extends BaseAuthActivity
                 tvName.setText(session.getFullName());
             }
             if (tvSubtitle != null) {
-                tvSubtitle.setText("NMPralekh · Admin");
+                tvSubtitle.setText("Admin");
             }
         }
 

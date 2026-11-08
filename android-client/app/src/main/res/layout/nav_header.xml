@@ -1,32 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Drawer header: red bar mark + product name, then the signed-in user (web sidebar) -->
+<!-- outer layer gets the status-bar inset as padding (BaseAuthActivity.padBelowStatusBar),
+     inner layer keeps the spacing -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="176dp"
-    android:background="@color/colorHeaderBg"
-    android:gravity="bottom"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:theme="@style/ThemeOverlay.AppCompat.Dark">
+    android:layout_height="wrap_content"
+    android:background="@color/gray_800">
 
-    <ImageView
-        android:layout_width="64dp"
-        android:layout_height="64dp"
-        android:paddingTop="8dp"
-        android:src="@drawable/nmpralekh" />
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="20dp"
+    android:paddingBottom="16dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <View
+            android:layout_width="6dp"
+            android:layout_height="26dp"
+            android:layout_marginEnd="10dp"
+            android:background="@color/red_600" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NMPralekh"
+            android:textColor="@color/white"
+            android:textSize="17sp"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="12dp"
+        android:background="@color/white_10" />
 
     <TextView
         android:id="@+id/tvNavHeaderName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
         android:text="Faculty Dashboard"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-        android:textColor="@android:color/white" />
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:fontFamily="sans-serif-medium" />
 
     <TextView
         android:id="@+id/tvNavHeaderSubtitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
         android:text="NMPralekh"
-        android:textColor="#CCFFFFFF" />
+        android:textColor="@color/gray_400"
+        android:textSize="12sp" />
 </LinearLayout>
+</FrameLayout>

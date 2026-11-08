@@ -45,14 +45,6 @@ public class FDPFragment extends BaseRecordFragment {
                 return jsonStr(record, "type").replace("_", " ");
             }
             @Override
-            public int getBadgeColor(JsonObject record) {
-                return 0xFFEDE9FE; // purple
-            }
-            @Override
-            public int getBadgeTextColor(JsonObject record) {
-                return 0xFF6D28D9;
-            }
-            @Override
             public String getExtraData(JsonObject record) {
                 return jsonStr(record, "organizing_body");
             }

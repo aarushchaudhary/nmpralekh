@@ -44,14 +44,6 @@ public class PlacementsFragment extends BaseRecordFragment {
                 return null;
             }
             @Override
-            public int getBadgeColor(JsonObject record) {
-                return 0;
-            }
-            @Override
-            public int getBadgeTextColor(JsonObject record) {
-                return 0;
-            }
-            @Override
             public String getExtraData(JsonObject record) {
                 String co = jsonStr(record, "company_name");
                 if (co.isEmpty()) return jsonStr(record, "placecom_name");

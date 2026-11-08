@@ -1,10 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- NMIMS brand palette only (same as the web app): Red #CC2626, Grey #5A5A5A, Dark Grey #2A2A2A,
+     plus their tints/shades, white and black. -->
 <resources>
-    <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="colorPrimary">#ED1C24</color>
-    <color name="colorHeaderBg">#ED1C24</color>
-    <color name="colorNavItemSelected">#F8D0D2</color>
-    <color name="colorNavItemText">#333333</color>
-    <color name="colorNavItemTextSelected">#ED1C24</color>
+
+    <color name="red_50">#FFFDF4F4</color>
+    <color name="red_200">#FFF5C9C9</color>
+    <color name="red_600">#FFCC2626</color> <!-- NMIMS Red -->
+    <color name="red_700">#FFA91F1F</color>
+    <color name="red_800">#FF8A1A1A</color>
+
+    <color name="gray_50">#FFF7F7F7</color>  <!-- page background -->
+    <color name="gray_100">#FFEFEFEF</color>
+    <color name="gray_200">#FFE2E2E2</color> <!-- borders, dividers -->
+    <color name="gray_300">#FFCFCFCF</color> <!-- input borders -->
+    <color name="gray_400">#FFA3A3A3</color> <!-- icons, hints only (fails AA as text) -->
+    <color name="gray_500">#FF6E6E6E</color> <!-- lightest readable text -->
+    <color name="gray_600">#FF5A5A5A</color> <!-- NMIMS Grey: secondary text -->
+    <color name="gray_700">#FF444444</color>
+    <color name="gray_800">#FF2A2A2A</color> <!-- NMIMS Dark Grey: drawer, strong badges -->
+    <color name="gray_900">#FF1F1F1F</color> <!-- headings, body text -->
+
+    <color name="white_10">#1AFFFFFF</color> <!-- active drawer item on dark grey -->
 </resources>

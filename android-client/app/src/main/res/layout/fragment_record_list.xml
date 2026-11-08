@@ -1,104 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Record list (web records page): page title, bordered rows, pagination bar, one red "Add" action -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FAFAFA">
+    android:background="@color/gray_50">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="16dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="8dp">
+            android:paddingTop="14dp"
+            android:paddingBottom="10dp">
 
+            <!-- the app bar already shows the page name; kept for code that sets it -->
             <TextView
                 android:id="@+id/tvPageTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="#111827"
+                android:visibility="gone"
+                android:accessibilityHeading="true"
+                android:textColor="@color/gray_900"
                 android:textSize="20sp"
-                android:textStyle="bold" />
+                android:fontFamily="sans-serif-medium" />
 
             <TextView
                 android:id="@+id/tvPageSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:textColor="#6B7280"
+                android:textColor="@color/gray_600"
                 android:textSize="13sp" />
         </LinearLayout>
 
-        <!-- Loading -->
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginTop="32dp" />
+            android:layout_marginTop="32dp"
+            android:indeterminateTint="@color/red_600" />
 
-        <!-- Empty state -->
         <LinearLayout
             android:id="@+id/layoutEmpty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:background="@drawable/empty_bg"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="48dp"
+            android:padding="40dp"
             android:visibility="gone">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📋"
-                android:textSize="40sp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
                 android:text="No records found"
-                android:textColor="#9CA3AF"
+                android:textColor="@color/gray_600"
                 android:textSize="14sp" />
         </LinearLayout>
 
-        <!-- Records list -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:clipToPadding="false"
-            android:paddingBottom="80dp"
+            android:paddingBottom="88dp"
             android:visibility="gone" />
 
-        <!-- Pagination -->
         <LinearLayout
             android:id="@+id/layoutPagination"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#FFFFFF"
-            android:elevation="4dp"
-            android:gravity="center"
+            android:background="@drawable/pagination_bg"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="8dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp"
             android:visibility="gone">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPrevious"
-                style="@style/Widget.Material3.Button.TextButton"
+                style="@style/Widget.NMPralekh.Button.Small"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="← Previous"
-                android:textSize="13sp" />
+                android:text="Previous" />
 
             <TextView
                 android:id="@+id/tvPageInfo"
@@ -106,29 +100,31 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:textColor="#6B7280"
+                android:textColor="@color/gray_600"
                 android:textSize="13sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnNext"
-                style="@style/Widget.Material3.Button.TextButton"
+                style="@style/Widget.NMPralekh.Button.Small"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Next →"
-                android:textSize="13sp" />
+                android:text="Next" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- FAB -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fabAdd"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
-        android:src="@android:drawable/ic_input_add"
-        android:contentDescription="Add record"
-        app:backgroundTint="@color/colorPrimary"
-        app:tint="@android:color/white" />
+        android:text="Add record"
+        android:textAllCaps="false"
+        android:textColor="@color/white"
+        app:backgroundTint="@color/red_600"
+        app:icon="@android:drawable/ic_input_add"
+        app:iconTint="@color/white"
+        app:shapeAppearanceOverlay="@style/Shape.NMPralekh"
+        app:elevation="2dp" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

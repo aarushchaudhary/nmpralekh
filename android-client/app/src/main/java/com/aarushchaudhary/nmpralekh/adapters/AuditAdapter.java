@@ -69,25 +69,18 @@ public class AuditAdapter extends RecyclerView.Adapter<AuditAdapter.AuditViewHol
         holder.tvRequestedBy.setText("Requested by " + requestedByStr + " · " + requestedAt);
 
         holder.tvActionBadge.setText(action);
-        if ("DELETE".equals(action)) {
-            holder.tvActionBadge.setTextColor(0xFF991B1B); // red-800
-            holder.tvActionBadge.setBackgroundColor(0xFFFEE2E2); // red-100
-        } else {
-            holder.tvActionBadge.setTextColor(0xFF92400E); // yellow-800
-            holder.tvActionBadge.setBackgroundColor(0xFFFEF3C7); // yellow-100
-        }
+        // pending request: a deletion is the risky one
+        RecordAdapter.applyBadgeStyle(holder.tvActionBadge,
+                "DELETE".equals(action) ? RecordAdapter.BadgeStyle.RED : RecordAdapter.BadgeStyle.GRAY);
 
         if (isHistory) {
             holder.layoutActions.setVisibility(View.GONE);
             String status = getString(audit, "status");
             holder.tvActionBadge.setText(action + " (" + status + ")");
-            if ("approved".equalsIgnoreCase(status)) {
-                holder.tvActionBadge.setTextColor(0xFF065F46); // green-800
-                holder.tvActionBadge.setBackgroundColor(0xFFD1FAE5); // green-100
-            } else if ("rejected".equalsIgnoreCase(status)) {
-                holder.tvActionBadge.setTextColor(0xFF991B1B);
-                holder.tvActionBadge.setBackgroundColor(0xFFFEE2E2);
-            }
+            RecordAdapter.applyBadgeStyle(holder.tvActionBadge,
+                    "approved".equalsIgnoreCase(status) ? RecordAdapter.BadgeStyle.DARK
+                    : "rejected".equalsIgnoreCase(status) ? RecordAdapter.BadgeStyle.RED
+                    : RecordAdapter.BadgeStyle.OUTLINE);
         } else {
             holder.layoutActions.setVisibility(View.VISIBLE);
             int auditId = audit.has("id") ? audit.get("id").getAsInt() : -1;

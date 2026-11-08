@@ -51,21 +51,18 @@ public class ClubsFragment extends BaseRecordFragment {
             }
 
             @Override
+
+            public RecordAdapter.BadgeStyle getBadgeStyle(JsonObject record) {
+
+                boolean isActive = record.has("is_active") && record.get("is_active").getAsBoolean();
+                return isActive ? RecordAdapter.BadgeStyle.DARK : RecordAdapter.BadgeStyle.GRAY;
+
+            }
+
+            @Override
             public String getBadgeText(JsonObject record) {
                 boolean isActive = record.has("is_active") && record.get("is_active").getAsBoolean();
                 return isActive ? "Active" : "Inactive";
-            }
-
-            @Override
-            public int getBadgeColor(JsonObject record) {
-                boolean isActive = record.has("is_active") && record.get("is_active").getAsBoolean();
-                return isActive ? 0xFFD1FAE5 : 0xFFF3F4F6;
-            }
-
-            @Override
-            public int getBadgeTextColor(JsonObject record) {
-                boolean isActive = record.has("is_active") && record.get("is_active").getAsBoolean();
-                return isActive ? 0xFF065F46 : 0xFF374151;
             }
 
             @Override

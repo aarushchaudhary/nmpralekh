@@ -1,4 +1,5 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.Map;
 import retrofit2.Call;
 
@@ -66,16 +67,15 @@ public class PatentsFragment extends BaseRecordFragment {
                 return jsonStr(record, "applicant_name") + " · " + jsonStr(record, "date_of_publication");
             }
             @Override
+            public RecordAdapter.BadgeStyle getBadgeStyle(JsonObject record) {
+                String status = jsonStr(record, "patent_status");
+                if ("granted".equalsIgnoreCase(status)) return RecordAdapter.BadgeStyle.DARK;
+                if ("filed".equalsIgnoreCase(status)) return RecordAdapter.BadgeStyle.OUTLINE;
+                return RecordAdapter.BadgeStyle.GRAY;
+            }
+            @Override
             public String getBadgeText(JsonObject record) {
                 return jsonStr(record, "patent_status");
-            }
-            @Override
-            public int getBadgeColor(JsonObject record) {
-                return 0xFFDBEAFE; // blue
-            }
-            @Override
-            public int getBadgeTextColor(JsonObject record) {
-                return 0xFF1D4ED8;
             }
             @Override
             public String getExtraData(JsonObject record) {
@@ -123,7 +123,7 @@ public class PatentsFragment extends BaseRecordFragment {
     }
 
     private void showAddCoApplicantDialog() {
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
         builder.setTitle("Add Co-applicant");
 
         LinearLayout layout = new LinearLayout(requireContext());

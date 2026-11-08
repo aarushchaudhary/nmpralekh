@@ -1,22 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- One change request: what changed, who asked, Reject (quiet) / Approve (primary) -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
-    android:layout_marginVertical="4dp"
-    app:cardBackgroundColor="#FFFFFF"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="1dp"
-    app:strokeColor="#F3F4F6"
-    app:strokeWidth="1dp">
+    android:layout_marginVertical="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="14dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -27,50 +22,46 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_marginEnd="8dp"
                 android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/tvTableName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="#111827"
+                    android:textColor="@color/gray_900"
                     android:textSize="15sp"
-                    android:textStyle="bold" />
+                    android:fontFamily="sans-serif-medium" />
 
                 <TextView
                     android:id="@+id/tvRequestedBy"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textColor="#6B7280"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@color/gray_600"
                     android:textSize="13sp" />
 
                 <TextView
                     android:id="@+id/tvChanges"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:textColor="#374151"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/badge_gray"
+                    android:padding="10dp"
+                    android:textColor="@color/gray_800"
                     android:textSize="12sp"
-                    android:fontFamily="monospace"
-                    android:background="#F9FAFB"
-                    android:padding="8dp"
+                    android:lineSpacingExtra="2dp"
                     android:visibility="gone" />
             </LinearLayout>
 
             <TextView
                 android:id="@+id/tvActionBadge"
+                style="@style/Widget.NMPralekh.Badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="top"
-                android:background="@drawable/badge_background"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="2dp"
-                android:textColor="#4B5563"
-                android:textSize="11sp" />
+                android:layout_gravity="top" />
         </LinearLayout>
 
-        <!-- Action buttons -->
         <LinearLayout
             android:id="@+id/layoutActions"
             android:layout_width="match_parent"
@@ -81,30 +72,18 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnReject"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.NMPralekh.Button.Small.Danger"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:paddingHorizontal="16dp"
-                android:text="Reject"
-                android:textColor="#DC2626"
-                app:strokeColor="#DC2626"
-                app:cornerRadius="6dp" />
+                android:text="Reject" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnApprove"
-                style="@style/Widget.MaterialComponents.Button"
+                style="@style/Widget.NMPralekh.Button.Small.Primary"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:paddingHorizontal="16dp"
-                android:text="Approve"
-                android:backgroundTint="#059669"
-                app:cornerRadius="6dp" />
+                android:layout_height="wrap_content"
+                android:text="Approve" />
         </LinearLayout>
-
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

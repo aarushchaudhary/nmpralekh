@@ -1,4 +1,5 @@
 package com.aarushchaudhary.nmpralekh.fragments;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.Map;
 import retrofit2.Call;
 
@@ -70,14 +71,6 @@ public class PublicationsFragment extends BaseRecordFragment {
                 return jsonStr(record, "author_type");
             }
             @Override
-            public int getBadgeColor(JsonObject record) {
-                return 0xFFFEF3C7; // yellow
-            }
-            @Override
-            public int getBadgeTextColor(JsonObject record) {
-                return 0xFF92400E;
-            }
-            @Override
             public String getExtraData(JsonObject record) {
                 return jsonStr(record, "date");
             }
@@ -123,7 +116,7 @@ public class PublicationsFragment extends BaseRecordFragment {
     }
 
     private void showAddCoAuthorDialog() {
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
         builder.setTitle("Add Co-author");
 
         LinearLayout layout = new LinearLayout(requireContext());

@@ -5,7 +5,6 @@ import retrofit2.Call;
 import android.content.Context;
 import android.os.Bundle;
 import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,10 +15,10 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 
 import com.aarushchaudhary.nmpralekh.ApiClient;
+import com.aarushchaudhary.nmpralekh.R;
 import com.aarushchaudhary.nmpralekh.api.ApiService;
 import com.aarushchaudhary.nmpralekh.auth.SessionManager;
 import com.aarushchaudhary.nmpralekh.databinding.FragmentHomeDashboardBinding;
@@ -124,9 +123,9 @@ public class HomeDashboardFragment extends Fragment {
                             }
                         }
                         if (schoolNames.isEmpty()) {
-                            binding.tvSchools.setText("0 Active Schools");
+                            binding.tvSchools.setText("No active schools");
                         } else {
-                            binding.tvSchools.setText(schoolNames.size() + " Active Schools: " + String.join(", ", schoolNames));
+                            binding.tvSchools.setText(String.join(", ", schoolNames));
                         }
                     } else {
                         binding.tvSchools.setText("Failed to load schools");
@@ -152,7 +151,7 @@ public class HomeDashboardFragment extends Fragment {
                         if (schoolNames.isEmpty()) {
                             binding.tvSchools.setText("No schools assigned");
                         } else {
-                            binding.tvSchools.setText(schoolNames.size() + " Schools: " + String.join(", ", schoolNames));
+                            binding.tvSchools.setText(String.join(", ", schoolNames));
                         }
                     } else {
                         binding.tvSchools.setText("Failed to load schools");
@@ -188,66 +187,68 @@ public class HomeDashboardFragment extends Fragment {
         });
     }
 
+    // One ruled KPI strip like the web StatCard grid: white tiles, 1dp rules, no shadows.
     private void populateGrid(JsonObject countsObj) {
         binding.gridModules.removeAllViews();
-        
-        int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics());
-        int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics());
-        int cornerRadius = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12, getResources().getDisplayMetrics());
-        int elevation = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics());
+        binding.gridModules.setClipToOutline(true); // keep the strip's rounded corners over square tiles
 
-        for (String[] module : modules) {
-            String key = module[0];
-            String label = module[1];
+        int n = modules.length;
+        int rows = (n + 1) / 2;
+        int rule = Math.max(1, Math.round(dp(1)));
+        int pad = Math.round(dp(14));
+
+        for (int i = 0; i < n; i++) {
+            String key = modules[i][0];
+            String label = modules[i][1];
             int count = countsObj.has(key) ? countsObj.get(key).getAsInt() : 0;
+            boolean lastOdd = (n % 2 == 1) && i == n - 1; // fills the row instead of leaving a gap
+            int row = i / 2, col = i % 2;
 
-            CardView cardView = new CardView(requireContext());
-            GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+            GridLayout.LayoutParams params = new GridLayout.LayoutParams(
+                    GridLayout.spec(row), GridLayout.spec(col, lastOdd ? 2 : 1, 1f));
             params.width = 0;
-            params.height = GridLayout.LayoutParams.WRAP_CONTENT;
-            params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-            params.setMargins(margin, margin, margin, margin);
-            cardView.setLayoutParams(params);
-            
-            cardView.setRadius(cornerRadius);
-            cardView.setCardElevation(elevation);
-            cardView.setCardBackgroundColor(android.graphics.Color.WHITE);
-            cardView.setClickable(true);
-            cardView.setFocusable(true);
-            
-            TypedValue outValue = new TypedValue();
-            requireContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
-            cardView.setForeground(requireContext().getDrawable(outValue.resourceId));
+            params.setMargins(0, 0, (col == 0 && !lastOdd) ? rule : 0, row < rows - 1 ? rule : 0);
 
-            cardView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onModuleClick(key);
-                }
+            LinearLayout tile = new LinearLayout(requireContext());
+            tile.setOrientation(LinearLayout.VERTICAL);
+            tile.setLayoutParams(params);
+            tile.setPadding(pad, pad, pad, pad);
+            tile.setBackgroundColor(requireContext().getColor(R.color.white));
+            TypedValue ripple = new TypedValue();
+            requireContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground, ripple, true);
+            tile.setForeground(requireContext().getDrawable(ripple.resourceId));
+            tile.setClickable(true);
+            tile.setFocusable(true);
+            tile.setContentDescription(label + ": " + count + ". View records");
+            tile.setOnClickListener(v -> {
+                if (listener != null) listener.onModuleClick(key);
             });
 
-            LinearLayout layout = new LinearLayout(requireContext());
-            layout.setOrientation(LinearLayout.VERTICAL);
-            layout.setPadding(padding, padding, padding, padding);
-            layout.setGravity(Gravity.CENTER_VERTICAL);
+            tile.addView(text(label, 12, R.color.gray_600, false));
+            TextView value = text(String.valueOf(count), 22, R.color.gray_900, true);
+            value.setPadding(0, Math.round(dp(2)), 0, 0);
+            value.setFontFeatureSettings("tnum");
+            tile.addView(value);
+            TextView link = text("View records", 12, R.color.red_700, true);
+            link.setPadding(0, Math.round(dp(2)), 0, 0);
+            tile.addView(link);
 
-            TextView tvCount = new TextView(requireContext());
-            tvCount.setText(String.valueOf(count));
-            tvCount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
-            tvCount.setTextColor(android.graphics.Color.parseColor("#111827"));
-            tvCount.setTypeface(null, android.graphics.Typeface.BOLD);
-
-            TextView tvLabel = new TextView(requireContext());
-            tvLabel.setText(label);
-            tvLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            tvLabel.setTextColor(android.graphics.Color.parseColor("#6B7280"));
-            tvLabel.setPadding(0, (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 4, getResources().getDisplayMetrics()), 0, 0);
-
-            layout.addView(tvCount);
-            layout.addView(tvLabel);
-            cardView.addView(layout);
-
-            binding.gridModules.addView(cardView);
+            binding.gridModules.addView(tile);
         }
+    }
+
+    private TextView text(String s, int sp, int colorRes, boolean medium) {
+        TextView tv = new TextView(requireContext());
+        tv.setText(s);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+        tv.setTextColor(requireContext().getColor(colorRes));
+        if (medium) tv.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
+        tv.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO); // the tile announces itself
+        return tv;
+    }
+
+    private float dp(int v) {
+        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics());
     }
 
     @Override
