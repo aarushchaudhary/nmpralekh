@@ -5,12 +5,14 @@ import { useAuth } from '../../context/AuthContext'
 import useExport from '../../hooks/useExport'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
+import FormError from '../../components/ui/FormError'
 import Table from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import api from '../../api/axios'
+import { apiErrors } from '../../api/errors'
 
 const empty = {
     school: '', name: '', date: '',
@@ -76,19 +78,20 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
             }
             setShowForm(false); fetch()
         } catch (err) {
-            if (err.response?.data) setErrors(err.response.data)
+            setErrors(apiErrors(err))
+            // edits fail after the form was swapped for the confirm box; reopen it to show why
+            if (selected) { setShowEditConfirm(false); setShowForm(true) }
         } finally { setSaving(false) }
     }
 
     const handleDelete = async () => {
         setSaving(true)
         try {
-            const res = await api.delete(`/records/school-activities/${selected.id}/`)
-            console.log('Delete response:', res.data)
+            await api.delete(`/records/school-activities/${selected.id}/`)
             setShowDeleteConfirm(false)
             fetch()
         } catch (err) {
-            console.error('Delete failed:', err)
+            setErrors(apiErrors(err))
         } finally {
             setSaving(false)
         }
@@ -125,7 +128,7 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
                                 Edit
                             </Button>
                             <Button size="sm" variant="danger"
-                                onClick={() => { setSelected(row); setShowDeleteConfirm(true) }}>
+                                onClick={() => { setSelected(row); setErrors({}); setShowDeleteConfirm(true) }}>
                                 Delete
                             </Button>
                         </>
@@ -141,10 +144,9 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
                 action={
                     <div className="flex gap-2">
                         {['super_admin', 'admin', 'user'].includes(user?.role) && (
-                            <button onClick={() => exportFile()} disabled={exporting}
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+                            <Button variant="success" onClick={() => exportFile()} loading={exporting}>
                                 {exporting ? 'Exporting...' : '⬇ Export'}
-                            </button>
+                            </Button>
                         )}
                         {!readOnly && <Button onClick={openCreate}>+ Add Activity</Button>}
                     </div>
@@ -176,10 +178,11 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
                             Conducted for entire school
                         </label>
                     </div>
+                    <FormError message={errors._form} />
                     <div className="flex justify-end gap-3 pt-2">
                         <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
                         <Button loading={saving}
-                            onClick={selected ? () => { setShowForm(false); setShowEditConfirm(true) } : handleSubmit}>
+                            onClick={selected ? () => { if (validate()) { setShowForm(false); setShowEditConfirm(true) } } : handleSubmit}>
                             {selected ? 'Request Update' : 'Save Record'}
                         </Button>
                     </div>
@@ -192,7 +195,7 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
                 confirmLabel="Submit for Approval" loading={saving} />
 
             <ConfirmDialog isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)}
-                onConfirm={handleDelete} title="Submit Delete Request"
+                onConfirm={handleDelete} error={errors._form} title="Submit Delete Request"
                 message="This delete request will be sent for approval before the record is removed."
                 confirmLabel="Submit for Approval" loading={saving} />
         </div>

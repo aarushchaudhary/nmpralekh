@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
+import FormError from '../../components/ui/FormError'
 
 export default function SendMISDataPage() {
     const [reports, setReports] = useState([])
@@ -8,6 +9,7 @@ export default function SendMISDataPage() {
     const [formData, setFormData] = useState({ name: '', date_from: '', date_to: '', data_content: '' })
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [pageError, setPageError] = useState('')
 
     const fetchReports = () => {
         setLoading(true)
@@ -49,18 +51,20 @@ export default function SendMISDataPage() {
     const handleSendToAdmin = async (id) => {
         try {
             await api.post(`/export/reports/${id}/send-admin/`)
+            setPageError('')
             fetchReports()
         } catch (err) {
-            alert(err.response?.data?.detail || "Error sending to admin")
+            setPageError(err.response?.data?.detail || "Error sending to admin")
         }
     }
 
     const handleSendToAccumulator = async (id) => {
         try {
             await api.post(`/export/reports/${id}/send-accumulator/`)
+            setPageError('')
             fetchReports()
         } catch (err) {
-            alert(err.response?.data?.detail || "Error sending to accumulator")
+            setPageError(err.response?.data?.detail || "Error sending to accumulator")
         }
     }
 
@@ -99,6 +103,7 @@ export default function SendMISDataPage() {
                 <div>
                     <h1 className="text-2xl font-semibold text-gray-800">Send MIS Data</h1>
                     <p className="text-gray-500 mt-1">Create and dispatch your MIS Reports</p>
+                    <div className="mt-3"><FormError message={pageError} /></div>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}

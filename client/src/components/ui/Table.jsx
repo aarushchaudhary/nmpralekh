@@ -2,7 +2,7 @@ import { useState } from 'react'
 import EmptyState from './EmptyState'
 
 export default function Table({
-  columns, data, loading, onRowClick,
+  columns, data, loading,
   // server-side pagination props
   serverPagination = false,
   totalPages = 1,
@@ -13,6 +13,9 @@ export default function Table({
   const [sortKey,   setSortKey]   = useState(null)
   const [sortDir,   setSortDir]   = useState('asc')
   const perPage = 25
+
+  // Paged tables only hold 25 rows, so sorting them would only reorder the current page
+  const canSort = col => !serverPagination && col.sortable !== false
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -67,26 +70,27 @@ export default function Table({
           <thead className="bg-gray-100/50 border-b border-gray-200">
             <tr>
               {columns.map(col => (
-                <th key={col.key}
-                  onClick={() => col.sortable !== false && handleSort(col.key)}
-                  className={`px-4 py-3 text-left text-xs font-semibold text-gray-800 uppercase tracking-wider
-                              ${col.sortable !== false
-                                ? 'cursor-pointer hover:text-gray-800 select-none'
-                                : ''}`}>
-                  {col.label}
-                  {sortKey === col.key && (
-                    <span className="ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>
-                  )}
+                <th key={col.key} scope="col"
+                  aria-sort={sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-800 uppercase tracking-wider">
+                  {canSort(col) ? (
+                    <button type="button" onClick={() => handleSort(col.key)}
+                      className="inline-flex items-center gap-1 uppercase tracking-wider font-semibold
+                                 hover:text-gray-950 select-none rounded
+                                 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                      {col.label}
+                      {sortKey === col.key && (
+                        <span aria-hidden="true">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </button>
+                  ) : col.label}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
             {paginated.map((row, i) => (
-              <tr key={row.id ?? i}
-                onClick={() => onRowClick?.(row)}
-                className={`${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
-                            transition-colors`}>
+              <tr key={row.id ?? i}>
                 {columns.map(col => (
                   <td key={col.key} className="px-4 py-3 text-gray-800">
                     {col.render ? col.render(row) : row[col.key] ?? '—'}
@@ -102,7 +106,6 @@ export default function Table({
       <div className="md:hidden space-y-3">
         {paginated.map((row, i) => (
           <div key={row.id ?? i}
-            onClick={() => onRowClick?.(row)}
             className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
             {columns.map(col => (
               col.key !== 'actions' && (

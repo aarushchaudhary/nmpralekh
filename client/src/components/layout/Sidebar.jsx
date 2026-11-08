@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
@@ -114,6 +115,13 @@ export default function Sidebar({ isOpen, onClose }) {
     }
     const links = roleNavLinks[roleKey] || []
 
+    useEffect(() => {
+        if (!isOpen) return
+        const onKey = e => { if (e.key === 'Escape') onClose() }
+        document.addEventListener('keydown', onKey)
+        return () => document.removeEventListener('keydown', onKey)
+    }, [isOpen, onClose])
+
     const handleLogout = async () => {
         await logout()
         navigate('/login')
@@ -129,9 +137,9 @@ export default function Sidebar({ isOpen, onClose }) {
 
             <aside className={`
                 fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200
-                z-30 flex flex-col transition-transform duration-300 ease-in-out shadow-sm
-                ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-                md:translate-x-0 md:static md:z-auto
+                z-30 flex flex-col transition-[transform,visibility] duration-300 ease-in-out shadow-sm
+                ${isOpen ? 'translate-x-0' : '-translate-x-full invisible'}
+                md:translate-x-0 md:visible md:static md:z-auto
             `}>
 
                 {/* Logo */}

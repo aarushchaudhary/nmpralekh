@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import PageHeader from '../../components/ui/PageHeader'
+import FormError from '../../components/ui/FormError'
 import { useAuth } from '../../context/AuthContext'
 
 export default function FinalizeMISPage() {
@@ -13,6 +14,7 @@ export default function FinalizeMISPage() {
     const [formData, setFormData] = useState({ name: '', date_from: '', date_to: '', data_content: '' })
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [pageError, setPageError] = useState('')
 
     // Search & Combine state for received reports
     const [receivedReports, setReceivedReports] = useState([])
@@ -70,18 +72,20 @@ export default function FinalizeMISPage() {
     const handleSendSuperAdmin = async (id) => {
         try {
             await api.post(`/export/reports/${id}/send-superadmin/`)
+            setPageError('')
             fetchMyReports()
         } catch (err) {
-            alert(err.response?.data?.detail || "Failed to send to Super Admin")
+            setPageError(err.response?.data?.detail || "Failed to send to Super Admin")
         }
     }
 
     const handleSendChronicle = async (id) => {
         try {
             await api.post(`/export/reports/${id}/send-chronicle/`)
+            setPageError('')
             fetchMyReports()
         } catch (err) {
-            alert(err.response?.data?.detail || "Failed to send to Chronicle Master")
+            setPageError(err.response?.data?.detail || "Failed to send to Chronicle Master")
         }
     }
     // Filter logic for received reports
@@ -126,7 +130,7 @@ export default function FinalizeMISPage() {
 
     const handleCombineIntoTextarea = () => {
         if (selectedReportIds.size === 0) {
-            alert("Please select at least one report to combine.")
+            setError("Please select at least one report to combine.")
             return
         }
         const selected = receivedReports.filter(r => selectedReportIds.has(r.id))
@@ -184,6 +188,7 @@ export default function FinalizeMISPage() {
                 <div>
                     <h1 className="text-2xl font-semibold text-gray-800">Finalize MIS Data</h1>
                     <p className="text-gray-500 mt-1">Create and manage your finalized MIS reports</p>
+                    <div className="mt-3"><FormError message={pageError} /></div>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}

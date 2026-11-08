@@ -3,11 +3,14 @@ import useRecords from '../../hooks/useRecords'
 import useSchools from '../../hooks/useSchools'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
+import FormError from '../../components/ui/FormError'
 import Table from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
 import Badge from '../../components/ui/Badge'
+import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import api from '../../api/axios'
+import { apiErrors } from '../../api/errors'
 
 const typeOptions = [
     { value: 'club', label: 'Club' },
@@ -28,6 +31,8 @@ export default function ClubsPage() {
     const [form, setForm] = useState(empty)
     const [saving, setSaving] = useState(false)
     const [errors, setErrors] = useState({})
+    const [deleting, setDeleting] = useState(null)
+    const [deleteError, setDeleteError] = useState('')
 
     const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
     const isEdit = !!selected
@@ -66,18 +71,19 @@ export default function ClubsPage() {
             }
             setShowForm(false); fetch()
         } catch (err) {
-            if (err.response?.data) setErrors(err.response.data)
+            setErrors(apiErrors(err))
         } finally { setSaving(false) }
     }
 
-    const handleDelete = async (row) => {
-        if (!confirm(`Delete "${row.name}"?`)) return
+    const handleDelete = async () => {
+        setSaving(true)
         try {
-            await api.delete(`/records/clubs/${row.id}/`)
+            await api.delete(`/records/clubs/${deleting.id}/`)
+            setDeleting(null)
             fetch()
         } catch (err) {
-            console.error('Delete failed:', err)
-        }
+            setDeleteError(apiErrors(err)._form || 'Could not delete this club.')
+        } finally { setSaving(false) }
     }
 
     const columns = [
@@ -106,7 +112,7 @@ export default function ClubsPage() {
                     <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
                         Edit
                     </Button>
-                    <Button size="sm" variant="danger" onClick={() => handleDelete(row)}>
+                    <Button size="sm" variant="danger" onClick={() => { setDeleteError(''); setDeleting(row) }}>
                         Delete
                     </Button>
                 </div>
@@ -148,9 +154,7 @@ export default function ClubsPage() {
                             Active
                         </label>
                     </div>
-                    {errors.non_field_errors && (
-                        <p className="text-sm text-red-500">{errors.non_field_errors}</p>
-                    )}
+                    <FormError message={errors._form} />
                     <div className="flex justify-end gap-3 pt-2">
                         <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
                         <Button loading={saving} onClick={handleSubmit}>
@@ -159,6 +163,11 @@ export default function ClubsPage() {
                     </div>
                 </div>
             </Modal>
+
+            <ConfirmDialog isOpen={!!deleting} onClose={() => setDeleting(null)}
+                onConfirm={handleDelete} title="Delete club"
+                message={`Delete "${deleting?.name}"? This cannot be undone.`}
+                confirmLabel="Delete" loading={saving} error={deleteError} />
         </div>
     )
 }

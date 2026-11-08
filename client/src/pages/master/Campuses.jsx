@@ -2,12 +2,14 @@ import { useState } from 'react'
 import useRecords  from '../../hooks/useRecords'
 import PageHeader  from '../../components/ui/PageHeader'
 import Button      from '../../components/ui/Button'
+import FormError from '../../components/ui/FormError'
 import Table       from '../../components/ui/Table'
 import Modal       from '../../components/ui/Modal'
 import FormInput   from '../../components/ui/FormInput'
 import Badge       from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import api         from '../../api/axios'
+import { apiErrors } from '../../api/errors'
 
 const empty = { name: '', code: '', city: '' }
 
@@ -52,7 +54,7 @@ export default function Campuses() {
       } else { await create(form) }
       setShowForm(false)
     } catch (err) {
-      if (err.response?.data) setErrors(err.response.data)
+      setErrors(apiErrors(err))
     } finally { setSaving(false) }
   }
 
@@ -133,6 +135,7 @@ export default function Campuses() {
           <FormInput label="City" value={form.city} onChange={set('city')}
             placeholder="e.g. Hyderabad"
             required error={errors.city} />
+          <FormError message={errors._form} />
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
             <Button onClick={handleSubmit} loading={saving}>

@@ -42,11 +42,9 @@ export default function useRecords(endpoint) {
     }
   }, [endpoint]) // endpoint is the only true dependency now
 
-  // Re-fetch whenever the page changes (driven by goToPage)
-  useEffect(() => { fetch({}, currentPage) }, [currentPage]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Initial load
-  useEffect(() => { fetch() }, [fetch])
+  // Initial load, and re-fetch whenever the page changes (driven by goToPage).
+  // One effect: two separate ones both fired on mount and loaded the page twice.
+  useEffect(() => { fetch({}, currentPage) }, [fetch, currentPage])
 
   const create = useCallback(async (payload) => {
     const res = await api.post(endpoint, payload)

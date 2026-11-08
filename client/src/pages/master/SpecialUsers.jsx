@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import api from '../../api/axios'
 
 function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
@@ -11,11 +11,7 @@ function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
 
-    useEffect(() => {
-        fetchStatus()
-    }, [])
-
-    const fetchStatus = async () => {
+    const fetchStatus = useCallback(async () => {
         try {
             const res = await api.get(apiEndpoint)
             setExists(res.data.exists)
@@ -24,7 +20,9 @@ function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
         } finally {
             setLoading(false)
         }
-    }
+    }, [apiEndpoint])
+
+    useEffect(() => { fetchStatus() }, [fetchStatus])
 
     const handleCreate = async (e) => {
         e.preventDefault()

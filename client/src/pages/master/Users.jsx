@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import useRecords from '../../hooks/useRecords'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
+import FormError from '../../components/ui/FormError'
 import Table from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import api from '../../api/axios'
+import { apiErrors } from '../../api/errors'
 
 const roleOptions = [
     { value: 'super_admin', label: 'Super Admin' },
@@ -112,7 +114,7 @@ export default function Users() {
             }
             setShowForm(false)
         } catch (err) {
-            if (err.response?.data) setErrors(err.response.data)
+            setErrors(apiErrors(err))
         } finally {
             setSaving(false)
         }
@@ -246,6 +248,7 @@ export default function Users() {
                         onChange={set('campus')} options={campusOptions}
                         error={errors.campus}
                     />
+                    <FormError message={errors._form} />
                     <div className="flex justify-end gap-3 pt-2">
                         <Button variant="secondary" onClick={() => setShowForm(false)}>
                             Cancel

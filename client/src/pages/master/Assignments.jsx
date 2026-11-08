@@ -2,11 +2,13 @@ import { useState } from 'react'
 import useRecords from '../../hooks/useRecords'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
+import FormError from '../../components/ui/FormError'
 import Table from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import api from '../../api/axios'
+import { apiErrors } from '../../api/errors'
 import { useEffect } from 'react'
 
 export default function Assignments() {
@@ -71,7 +73,7 @@ export default function Assignments() {
             setShowForm(false)
             setForm({ user: '', school: '' })
         } catch (err) {
-            if (err.response?.data) setErrors(err.response.data)
+            setErrors(apiErrors(err))
         } finally {
             setSaving(false)
         }
@@ -151,9 +153,7 @@ export default function Assignments() {
                         options={schoolOptions}
                         required error={errors.school}
                     />
-                    {errors.non_field_errors && (
-                        <p className="text-sm text-red-500">{errors.non_field_errors}</p>
-                    )}
+                    <FormError message={errors._form} />
                     <div className="flex justify-end gap-3 pt-2">
                         <Button variant="secondary" onClick={() => setShowForm(false)}>
                             Cancel

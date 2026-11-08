@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../api/axios'
+import FormError from '../../components/ui/FormError'
 
 const STATUS_PIPELINE = ['open', 'planning', 'fixing', 'testing', 'closed']
 
 export default function ErrorTickets() {
     const [tickets, setTickets] = useState([])
     const [loading, setLoading] = useState(true)
+    const [pageError, setPageError] = useState('')
     const [expandedTicketId, setExpandedTicketId] = useState(null)
     const [ticketDetails, setTicketDetails] = useState({})
     const [loadingDetails, setLoadingDetails] = useState(false)
@@ -28,13 +30,13 @@ export default function ErrorTickets() {
     const handleStatusChange = async (ticketId, newStatus) => {
         try {
             await api.post(`/service/tickets/${ticketId}/status/`, { status: newStatus })
+            setPageError('')
             setTickets(tickets.map(t => t.id === ticketId ? { ...t, status: newStatus } : t))
             if (ticketDetails[ticketId]) {
                 setTicketDetails({ ...ticketDetails, [ticketId]: { ...ticketDetails[ticketId], status: newStatus } })
             }
         } catch (err) {
-            console.error("Failed to update status", err)
-            alert("Failed to update status")
+            setPageError(err.response?.data?.detail || "Failed to update status")
         }
     }
 
@@ -71,6 +73,7 @@ export default function ErrorTickets() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-gray-900">Automated Error Tickets</h1>
+            <FormError message={pageError} />
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

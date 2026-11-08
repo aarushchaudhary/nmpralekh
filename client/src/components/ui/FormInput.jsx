@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import SearchableSelect from './SearchableSelect'
 
 export default function FormInput({
@@ -5,6 +6,15 @@ export default function FormInput({
     placeholder, required, error, disabled,
     options, // for select
 }) {
+    const id = useId()
+    const labelId = `${id}-label`
+    const errorId = `${id}-error`
+    const a11y = {
+        id,
+        'aria-invalid': error ? true : undefined,
+        'aria-describedby': error ? errorId : undefined,
+    }
+
     const baseClass = `
     w-full px-3 py-2 text-sm border rounded-md transition-colors
     focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:border-transparent
@@ -15,14 +25,17 @@ export default function FormInput({
     return (
         <div>
             {label && (
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label id={labelId} htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
                     {label}
-                    {required && <span className="text-red-400 ml-1">*</span>}
+                    {required && <span className="text-red-400 ml-1" aria-hidden="true">*</span>}
                 </label>
             )}
 
             {type === 'select' ? (
                 <SearchableSelect
+                    {...a11y}
+                    labelId={label ? labelId : undefined}
+                    required={required}
                     options={options}
                     value={value}
                     onChange={onChange}
@@ -32,6 +45,7 @@ export default function FormInput({
                 />
             ) : type === 'textarea' ? (
                 <textarea
+                    {...a11y}
                     value={value}
                     onChange={onChange}
                     placeholder={placeholder}
@@ -42,6 +56,7 @@ export default function FormInput({
                 />
             ) : (
                 <input
+                    {...a11y}
                     type={type}
                     value={value}
                     onChange={onChange}
@@ -53,7 +68,7 @@ export default function FormInput({
             )}
 
             {error && (
-                <p className="text-xs text-red-500 mt-1">{error}</p>
+                <p id={errorId} className="text-xs text-red-500 mt-1">{error}</p>
             )}
         </div>
     )

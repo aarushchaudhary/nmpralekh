@@ -4,6 +4,7 @@ import useSchools        from '../../hooks/useSchools'
 import useExport         from '../../hooks/useExport'
 import PageHeader        from '../../components/ui/PageHeader'
 import Button            from '../../components/ui/Button'
+import FormError         from '../../components/ui/FormError'
 import Table             from '../../components/ui/Table'
 import Modal             from '../../components/ui/Modal'
 import FormInput         from '../../components/ui/FormInput'
@@ -12,6 +13,7 @@ import ConfirmDialog     from '../../components/ui/ConfirmDialog'
 import MultiPersonPicker from '../../components/ui/MultiPersonPicker'
 import { useAuth }       from '../../context/AuthContext'
 import api               from '../../api/axios'
+import { apiErrors }     from '../../api/errors'
 
 const applicantTypeOptions = [
   { value: 'faculty', label: 'Faculty' },
@@ -119,19 +121,20 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
       }
       setShowForm(false); fetch()
     } catch (err) {
-      if (err.response?.data) setErrors(err.response.data)
+      setErrors(apiErrors(err))
+      // edits fail after the form was swapped for the confirm box; reopen it to show why
+      if (selected) { setShowEditConfirm(false); setShowForm(true) }
     } finally { setSaving(false) }
   }
 
   const handleDelete = async () => {
     setSaving(true)
     try {
-      const res = await api.delete(`/records/patents/${selected.id}/`)
-      console.log('Delete response:', res.data)
+      await api.delete(`/records/patents/${selected.id}/`)
       setShowDeleteConfirm(false)
       fetch()
     } catch (err) {
-      console.error('Delete failed:', err)
+      setErrors(apiErrors(err))
     } finally {
       setSaving(false)
     }
@@ -197,7 +200,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
                 Edit
               </Button>
               <Button size="sm" variant="danger"
-                onClick={() => { setSelected(row); setShowDeleteConfirm(true) }}>
+                onClick={() => { setSelected(row); setErrors({}); setShowDeleteConfirm(true) }}>
                 Delete
               </Button>
             </>
@@ -217,12 +220,9 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
         action={
           <div className="flex gap-2">
             {['super_admin', 'admin', 'user'].includes(user?.role) && (
-              <button onClick={() => exportFile()} disabled={exporting}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white
-                           text-sm font-medium rounded-lg transition-colors
-                           disabled:opacity-50 flex items-center gap-2">
+              <Button variant="success" onClick={() => exportFile()} loading={exporting}>
                 {exporting ? 'Exporting...' : '⬇ Export'}
-              </button>
+              </Button>
             )}
             {(selfOnly || !readOnly) && (
               <Button onClick={openCreate}>+ Add Patent</Button>
@@ -295,11 +295,12 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
             />
           </div>
 
+          <FormError message={errors._form} />
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
             <Button loading={saving}
               onClick={isEdit
-                ? () => { setShowForm(false); setShowEditConfirm(true) }
+                ? () => { if (validate()) { setShowForm(false); setShowEditConfirm(true) } }
                 : handleSubmit}>
               {isEdit ? 'Request Update' : 'Save Record'}
             </Button>
@@ -312,7 +313,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
         message="This update will be sent for approval before being applied."
         confirmLabel="Submit for Approval" loading={saving} />
       <ConfirmDialog isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={handleDelete} title="Submit Delete Request"
+        onConfirm={handleDelete} error={errors._form} title="Submit Delete Request"
         message="This delete request will be sent for approval."
         confirmLabel="Submit for Approval" loading={saving} />
     </div>

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../api/axios'
+import FormError from '../../components/ui/FormError'
 
 const STATUS_PIPELINE = ['open', 'planning', 'fixing', 'testing', 'closed']
 
 export default function UserFeedback() {
     const [reports, setReports] = useState([])
     const [loading, setLoading] = useState(true)
+    const [pageError, setPageError] = useState('')
     const [expandedReportId, setExpandedReportId] = useState(null)
 
     useEffect(() => {
@@ -26,10 +28,10 @@ export default function UserFeedback() {
     const handleStatusChange = async (reportId, newStatus) => {
         try {
             await api.patch(`/service/bug-reports/${reportId}/`, { status: newStatus })
+            setPageError('')
             setReports(reports.map(r => r.id === reportId ? { ...r, status: newStatus } : r))
         } catch (err) {
-            console.error("Failed to update status", err)
-            alert("Failed to update status")
+            setPageError(err.response?.data?.detail || "Failed to update status")
         }
     }
 
@@ -53,6 +55,7 @@ export default function UserFeedback() {
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold text-gray-900">User Bug Reports</h1>
+            <FormError message={pageError} />
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <table className="w-full text-left border-collapse">

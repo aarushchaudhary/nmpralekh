@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md' }) {
     const sizes = {
@@ -9,6 +9,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
     }
 
     const dialogRef = useRef(null)
+    const titleId = useId()
 
     useEffect(() => {
         const dialog = dialogRef.current
@@ -42,6 +43,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
     return (
         <dialog
             ref={dialogRef}
+            aria-labelledby={titleId}
             onClick={(e) => {
                 if (e.target === dialogRef.current) {
                     dialogRef.current.close()
@@ -58,13 +60,15 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4
                         border-b border-gray-100">
-                    <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+                    <h2 id={titleId} className="text-base font-semibold text-gray-900">{title}</h2>
                     <button
+                        type="button"
                         onClick={onClose}
+                        aria-label="Close"
                         className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100
                        hover:text-gray-600 transition-colors"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                 d="M6 18L18 6M6 6l12 12" />
                         </svg>
