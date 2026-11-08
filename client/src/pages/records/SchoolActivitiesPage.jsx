@@ -21,8 +21,8 @@ const empty = {
 
 export default function SchoolActivitiesPage({ readOnly = false }) {
     const { user } = useAuth()
-    const { exportFile, exporting } = useExport('/export/school-activities/', { filename: 'school_activities.xlsx' })
-    const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/school-activities/')
+    const { exportFile, exporting, exportError } = useExport('/export/school-activities/', { filename: 'school_activities.xlsx' })
+    const { data, loading, error: loadError, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/school-activities/')
     const { schoolOptions } = useSchools()
 
     const [showForm, setShowForm] = useState(false)
@@ -148,7 +148,8 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
                     </div>
                 } />
 
-            <Table columns={columns} data={data}
+            {exportError && <div className="mb-4"><FormError message={exportError} /></div>}
+            <Table columns={columns} data={data} error={loadError}
         serverPagination
         totalPages={totalPages}
         currentPage={currentPage}

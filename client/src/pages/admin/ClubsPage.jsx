@@ -21,7 +21,7 @@ const typeOptions = [
 const empty = { name: '', type: 'club', school: '', is_active: true }
 
 export default function ClubsPage() {
-    const { data, loading, create, fetch, totalPages, currentPage, goToPage } = useRecords('/records/clubs/')
+    const { data, loading, error: loadError, create, fetch, totalPages, currentPage, goToPage } = useRecords('/records/clubs/')
     const { schoolOptions } = useSchools()
 
     const [showForm, setShowForm] = useState(false)
@@ -121,7 +121,7 @@ export default function ClubsPage() {
                 action={<Button onClick={openCreate}>+ Add Club</Button>}
             />
 
-            <Table columns={columns} data={data}
+            <Table columns={columns} data={data} error={loadError}
                 serverPagination totalPages={totalPages}
                 currentPage={currentPage} onPageChange={goToPage}
                 loading={loading} />

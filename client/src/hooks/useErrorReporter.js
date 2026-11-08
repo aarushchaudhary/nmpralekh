@@ -5,7 +5,7 @@
  * Never throws — the reporter must never cause a secondary crash.
  *
  * Usage:
- *   const { reportError, reportApiError } = useErrorReporter()
+ *   import { reportError, reportApiError } from './useErrorReporter'
  *
  *   // In a catch block:
  *   reportError(error, { componentStack: '...' })
@@ -97,12 +97,4 @@ export function reportApiError(axiosError) {
             response_data: JSON.stringify(axiosError.response?.data)?.slice(0, 500),
         },
     })
-}
-
-/**
- * Hook version (for use inside React components/hooks).
- * Returns the same two functions bound to the current component context.
- */
-export default function useErrorReporter() {
-    return { reportError, reportApiError }
 }

@@ -27,8 +27,8 @@ const empty = {
 
 export default function FDPPage({ readOnly = false }) {
     const { user } = useAuth()
-    const { exportFile, exporting } = useExport('/export/fdp/', { filename: 'fdp.xlsx' })
-    const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/fdp/')
+    const { exportFile, exporting, exportError } = useExport('/export/fdp/', { filename: 'fdp.xlsx' })
+    const { data, loading, error: loadError, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/fdp/')
     const { schoolOptions } = useSchools()
 
     const [showForm, setShowForm] = useState(false)
@@ -154,7 +154,8 @@ export default function FDPPage({ readOnly = false }) {
                     </div>
                 } />
 
-            <Table columns={columns} data={data}
+            {exportError && <div className="mb-4"><FormError message={exportError} /></div>}
+            <Table columns={columns} data={data} error={loadError}
         serverPagination
         totalPages={totalPages}
         currentPage={currentPage}

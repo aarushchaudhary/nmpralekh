@@ -35,15 +35,17 @@ const empty = {
 
 export default function PatentsPage({ readOnly = false, selfOnly = false }) {
   const { user }                         = useAuth()
-  const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/patents/')
+  const { data, loading, error: loadError, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/patents/')
   const { schoolOptions }                = useSchools()
-  const { exportFile, exporting }        = useExport('/export/patents/', { filename: 'patents.xlsx' })
+  const { exportFile, exporting, exportError }        = useExport('/export/patents/', { filename: 'patents.xlsx' })
 
   const [showForm,          setShowForm]          = useState(false)
   const [showEditConfirm,   setShowEditConfirm]   = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selected,          setSelected]          = useState(null)
   const [form,              setForm]              = useState(empty)
+  const [loadedIds, setLoadedIds] = useState([])
+  const [pageError, setPageError] = useState('')
   const [coApplicants,      setCoApplicants]      = useState([])
   const [saving,            setSaving]            = useState(false)
   const [errors,            setErrors]            = useState({})
@@ -52,7 +54,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
   const isEdit = !!selected
 
   const openCreate = () => {
-    setSelected(null); setCoApplicants([])
+    setSelected(null); setCoApplicants([]); setLoadedIds([])
     setForm({
       ...empty,
       applicant_name: selfOnly ? (user?.full_name || '') : '',
@@ -77,6 +79,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
     const res  = await api.get(`/records/patents/${row.id}/applicants/`)
     const data = res.data?.results ?? res.data
     setCoApplicants(data)
+    setLoadedIds(data.map(p => p.id))
     setErrors({}); setShowForm(true)
   }
 
@@ -106,10 +109,16 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
         )
       }
     }
+    // people removed in the picker since the form opened
+    const keptIds = new Set(coApplicants.filter(p => p.id && p.name).map(p => p.id))
+    for (const id of loadedIds.filter(id => !keptIds.has(id))) {
+      await api.delete(`/records/patents/${patentId}/applicants/${id}/`)
+    }
   }
 
   const handleSubmit = async () => {
     if (!validate()) return
+    setPageError('')
     setSaving(true)
     try {
       if (isEdit) {
@@ -118,7 +127,14 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
         setShowEditConfirm(false)
       } else {
         const res = await create(form)
-        if (res?.id) await saveCoApplicants(res.id)
+        try {
+          if (res?.id) await saveCoApplicants(res.id)
+        } catch (err) {
+          // the patent exists now; keeping the "Add" form open would create a duplicate on retry
+          setShowForm(false); fetch()
+          setPageError(`Patent saved, but its co-applicants were not: ${apiErrors(err)._form || 'add them by editing the patent.'}`)
+          return
+        }
       }
       setShowForm(false); fetch()
     } catch (err) {
@@ -239,7 +255,9 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
         </Panel>
       )}
 
-      <Table columns={columns} data={data}
+      {pageError && <div className="mb-4"><FormError message={pageError} /></div>}
+      {exportError && <div className="mb-4"><FormError message={exportError} /></div>}
+      <Table columns={columns} data={data} error={loadError}
         serverPagination
         totalPages={totalPages}
         currentPage={currentPage}

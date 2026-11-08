@@ -14,7 +14,7 @@ import { apiErrors } from '../../api/errors'
 const empty = { campus: '', name: '', code: '' }
 
 export default function Schools() {
-    const { data, loading, create, update, remove , totalPages, currentPage, goToPage, fetch} = useRecords('/schools/')
+    const { data, loading, error: loadError, create, update, remove , totalPages, currentPage, goToPage, fetch} = useRecords('/schools/')
 
     const [campusOptions, setCampusOptions] = useState([])
 
@@ -147,7 +147,7 @@ export default function Schools() {
                 }
             />
 
-            <Table columns={columns} data={data}
+            <Table columns={columns} data={data} error={loadError}
         serverPagination
         totalPages={totalPages}
         currentPage={currentPage}

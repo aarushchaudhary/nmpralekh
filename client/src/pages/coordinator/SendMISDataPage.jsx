@@ -203,11 +203,7 @@ export default function SendMISDataPage() {
 
             {isModalOpen && (
                 <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create MIS Report">
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                            {error}
-                        </div>
-                    )}
+                    {error && <div className="mb-4"><FormError message={error} /></div>}
 
                     <form onSubmit={handleCreateReport} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">

@@ -7,14 +7,8 @@ const styles = {
     gray: 'bg-gray-100 text-gray-700 border-gray-200',
 }
 
-// older colour names used across pages
-const aliases = {
-    green: 'dark', blue: 'gray', purple: 'gray', teal: 'gray',
-    yellow: 'outline', orange: 'outline',
-}
-
 export default function Badge({ label, color = 'gray' }) {
-    const style = styles[color] || styles[aliases[color]] || styles.gray
+    const style = styles[color] || styles.gray
     return (
         <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-xs font-medium whitespace-nowrap ${style}`}>
             {label}

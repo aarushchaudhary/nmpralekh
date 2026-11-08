@@ -20,9 +20,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     // use plain axios — not the interceptor version
     // so a 401 here does NOT trigger a refresh loop
+    // The 30-min access cookie may have expired while the 6-h refresh cookie is
+    // still valid (e.g. reopening the app after a break): refresh once, then retry.
     authApi.get('/auth/me/')
+      .catch(err => {
+        if (err.response?.status !== 401) throw err
+        return authApi.post('/auth/refresh/', {}).then(() => authApi.get('/auth/me/'))
+      })
       .then(res => setUser(res.data))
-      .catch(() => setUser(null))   // silently set null — no retry
+      .catch(() => setUser(null))
       .finally(() => setLoading(false))
   }, [])
 

@@ -26,8 +26,8 @@ const empty = {
 
 export default function CertificationsPage({ readOnly = false, selfOnly = false }) {
     const { user } = useAuth()
-    const { exportFile, exporting } = useExport('/export/certifications/', { filename: 'certifications.xlsx' })
-    const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/certifications/')
+    const { exportFile, exporting, exportError } = useExport('/export/certifications/', { filename: 'certifications.xlsx' })
+    const { data, loading, error: loadError, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/certifications/')
     const { schoolOptions } = useSchools()
 
     const [showForm, setShowForm] = useState(false)
@@ -175,7 +175,8 @@ export default function CertificationsPage({ readOnly = false, selfOnly = false 
                     </div>
                 } />
 
-            <Table columns={columns} data={data}
+            {exportError && <div className="mb-4"><FormError message={exportError} /></div>}
+            <Table columns={columns} data={data} error={loadError}
         serverPagination
         totalPages={totalPages}
         currentPage={currentPage}

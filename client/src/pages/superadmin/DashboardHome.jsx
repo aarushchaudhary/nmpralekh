@@ -6,16 +6,18 @@ import StatCard from '../../components/ui/StatCard'
 import Panel from '../../components/ui/Panel'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
+import FormError from '../../components/ui/FormError'
 import api from '../../api/axios'
+import { exportErrorMessage } from '../../hooks/useExport'
 
 const modules = [
-    { label: 'School activities', path: 'school-activities', endpoint: '/records/school-activities/' },
-    { label: 'Student activities', path: 'student-activities', endpoint: '/records/student-activities/' },
-    { label: 'FDP / Workshop / GL', path: 'fdp', endpoint: '/records/fdp/' },
-    { label: 'Publications', path: 'publications', endpoint: '/records/publications/' },
-    { label: 'Patents', path: 'patents', endpoint: '/records/patents/' },
-    { label: 'Certifications', path: 'certifications', endpoint: '/records/certifications/' },
-    { label: 'Placements', path: 'placements', endpoint: '/records/placements/' },
+    { label: 'School activities', path: 'school-activities' },
+    { label: 'Student activities', path: 'student-activities' },
+    { label: 'FDP / Workshop / GL', path: 'fdp' },
+    { label: 'Publications', path: 'publications' },
+    { label: 'Patents', path: 'patents' },
+    { label: 'Certifications', path: 'certifications' },
+    { label: 'Placements', path: 'placements' },
 ]
 
 const exportEndpoints = [
@@ -33,21 +35,20 @@ export default function DashboardHome() {
     const [counts, setCounts] = useState({})
     const [schools, setSchools] = useState([])
     const [exporting, setExporting] = useState(null)
+    const [exportError, setExportError] = useState('')
 
     useEffect(() => {
         api.get('/schools/').then(res => {
             setSchools(res.data?.results ?? res.data)
         })
-        modules.forEach(mod => {
-            api.get(mod.endpoint).then(res => {
-                const data = res.data?.results ?? res.data
-                setCounts(prev => ({ ...prev, [mod.path]: data.length }))
-            }).catch(() => { })
-        })
+        api.get('/records/dashboard-counts/').then(res => {
+            setCounts(Object.fromEntries(modules.map(mod => [mod.path, res.data[mod.path.replaceAll('-', '_')]])))
+        }).catch(() => { })
     }, [])
 
-    const handleExport = async (endpoint, filename) => {
-        setExporting(filename)
+    const handleExport = async (endpoint, filename, key = filename) => {
+        setExporting(key)
+        setExportError('')
         try {
             const res = await api.get(endpoint, { responseType: 'blob' })
             const url = window.URL.createObjectURL(new Blob([res.data]))
@@ -56,25 +57,14 @@ export default function DashboardHome() {
             a.download = filename
             a.click()
             window.URL.revokeObjectURL(url)
-        } catch { /* download error swallowed */ } finally {
+        } catch (err) {
+            setExportError(await exportErrorMessage(err))
+        } finally {
             setExporting(null)
         }
     }
 
-    const handleExportAll = async () => {
-        setExporting('all')
-        try {
-            const res = await api.get('/export/all/', { responseType: 'blob' })
-            const url = window.URL.createObjectURL(new Blob([res.data]))
-            const a = document.createElement('a')
-            a.href = url
-            a.download = 'MIS_Dashboard.xlsx'
-            a.click()
-            window.URL.revokeObjectURL(url)
-        } catch { /* download error swallowed */ } finally {
-            setExporting(null)
-        }
-    }
+    const handleExportAll = () => handleExport('/export/all/', 'MIS_Dashboard.xlsx', 'all')
 
     return (
         <div className="space-y-6">
@@ -82,6 +72,7 @@ export default function DashboardHome() {
                 title={`Welcome, ${user?.full_name}`}
                 subtitle="Read-only view across all schools"
             />
+            <FormError message={exportError} />
 
             {/* Module counts, each linking to its module */}
             <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded-md overflow-hidden [&>*:last-child]:col-span-2 xl:[&>*:last-child]:col-span-1">

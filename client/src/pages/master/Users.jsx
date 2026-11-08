@@ -26,7 +26,7 @@ const emptyForm = {
 }
 
 export default function Users() {
-    const { data, loading, create, update, remove , totalPages, currentPage, goToPage, fetch} = useRecords('/users/')
+    const { data, loading, error: loadError, create, update, remove , totalPages, currentPage, goToPage, fetch} = useRecords('/users/')
 
     const [campusOptions, setCampusOptions] = useState([])
 
@@ -184,7 +184,7 @@ export default function Users() {
                 action={<Button onClick={openCreate}>+ Add User</Button>}
             />
 
-            <Table columns={columns} data={data}
+            <Table columns={columns} data={data} error={loadError}
         serverPagination
         totalPages={totalPages}
         currentPage={currentPage}

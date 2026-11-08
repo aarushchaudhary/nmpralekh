@@ -2,6 +2,7 @@ import { useState } from 'react'
 import api from '../../api/axios'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
+import FormError from '../../components/ui/FormError'
 
 const inputClass = 'h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 ' +
     'focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20'
@@ -63,11 +64,7 @@ export default function RequestDataModal({ isOpen, onClose, coordinator, onSucce
                 }
             </p>
 
-            {error && (
-                <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                    {error}
-                </div>
-            )}
+            {error && <div className="mb-4"><FormError message={error} /></div>}
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>

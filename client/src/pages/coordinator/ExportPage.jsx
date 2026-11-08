@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import PageHeader from '../../components/ui/PageHeader'
+import FormError from '../../components/ui/FormError'
 import Button from '../../components/ui/Button'
 import Panel from '../../components/ui/Panel'
 import Badge from '../../components/ui/Badge'
@@ -14,7 +15,7 @@ export default function ExportPage() {
     const [dateTo, setDateTo]     = useState('')
     const [format, setFormat]     = useState('excel')
     const [dateError, setDateError] = useState('')
-    const { exportFile, exporting } = useExport('/export/coordinator/', {
+    const { exportFile, exporting, exportError } = useExport('/export/coordinator/', {
         filename: format === 'json' ? 'MIS_Coordinator_Export' : 'MIS_Coordinator_Export',
         mimeType: format === 'json' ? 'application/json' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         extension: format === 'json' ? '.json' : '.xlsx'
@@ -38,6 +39,7 @@ export default function ExportPage() {
                 title="Data Export"
                 subtitle="Export MIS records for your school within a date range"
             />
+            {exportError && <div className="mb-4"><FormError message={exportError} /></div>}
 
             <div className="max-w-2xl">
                 <Panel

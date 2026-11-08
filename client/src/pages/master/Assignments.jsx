@@ -12,7 +12,7 @@ import { apiErrors } from '../../api/errors'
 import { useEffect } from 'react'
 
 export default function Assignments() {
-    const { data, loading, create, remove , totalPages, currentPage, goToPage} = useRecords('/schools/assign/')
+    const { data, loading, error: loadError, create, remove , totalPages, currentPage, goToPage} = useRecords('/schools/assign/')
 
     const [showForm, setShowForm] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
@@ -119,7 +119,7 @@ export default function Assignments() {
                 }
             />
 
-            <Table columns={columns} data={data}
+            <Table columns={columns} data={data} error={loadError}
         serverPagination
         totalPages={totalPages}
         currentPage={currentPage}

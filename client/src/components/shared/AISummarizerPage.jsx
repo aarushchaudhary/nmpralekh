@@ -2,6 +2,7 @@ import { useState } from 'react'
 import PageHeader from '../ui/PageHeader'
 import Button from '../ui/Button'
 import Panel from '../ui/Panel'
+import FormError from '../ui/FormError'
 
 export default function AISummarizerPage() {
     const [serverUrl, setServerUrl] = useState('')
@@ -127,11 +128,7 @@ export default function AISummarizerPage() {
                         </form>
                     </div>
 
-                    {error && (
-                        <div className="p-4 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                            {error}
-                        </div>
-                    )}
+                    <FormError message={error} />
 
                     {/* 3. Result Box */}
                     <div>

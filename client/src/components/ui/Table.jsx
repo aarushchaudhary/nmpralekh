@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import EmptyState from './EmptyState'
+import FormError from './FormError'
 
 export default function Table({
-  columns, data, loading,
+  columns, data, loading, error,
   // server-side pagination props
   serverPagination = false,
   totalPages = 1,
@@ -62,6 +63,9 @@ export default function Table({
       </div>
     )
   }
+
+  // a failed load must not look like an empty list
+  if (error) return <FormError message={error} />
 
   if (!data?.length) return <EmptyState />
 

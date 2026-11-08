@@ -30,15 +30,17 @@ const empty = {
 
 export default function PublicationsPage({ readOnly = false, selfOnly = false }) {
   const { user }                         = useAuth()
-  const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/publications/')
+  const { data, loading, error: loadError, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/publications/')
   const { schoolOptions }                = useSchools()
-  const { exportFile, exporting }        = useExport('/export/publications/', { filename: 'publications.xlsx' })
+  const { exportFile, exporting, exportError }        = useExport('/export/publications/', { filename: 'publications.xlsx' })
 
   const [showForm,          setShowForm]          = useState(false)
   const [showEditConfirm,   setShowEditConfirm]   = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selected,          setSelected]          = useState(null)
   const [form,              setForm]              = useState(empty)
+  const [loadedIds, setLoadedIds] = useState([])
+  const [pageError, setPageError] = useState('')
   const [coAuthors,         setCoAuthors]         = useState([])
   const [saving,            setSaving]            = useState(false)
   const [errors,            setErrors]            = useState({})
@@ -56,6 +58,7 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
   const openCreate = () => {
     setSelected(null)
     setCoAuthors([])
+    setLoadedIds([])
     setForm({
       ...empty,
       author_name: selfOnly ? (user?.full_name || '') : '',
@@ -81,6 +84,7 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
     const res  = await api.get(`/records/publications/${row.id}/authors/`)
     const data = res.data?.results ?? res.data
     setCoAuthors(data)
+    setLoadedIds(data.map(p => p.id))
     setErrors({}); setShowForm(true)
   }
 
@@ -110,10 +114,16 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
         )
       }
     }
+    // people removed in the picker since the form opened
+    const keptIds = new Set(coAuthors.filter(p => p.id && p.name).map(p => p.id))
+    for (const id of loadedIds.filter(id => !keptIds.has(id))) {
+      await api.delete(`/records/publications/${publicationId}/authors/${id}/`)
+    }
   }
 
   const handleSubmit = async () => {
     if (!validate()) return
+    setPageError('')
     setSaving(true)
     try {
       if (isEdit) {
@@ -122,7 +132,14 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
         setShowEditConfirm(false)
       } else {
         const res = await create(form)
-        if (res?.id) await saveCoAuthors(res.id)
+        try {
+          if (res?.id) await saveCoAuthors(res.id)
+        } catch (err) {
+          // the publication exists now; keeping the "Add" form open would create a duplicate on retry
+          setShowForm(false); fetch()
+          setPageError(`Publication saved, but its co-authors were not: ${apiErrors(err)._form || 'add them by editing the publication.'}`)
+          return
+        }
       }
       setShowForm(false); fetch()
     } catch (err) {
@@ -250,7 +267,9 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
         </Panel>
       )}
 
-      <Table columns={columns} data={data}
+      {pageError && <div className="mb-4"><FormError message={pageError} /></div>}
+      {exportError && <div className="mb-4"><FormError message={exportError} /></div>}
+      <Table columns={columns} data={data} error={loadError}
         serverPagination
         totalPages={totalPages}
         currentPage={currentPage}

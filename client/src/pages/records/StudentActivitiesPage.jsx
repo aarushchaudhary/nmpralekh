@@ -27,9 +27,9 @@ const empty = {
 
 export default function StudentActivitiesPage({ readOnly = false }) {
     const { user } = useAuth()
-    const { data, loading, create, fetch, totalPages, currentPage, goToPage } = useRecords('/records/student-activities/')
+    const { data, loading, error: loadError, create, fetch, totalPages, currentPage, goToPage } = useRecords('/records/student-activities/')
     const { schoolOptions } = useSchools()
-    const { exportFile, exporting } = useExport('/export/student-activities/', { filename: 'student_activities.xlsx' })
+    const { exportFile, exporting, exportError } = useExport('/export/student-activities/', { filename: 'student_activities.xlsx' })
 
     const [clubOptions, setClubOptions] = useState([])
     const [showOther, setShowOther] = useState(false)
@@ -203,7 +203,8 @@ export default function StudentActivitiesPage({ readOnly = false }) {
                 }
             />
 
-            <Table columns={columns} data={data}
+            {exportError && <div className="mb-4"><FormError message={exportError} /></div>}
+            <Table columns={columns} data={data} error={loadError}
                 serverPagination
                 totalPages={totalPages}
                 currentPage={currentPage}

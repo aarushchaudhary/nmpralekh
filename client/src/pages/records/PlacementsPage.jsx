@@ -18,9 +18,9 @@ const empty = { school: '', name: '', date: '', details: '', company_name: '', p
 
 export default function PlacementsPage({ readOnly = false }) {
     const { user } = useAuth()
-    const { data, loading, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/placements/')
+    const { data, loading, error: loadError, create, fetch , totalPages, currentPage, goToPage} = useRecords('/records/placements/')
     const { schoolOptions } = useSchools()
-    const { exportFile, exporting } = useExport('/export/placements/', { filename: 'placements.xlsx' })
+    const { exportFile, exporting, exportError } = useExport('/export/placements/', { filename: 'placements.xlsx' })
 
     const [showForm, setShowForm] = useState(false)
     const [showEditConfirm, setShowEditConfirm] = useState(false)
@@ -145,7 +145,8 @@ export default function PlacementsPage({ readOnly = false }) {
                 }
             />
 
-            <Table columns={columns} data={data}
+            {exportError && <div className="mb-4"><FormError message={exportError} /></div>}
+            <Table columns={columns} data={data} error={loadError}
         serverPagination
         totalPages={totalPages}
         currentPage={currentPage}

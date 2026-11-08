@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../../api/axios'
 import PageHeader from '../../components/ui/PageHeader'
 import FormError from '../../components/ui/FormError'
@@ -21,6 +21,16 @@ export default function FinalizeMISPage() {
     const [myReports, setMyReports] = useState([])
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const dialogRef = useRef(null)
+
+    // hand-built dialog: move focus in on open, close on Escape
+    useEffect(() => {
+        if (!isModalOpen) return
+        dialogRef.current?.focus()
+        const onKey = e => { if (e.key === 'Escape') setIsModalOpen(false) }
+        document.addEventListener('keydown', onKey)
+        return () => document.removeEventListener('keydown', onKey)
+    }, [isModalOpen])
     const [formData, setFormData] = useState({ name: '', date_from: '', date_to: '', data_content: '' })
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
@@ -287,9 +297,10 @@ export default function FinalizeMISPage() {
 
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="bg-white rounded-md border border-gray-200 shadow-lg w-full max-w-5xl flex flex-col overflow-hidden" style={{ maxHeight: '95vh' }}>
+                    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="finalize-dialog-title"
+                        className="bg-white rounded-md border border-gray-200 shadow-lg w-full max-w-5xl flex flex-col overflow-hidden focus:outline-none" style={{ maxHeight: '95vh' }}>
                         <div className="px-5 py-3.5 border-b border-gray-200 flex justify-between items-center">
-                            <h2 className="text-base font-semibold text-gray-900">Create Final MIS</h2>
+                            <h2 id="finalize-dialog-title" className="text-base font-semibold text-gray-900">Create Final MIS</h2>
                             <button
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}
@@ -309,6 +320,7 @@ export default function FinalizeMISPage() {
                                         <input
                                             type="text"
                                             placeholder="Search by Title, School, or Coordinator..."
+                                            aria-label="Search received reports"
                                             value={inputSchool}
                                             onChange={(e) => setInputSchool(e.target.value)}
                                             className={inputClass}
@@ -316,12 +328,14 @@ export default function FinalizeMISPage() {
                                         <div className="flex gap-2">
                                             <input
                                                 type="date"
+                                                aria-label="Reports from date"
                                                 value={inputDateFrom}
                                                 onChange={(e) => setInputDateFrom(e.target.value)}
                                                 className={`${inputClass} !w-1/2`}
                                             />
                                             <input
                                                 type="date"
+                                                aria-label="Reports to date"
                                                 value={inputDateTo}
                                                 onChange={(e) => setInputDateTo(e.target.value)}
                                                 className={`${inputClass} !w-1/2`}
@@ -339,10 +353,9 @@ export default function FinalizeMISPage() {
                                     ) : (
                                         <div className="space-y-2">
                                             {filteredReceivedReports.map(report => (
-                                                <div
+                                                <label
                                                     key={report.id}
-                                                    onClick={() => toggleSelection(report.id)}
-                                                    className={`p-3 rounded-md border cursor-pointer transition-colors ${
+                                                    className={`block p-3 rounded-md border cursor-pointer transition-colors ${
                                                         selectedReportIds.has(report.id)
                                                         ? 'border-primary-600 bg-primary-50'
                                                         : 'border-gray-200 bg-white hover:bg-gray-50'
@@ -352,7 +365,7 @@ export default function FinalizeMISPage() {
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedReportIds.has(report.id)}
-                                                            onChange={() => {}}
+                                                            onChange={() => toggleSelection(report.id)}
                                                             className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary-600"
                                                         />
                                                         <div className="min-w-0">
@@ -360,7 +373,7 @@ export default function FinalizeMISPage() {
                                                             <div className="text-xs text-gray-500 tabular-nums">{report.created_by_school_name} | {new Date(report.created_at).toLocaleString()} | {report.date_from} to {report.date_to}</div>
                                                         </div>
                                                     </div>
-                                                </div>
+                                                </label>
                                             ))}
                                         </div>
                                     )}
@@ -382,11 +395,7 @@ export default function FinalizeMISPage() {
                             <div className="lg:w-1/2 flex flex-col">
                                 <h3 className="font-semibold text-gray-600 mb-3 text-xs uppercase tracking-wide">2. Review & Save Final MIS</h3>
 
-                                {error && (
-                                    <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                                        {error}
-                                    </div>
-                                )}
+                                {error && <div className="mb-4"><FormError message={error} /></div>}
 
                                 <form id="create-report-form" onSubmit={handleCreateReport} className="space-y-4 flex flex-col flex-grow">
                                     <div>

@@ -6,6 +6,7 @@ import Table from '../../components/ui/Table'
 import Panel from '../../components/ui/Panel'
 import Modal from '../../components/ui/Modal'
 import { PlusIcon } from '@heroicons/react/20/solid'
+import FormError from '../../components/ui/FormError'
 
 const inputClass = 'h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 ' +
     'placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20'
@@ -92,11 +93,7 @@ export default function InitiateRequestPage() {
 
             {isModalOpen && (
                 <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Initiate Data Request">
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                            {error}
-                        </div>
-                    )}
+                    {error && <div className="mb-4"><FormError message={error} /></div>}
 
                     <form onSubmit={handleCreateRequest} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
