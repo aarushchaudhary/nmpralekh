@@ -1,743 +1,769 @@
 # NMPralekh — MIS Dashboard Portal
 
-A full-stack Management Information System portal built for NMIMS University across all 9 campuses. Manages faculty activities, student activities, publications, patents, certifications, and placements — with a complete role-based access control system and an audit-driven change workflow.
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-CC2626.svg)](LICENSE)
+![Django](https://img.shields.io/badge/Django-6.0-0C4B33?logo=django&logoColor=white)
+![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
+![Android](https://img.shields.io/badge/Android-API%2024%2B-3DDC84?logo=android&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%2B-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-6%2B-DC382D?logo=redis&logoColor=white)
+
+NMPralekh is a Management Information System (MIS) portal for NMIMS University, built for all 9 campuses.
+Schools record their faculty and student activities, publications, patents, certifications and placements in one place.
+Every edit and delete goes through an approval step, and MIS reports flow upward from school to campus to university.
+
+The project has three parts that share one API:
+
+| Part | Folder | What it is | Built with |
+|---|---|---|---|
+| 🖥️ **Server** | [`server/`](server) | REST API, database, background jobs | Django 6, DRF, PostgreSQL, Redis, Celery |
+| 🌐 **Web client** | [`client/`](client) | Full portal for every role | React 19, Vite 8, Tailwind CSS 3 |
+| 📱 **Android app** | [`android-client/`](android-client) | Native app for faculty, admins, super admins and reviewers | Java, Material Components, Retrofit, OkHttp |
+
+> **Status:** alpha. It runs on localhost today; the production hardening steps are listed in [Going to production](#going-to-production).
 
 ---
 
-## Tech Stack
+## Contents
 
-| Layer | Technology |
+- [Architecture](#architecture)
+- [User roles](#user-roles)
+- [MIS record modules](#mis-record-modules)
+- [Key workflows](#key-workflows)
+- [Repository layout](#repository-layout)
+- [Setup guide](#setup-guide)
+  - [1. Server](#1-server-setup)
+  - [2. Web client](#2-web-client-setup)
+  - [3. Android app](#3-android-app-setup)
+  - [4. Running everything](#4-running-everything)
+- [Infrastructure tuning](#infrastructure-tuning)
+- [API reference](#api-reference)
+- [Database schema](#database-schema)
+- [Testing and CI](#testing-and-ci)
+- [Security](#security)
+- [Going to production](#going-to-production)
+- [Project rules](#project-rules)
+- [Developer and license](#developer-and-license)
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph clients["Clients"]
+        web["🌐 Web client<br/>React + Vite<br/>localhost:5173"]
+        app["📱 Android app<br/>Retrofit + OkHttp"]
+    end
+
+    subgraph edge["Entry point"]
+        nginx["Nginx :7567<br/>rate limit, headers,<br/>blocks /admin/"]
+    end
+
+    subgraph server["Django server"]
+        gunicorn["Gunicorn :8000<br/>gthread workers"]
+        apps["accounts · schools · records<br/>audit · export · service"]
+    end
+
+    subgraph jobs["Background jobs"]
+        worker["Celery worker<br/>exports, backups"]
+        beat["Celery beat<br/>nightly schedule"]
+    end
+
+    subgraph data["Data"]
+        pgb["pgBouncer :6432"]
+        pg[("PostgreSQL :5432")]
+        redis[("Redis :6379<br/>cache, rate limits,<br/>task queue")]
+    end
+
+    web -- "/api via Vite proxy" --> nginx
+    app -- "HTTP + cookies" --> nginx
+    nginx --> gunicorn --> apps
+    apps --> pgb --> pg
+    apps <--> redis
+    beat --> redis
+    redis --> worker
+    worker --> pgb
+
+    classDef client fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,stroke-width:2px
+    classDef android fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:2px
+    classDef edgeNode fill:#FFF3E0,stroke:#EF6C00,color:#E65100,stroke-width:2px
+    classDef django fill:#FDECEC,stroke:#CC2626,color:#8A1A1A,stroke-width:2px
+    classDef job fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C,stroke-width:2px
+    classDef store fill:#E0F7FA,stroke:#00838F,color:#004D40,stroke-width:2px
+    class web client
+    class app android
+    class nginx edgeNode
+    class gunicorn,apps django
+    class worker,beat job
+    class pgb,pg,redis store
+```
+
+| Django app | Responsibility |
 |---|---|
-| Frontend | React 18 + Vite + Tailwind CSS |
-| Backend | Django 6 + Django REST Framework |
-| Database | PostgreSQL 15+ (ACID compliant) |
-| Auth | JWT via djangorestframework-simplejwt + httpOnly cookies |
-| Cache | Redis + django-redis |
-| Background Tasks | Celery |
-| Search & Filtering | django-filter + DRF SearchFilter |
-| Excel Export | openpyxl |
-| Production Server | Gunicorn (gthread workers) |
-| Reverse Proxy | Nginx (rate limiting, admin protection, static files) |
+| `accounts` | Users, the 9 roles, cookie-based JWT login, refresh and logout, login rate limits |
+| `schools` | Campuses, schools, and which users belong to which school |
+| `records` | The 7 MIS modules, clubs, co-authors and co-applicants, dashboard counts, database backups |
+| `audit` | Approval queue for every update and delete |
+| `export` | Excel exports (per module, "Export all", nightly, manual), MIS data requests and reports |
+| `service` | Service portal: automatic error tickets, bug reports, system health |
 
 ---
 
-## Architecture Overview
+## User roles
 
 ```mermaid
-graph TD
-    A["Browser<br>https://localhost:5173"] -->|HTTPS| B["Vite Dev Server<br>:5173"]
-    B -->|"Proxy /api/* → http://localhost:7567"| N["Nginx<br>:7567 — public entry point"]
-    N -->|"proxy_pass → 127.0.0.1:8000"| C["Gunicorn<br>:8000 — internal only"]
-    
-    subgraph Django Applications
-        D1[accounts: Users, Roles, JWT]
-        D2[schools: Campuses, Schools]
-        D3[records: 8 MIS Modules + Clubs]
-        D4[audit: Approve/Reject]
-        D5[export: Excel Export]
-        D6[service: Errors & Bug Tickets]
-    end
-    
-    C --> D1
-    C --> D2
-    C --> D3
-    C --> D4
-    C --> D5
-    C --> D6
-    
-    C -->|Read/Write| DB[(PostgreSQL<br>ACID)]
-    C -->|Cache/Sessions| Cache[(Redis)]
-    C -->|Task Queue| Worker[Celery<br>Background Tasks]
-```
+flowchart TD
+    master["👑 Master<br/>creates campuses, schools, users"]
+    service["🛠️ Service Admin<br/>errors and bug reports"]
+    chronicle["📚 Chronicle Master<br/>university-wide reports"]
+    accumulator["🗂️ MIS Accumulator<br/>campus-wide reports"]
+    super["🏛️ Super Admin<br/>read-only, whole campus"]
+    coordinator["📊 MIS Coordinator<br/>school reports"]
+    admin["🏫 Admin<br/>school records, clubs"]
+    faculty["👩‍🏫 Faculty (user)<br/>own records"]
+    reviewer["✅ Delete Auth<br/>approves edits and deletes"]
 
----
+    master -->|sets up| super & admin & faculty & coordinator & reviewer
+    master -->|appoints| service & chronicle & accumulator
+    chronicle -->|requests data from| accumulator
+    accumulator -->|requests data from| coordinator
+    coordinator -->|reads| admin
+    coordinator -->|reads| faculty
+    admin -->|update / delete request| reviewer
+    faculty -->|update / delete request| reviewer
+    super -.->|views| admin
 
-## Project Structure
-
-```
-nmpralekh/
-├── venv/                           # Python virtual environment (never commit)
-├── client/                         # React Vite frontend
-│   ├── src/
-│   │   ├── api/
-│   │   │   └── axios.js            # Axios with cookie auth + auto refresh
-│   │   ├── context/
-│   │   │   └── AuthContext.jsx     # Auth state, login, logout
-│   │   ├── components/
-│   │   │   ├── layout/
-│   │   │   │   ├── Layout.jsx      # Page wrapper with sidebar
-│   │   │   │   └── Sidebar.jsx     # Role-aware navigation
-│   │   │   ├── ui/
-│   │   │   │   ├── Table.jsx       # Sortable paginated table + mobile cards
-│   │   │   │   ├── Modal.jsx       # Form modal
-│   │   │   │   ├── Button.jsx      # Primary, secondary, danger variants
-│   │   │   │   ├── Badge.jsx       # Status pills
-│   │   │   │   ├── FormInput.jsx   # Input, searchable select, textarea
-│   │   │   │   ├── SearchableSelect.jsx # Custom combobox with filtering
-│   │   │   │   ├── PageHeader.jsx  # Title + action button
-│   │   │   │   ├── EmptyState.jsx  # Empty table placeholder
-│   │   │   │   ├── ConfirmDialog.jsx
-│   │   │   │   └── MultiPersonPicker.jsx  # Co-authors / co-applicants
-│   │   │   └── ProtectedRoute.jsx  # Role-based route guard
-│   │   ├── pages/
-│   │   │   ├── auth/               # Login, Unauthorized
-│   │   │   ├── master/             # Campus, School, User, Assignment mgmt
-│   │   │   ├── admin/              # Admin dashboard, Clubs, Faculties view
-│   │   │   ├── faculty/            # Faculty dashboard + self-managed modules
-│   │   │   ├── superadmin/         # Read-only view, Campus Users, exports
-│   │   │   ├── deleteauth/         # Pending requests + history
-│   │   │   └── records/            # Shared record module pages (7 modules)
-│   │   ├── hooks/
-│   │   │   ├── useRecords.js       # Generic CRUD + server-side pagination
-│   │   │   ├── useSchools.js       # Fetch assigned schools for dropdowns
-│   │   │   └── useExport.js        # Excel file download handler
-│   │   ├── App.jsx                 # Router + role-based redirects
-│   │   └── main.jsx
-│   ├── tailwind.config.js
-│   ├── vite.config.js              # HTTPS + Proxy /api/* to Django
-│   └── package.json
-│
-├── server/                         # Django backend
-│   ├── apps/
-│   │   ├── accounts/               # Custom User model, JWT, permissions
-│   │   │   ├── models.py           # User with role + campus FK
-│   │   │   ├── serializers.py      # UserSerializer, UserVisibilitySerializer
-│   │   │   ├── views.py            # Login, logout, refresh, me, user CRUD,
-│   │   │   │                       # SchoolFacultiesView, CampusUsersView
-│   │   │   ├── permissions.py      # IsMaster, IsAdmin, IsSuperAdmin, IsUser
-│   │   │   └── authentication.py   # CookieJWTAuthentication
-│   │   ├── schools/                # Campus, School, UserSchoolMapping
-│   │   │   ├── models.py
-│   │   │   ├── serializers.py
-│   │   │   ├── views.py
-│   │   │   └── utils.py            # get_user_school_ids (campus-scoped)
-│   │   ├── records/                # All MIS data modules + Clubs
-│   │   │   ├── models.py           # Club, SchoolActivity, StudentActivity,
-│   │   │   │                       # FacultyFDPWorkshopGL, FacultyPublication,
-│   │   │   │                       # Patent, Certification, PlacementActivity,
-│   │   │   │                       # PublicationAuthor, PatentApplicant,
-│   │   │   │                       # BackupConfiguration
-│   │   │   ├── serializers.py
-│   │   │   ├── views.py            # School-scoped CRUD + audit interception
-│   │   │   └── cache_utils.py      # Redis-cached dashboard counts
-│   │   ├── audit/                  # Approve/reject workflow
-│   │   │   ├── models.py           # AuditRequest
-│   │   │   ├── serializers.py
-│   │   │   └── views.py            # Pending list, approve, reject, history
-│   │   ├── export/                 # Excel generation
-│   │   │   ├── views.py            # Per-module + all exports
-│   │   │   └── tasks.py            # Celery async export tasks
-│   │   └── service/                # Service Portal (errors & tickets)
-│   │       ├── models.py           # ErrorTicket, ErrorOccurrence, BugReport
-│   │       └── views.py            # Error ingestion, bug reporting, stats
-│   ├── config/
-│   │   ├── settings.py
-│   │   ├── settings.example.py     # Template — copy to settings.py, fill secrets
-│   │   ├── urls.py
-│   │   ├── wsgi.py
-│   │   ├── wsgi.example.py         # Template — includes deployment notes
-│   │   ├── celery.py
-│   │   └── pagination.py           # StandardPagination (25/page)
-│   ├── gunicorn.conf.py            # Production server config (gthread, 9w × 2t)
-│   ├── manage.py
-│   ├── requirements.txt            # Python dependencies
-│   ├── venv/                       # Virtual environment
-│   └── .env                        # Never commit — use .env.example as reference
-│
-├── android-client/                 # Native Android mobile app (Java)
-│   ├── app/
-│   │   └── src/main/
-│   │       ├── java/.../           # Activities (LoginActivity, FacultyActivity)
-│   │       ├── res/layout/         # UI layouts (XML)
-│   │       └── AndroidManifest.xml # App config and entry points
-│   └── build.gradle                # Android build config
-│
-├── start.sh                        # Start all services in one command (Gunicorn)
-├── client.sh                       # Start React only
-├── celery.sh                       # Start Celery only
-└── README.md
-```
-
----
-
-## User Roles and Hierarchy
-
-```mermaid
-graph TD
-    master[Master] -->|Creates & Assigns| campuses[Campuses, Schools, Users]
-    
-    subgraph System Level
-        service_admin[Service Admin] -->|Manages| errors[Error Tickets & Bug Reports]
-    end
-    
-    subgraph Campus Level
-        super_admin[Super Admin] -->|Read-Only & Export| all_records[All Records in Campus]
-        super_admin -->|Views| campus_users[All Campus Users]
-    end
-    
-    subgraph School Level
-        admin[Admin] -->|Full CRUD & Approvals| school_records[All Records in School]
-        admin -->|Manages| clubs[Clubs & Committees]
-        admin -->|Views| school_faculties[School Faculties]
-        
-        faculty[Faculty / User] -->|Creates| own_records[Own Records]
-        faculty -->|Requests Update/Delete| edit_requests[Audit Requests]
-        
-        mis_coord[MIS Coordinator] -->|Read-Only & Aggregated Export| school_records
-    end
-    
-    subgraph Campus Coordination
-        mis_accumulator[MIS Accumulator] -->|Receives & Combines| mis_coord
-    end
-    
-    subgraph University Coordination
-        chronicle_master[Chronicle Master] -->|Receives & Combines| mis_accumulator
-    end
-    
-    delete_auth[Delete Auth Reviewer] -->|Reviews| edit_requests
-    delete_auth -->|Approves/Rejects| DB_updates[Database Updates]
+    classDef top fill:#2A2A2A,stroke:#000,color:#fff,stroke-width:2px
+    classDef sys fill:#ECEFF1,stroke:#546E7A,color:#263238,stroke-width:2px
+    classDef report fill:#FFF8E1,stroke:#F9A825,color:#5D4037,stroke-width:2px
+    classDef campus fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,stroke-width:2px
+    classDef school fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:2px
+    classDef review fill:#FDECEC,stroke:#CC2626,color:#8A1A1A,stroke-width:2px
+    class master top
+    class service sys
+    class chronicle,accumulator,coordinator report
+    class super campus
+    class admin,faculty school
+    class reviewer review
 ```
 
 | Action | master | super_admin | admin | faculty | delete_auth | mis_coordinator | mis_accumulator | chronicle_master | service_admin |
 |---|---|---|---|---|---|---|---|---|---|
-| Create campuses | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Create schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Create users | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Create campuses, schools, users | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Assign users to schools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View all campus records | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View campus users | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View school faculties | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Manage clubs & committees | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| View own school records | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| View all campus records and users | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View school faculty, manage clubs | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View own school's records | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Create records | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Request update/delete | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Approve/reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Request update / delete | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Approve / reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
-| Finalize MIS Reports | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
-| Use AI Summarizer | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
-| Manage errors & bug reports| ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Write and send MIS reports | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| AI summarizer | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Error tickets and bug reports | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+There is only one Service Admin and one Chronicle Master; the database enforces this.
 
 ---
 
-## MIS Record Modules
+## MIS record modules
 
-| Module | Key Fields |
+| Module | Key fields |
 |---|---|
 | School Activities | Name, date, details, school-wide flag, collaborating schools |
-| Student Activities | Name, date, details, club/committee dropdown, collaborations |
-| Faculty FDP/Workshop/GL | Faculty, date range, name, type, organizing body |
-| Faculty Publications | Author(s), title, journal/conference, date, venue, DOI/Link (required) |
-| Patents | Applicant(s), title, date, journal number, status, DOI/Link (required) |
-| Certifications | Name, date, course title, agency, Credly/Proof link (required) |
+| Student Activities | Name, date, details, club or committee (or free text), collaborations |
+| Faculty FDP / Workshop / GL | Faculty, start and end date, name, type, organizing body |
+| Faculty Publications | Authors (ordered), title, journal or conference, date, venue, DOI / link (required) |
+| Patents | Applicants, title, publication date, journal number, status, DOI / link (required) |
+| Certifications | Person, date, course title, agency, Credly / proof link (required) |
 | Placement Activities | Name, date, details, PlaceCom, company |
 
-### Clubs & Committees
-
-Clubs are managed by Admins and linked to schools. They come in three types:
-- **Club** — Student clubs (e.g. Coding Club, IEEE)
-- **Committee** — Faculty/student committees
-- **Placement Committee** — PlaceCom entities
-
-When creating Student Activities, users select from registered clubs via a searchable dropdown, with an "Other" option for free-text entry.
+**Clubs and committees** are managed by admins and belong to a school. Types: Club, Committee and Placement Committee. Student activities pick a club from a searchable list, with an "Other" option for free text.
 
 ---
 
-## Audit and Delete Auth Flow
+## Key workflows
 
-Every **UPDATE** and **DELETE** goes through a strict approval workflow:
+### Edit and delete approval
+
+Records are never changed or deleted directly. The original stays as it is until a reviewer decides.
 
 ```mermaid
 sequenceDiagram
-    participant U as Admin/Faculty
-    participant S as System
+    autonumber
+    actor U as Admin / Faculty
+    participant S as Server
     participant DB as PostgreSQL
-    participant D as Delete Auth (Reviewer)
-    
-    U->>S: Submits Edit/Delete request
-    S->>S: Snapshot current row to old_data (JSON)
-    S->>DB: Add pending_audit_id flag to Record
-    S->>DB: Create AuditRequest (status=pending)
-    Note over S,DB: Original record remains unchanged!
-    
-    D->>S: Logs in & views Pending Requests
-    S-->>D: Displays field-by-field diff
-    
-    alt is Approved
-        D->>S: APPROVE
-        S->>DB: Apply changes inside transaction.atomic()
-        S->>DB: Clear pending_audit_id
-        S->>DB: Mark AuditRequest approved
-    else is Rejected
-        D->>S: REJECT
-        S->>DB: Record stays exactly as it was
-        S->>DB: Clear pending_audit_id
-        S->>DB: Mark AuditRequest rejected
+    actor R as Delete Auth reviewer
+
+    rect rgb(227, 242, 253)
+    U->>S: Edit or delete a record
+    S->>DB: Save a snapshot of the current row
+    S->>DB: Create AuditRequest (pending) and mark the record
+    Note over S,DB: The record itself is unchanged
     end
-    
-    Note over S,DB: All decisions logged in History with reviewer name & timestamp
+
+    rect rgb(255, 248, 225)
+    R->>S: Open pending requests
+    S-->>R: Field-by-field difference
+    end
+
+    alt Approved
+        rect rgb(232, 245, 233)
+        R->>S: Approve
+        S->>DB: Apply the change in one transaction
+        S->>DB: Clear the mark, request = approved
+        end
+    else Rejected
+        rect rgb(253, 236, 236)
+        R->>S: Reject
+        S->>DB: Record stays as it was
+        S->>DB: Clear the mark, request = rejected
+        end
+    end
 ```
+
+### MIS reporting chain
+
+```mermaid
+flowchart LR
+    ch["📚 Chronicle Master"] -- "1 · data request<br/>(date range)" --> acc["🗂️ MIS Accumulator"]
+    acc -- "2 · data request" --> co["📊 MIS Coordinator"]
+    co -- "3 · school report" --> acc
+    co -. "copy" .-> ad["🏫 Admin / Super Admin"]
+    acc -- "4 · campus report" --> ch
+
+    classDef c1 fill:#FFF8E1,stroke:#F9A825,color:#5D4037,stroke-width:2px
+    classDef c2 fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,stroke-width:2px
+    classDef c3 fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:2px
+    classDef c4 fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C,stroke-width:2px
+    class ch c1
+    class acc c2
+    class co c3
+    class ad c4
+```
+
+Each report records when it was sent to each recipient. A retried or double-clicked request cannot ask the same coordinator twice for the same dates.
+
+### "Export all" in the background
+
+Large exports run in Celery so they never block the web server.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant D as Django
+    participant Q as Redis queue
+    participant W as Celery worker
+
+    rect rgb(227, 242, 253)
+    B->>D: POST /api/export/all/
+    D->>Q: queue export job
+    D-->>B: 202 { task_id }
+    end
+    rect rgb(243, 229, 245)
+    Q->>W: job
+    W->>W: build the Excel file (kept for 1 day)
+    end
+    rect rgb(232, 245, 233)
+    loop every 1.5 s, up to 5 min
+        B->>D: GET /api/export/jobs/{task_id}/
+        D-->>B: processing / ready / failed
+    end
+    B->>D: GET /api/export/jobs/{task_id}/download/
+    D-->>B: MIS_Dashboard.xlsx (only to the user who started it)
+    end
+```
+
+### Login and session
+
+Both clients use the same cookies: a 30-minute **access token** and a 6-hour **refresh token** that rotates on every use.
+
+```mermaid
+sequenceDiagram
+    participant C as Web or Android client
+    participant A as /api/auth/
+
+    rect rgb(232, 245, 233)
+    C->>A: POST login/ (username, password)
+    A-->>C: httpOnly cookies: access_token, refresh_token
+    end
+    rect rgb(255, 243, 224)
+    C->>A: any request after 30 min → 401
+    C->>A: POST refresh/ (once, even if many requests failed)
+    A-->>C: new access + new refresh token (old one blacklisted)
+    C->>A: retry the original request
+    end
+    rect rgb(253, 236, 236)
+    C->>A: POST logout/
+    A-->>C: refresh token blacklisted, cookies cleared
+    end
+```
+
+### Scheduled jobs
+
+| Job | When | What it does |
+|---|---|---|
+| Nightly export | 12:00 AM IST daily | One Excel file per campus in `server/exports/` |
+| Database backup | Set by the master in the portal | `pg_dump` to `server/backups/` |
+| Manual export | On demand (master) | Campus export with a date range |
+
+Every export file name ends in a random 8-character ID, so a manual export and a nightly export can never overwrite each other.
 
 ---
 
-## Prerequisites
+## Repository layout
 
 ```
-Python 3.11+
-Node.js 18+
-PostgreSQL 15+
-Redis 6+
-Git
+nmpralekh/
+├── server/                         Django backend
+│   ├── apps/
+│   │   ├── accounts/               users, roles, JWT cookies, rate limits
+│   │   ├── schools/                campuses, schools, user ↔ school mapping
+│   │   ├── records/                MIS modules, clubs, dashboard counts, backups (tasks.py)
+│   │   ├── audit/                  approve / reject workflow
+│   │   ├── export/                 Excel exports, Celery tasks, MIS reports
+│   │   └── service/                error tickets, bug reports, health
+│   │       (each app: models.py · serializers.py · views.py · urls.py · tests.py · migrations/)
+│   ├── config/
+│   │   ├── settings.example.py     copy to settings.py (gitignored)
+│   │   ├── wsgi.example.py         copy to wsgi.py (gitignored)
+│   │   ├── pgbouncer.example.ini   pgBouncer template
+│   │   ├── redis.example.conf      Redis template
+│   │   ├── celery.py               Celery app
+│   │   ├── pagination.py           25 per page
+│   │   └── urls.py
+│   ├── backups/                    pg_dump files (gitignored)
+│   ├── exports/                    generated Excel files (gitignored)
+│   ├── gunicorn.conf.py
+│   ├── locustfile.py               load test
+│   ├── manage.py
+│   ├── requirements.txt
+│   └── .env.example                copy to .env
+│
+├── client/                         React web app
+│   ├── public/                     favicon.ico, apple-touch-icon.png
+│   ├── src/
+│   │   ├── api/                    axios.js (cookies + auto refresh), errors.js (+ test)
+│   │   ├── components/
+│   │   │   ├── layout/             Layout, Sidebar
+│   │   │   ├── ui/                 Table, Modal, Button, Badge, StatCard, SearchableSelect, …
+│   │   │   ├── shared/             AISummarizerPage
+│   │   │   └── …                   ProtectedRoute, ErrorBoundary, BugReportButton
+│   │   ├── context/                AuthContext
+│   │   ├── hooks/                  useRecords, useSchools, useExport, useErrorReporter
+│   │   ├── pages/                  auth · master · superadmin · admin · faculty · deleteauth
+│   │   │                           coordinator · accumulator · chronicle · service · records
+│   │   ├── App.jsx                 routes and role redirects
+│   │   └── main.jsx
+│   ├── vite.config.js              HTTPS + /api proxy
+│   ├── tailwind.config.js          NMIMS palette
+│   └── .env.example                copy to .env
+│
+├── android-client/                 Android app
+│   ├── app/src/main/
+│   │   ├── java/com/aarushchaudhary/nmpralekh/
+│   │   │   ├── LoginActivity, FacultyActivity, AdminActivity,
+│   │   │   │   SuperAdminActivity, DeleteAuthActivity, BaseAuthActivity
+│   │   │   ├── ApiClient.java      OkHttp: saved cookies, CSRF, token refresh
+│   │   │   ├── api/                ApiService (Retrofit endpoints)
+│   │   │   ├── auth/               SessionManager
+│   │   │   ├── adapters/           RecordAdapter, AuditAdapter
+│   │   │   └── fragments/          one per module, dashboards, audit screens
+│   │   ├── res/                    layout · menu · drawable · color · values (NMIMS theme)
+│   │   │                           mipmap-* (launcher icons, adaptive on Android 8+)
+│   │   └── AndroidManifest.xml
+│   ├── app/build.gradle
+│   └── gradle/libs.versions.toml   dependency versions
+│
+├── graphify-out/                   code knowledge graph
+│   ├── graph.json                  the graph (used by graphify query)
+│   ├── graph.html                  open in a browser to explore it
+│   ├── GRAPH_REPORT.md             architecture summary
+│   └── .graphify_labels.json(.sig) cluster names
+│
+├── .github/workflows/release.yml   CI for all three parts
+├── start.sh                        start every service with one command
+├── locust.sh                       start the load test UI
+├── .gitattributes                  merge rule for graph.json
+├── LICENSE                         GNU GPL v3
+└── README.md
 ```
+
+Gitignored but created during setup: `server/venv/`, `server/.env`, `server/config/settings.py`, `server/config/wsgi.py`, `client/.env`, `client/node_modules/`, `localhost+1*.pem` (mkcert), `android-client/local.properties`.
 
 ---
 
-## Initial Setup
+## Setup guide
 
-### 1. Clone and enter the project
+```mermaid
+flowchart LR
+    pre["Prerequisites"] --> s1["1 · Server<br/>Postgres, Redis, Django"]
+    s1 --> s2["2 · Web client<br/>certs, npm"]
+    s1 --> s3["3 · Android app<br/>Android Studio"]
+    s2 --> run["4 · ./start.sh"]
+    s3 --> run
+
+    classDef a fill:#ECEFF1,stroke:#546E7A,color:#263238,stroke-width:2px
+    classDef b fill:#FDECEC,stroke:#CC2626,color:#8A1A1A,stroke-width:2px
+    classDef c fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,stroke-width:2px
+    classDef d fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:2px
+    classDef e fill:#FFF3E0,stroke:#EF6C00,color:#E65100,stroke-width:2px
+    class pre a
+    class s1 b
+    class s2 c
+    class s3 d
+    class run e
+```
+
+### Prerequisites
+
+| Tool | Version | Needed for |
+|---|---|---|
+| Python | 3.12+ | Server |
+| PostgreSQL | 15+ | Server |
+| Redis | 6+ | Server (cache, rate limits, task queue) |
+| pgBouncer | any recent | Server (recommended connection pooling) |
+| Nginx | any recent | Server entry point; the web client's dev proxy points at it |
+| Node.js | 22+ (CI uses 24) | Web client |
+| mkcert | any | Web client (local HTTPS) |
+| Android Studio + JDK 21 | latest | Android app |
+
+Commands below are for Ubuntu / Debian. Clone the project first:
 
 ```bash
-git clone <your-repo-url>
+git clone <your-repo-url> nmpralekh
 cd nmpralekh
 ```
 
-### 2. Create virtual environment
+### 1. Server setup
+
+**1.1 Create the database**
 
 ```bash
-python -m venv venv
-source venv/bin/activate
+sudo -u postgres psql
 ```
-
-### 3. Install Python dependencies
-
-```bash
-cd server
-pip install -r requirements.txt
-```
-
-### 4. Set up PostgreSQL
 
 ```sql
-CREATE DATABASE nmpralekh
-    ENCODING 'UTF8'
-    LC_COLLATE 'en_US.UTF-8'
-    LC_CTYPE 'en_US.UTF-8'
-    TEMPLATE template0;
-
+CREATE DATABASE nmpralekh ENCODING 'UTF8' TEMPLATE template0;
 CREATE USER mis_user WITH PASSWORD 'your_strong_password';
-
 ALTER ROLE mis_user SET client_encoding TO 'utf8';
 ALTER ROLE mis_user SET default_transaction_isolation TO 'read committed';
 ALTER ROLE mis_user SET timezone TO 'Asia/Kolkata';
-ALTER ROLE mis_user WITH CREATEDB;
-
+ALTER ROLE mis_user CREATEDB;            -- lets the test runner create its test database
 GRANT ALL PRIVILEGES ON DATABASE nmpralekh TO mis_user;
-
--- PostgreSQL 15+ also requires this
 \c nmpralekh
-GRANT ALL ON SCHEMA public TO mis_user;
-
+GRANT ALL ON SCHEMA public TO mis_user;  -- required on PostgreSQL 15+
 \q
 ```
 
-### 5. Start Redis
-
-Redis is strictly required for caching dashboard counts. If you don't have it installed:
+**1.2 Install and start Redis**
 
 ```bash
-sudo apt update
 sudo apt install redis-server -y
-sudo systemctl enable redis-server
-sudo systemctl start redis-server
+sudo systemctl enable --now redis-server
 ```
 
-### 6. Configure Django settings & environment variables
+Set the memory policy to `volatile-lru` (see [Redis](#redis)). It keeps the Celery queue safe from eviction.
 
-Because they contain sensitive paths and imports, the main Django configuration files are gitignored. You must copy them from their templates:
+**1.3 Python environment and packages**
+
+```bash
+cd server
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+**1.4 Settings and environment**
 
 ```bash
 cp config/settings.example.py config/settings.py
 cp config/wsgi.example.py config/wsgi.py
+cp .env.example .env
 ```
 
-Next, create `server/.env`:
+Edit `server/.env`:
 
-```ini
-SECRET_KEY=your_long_random_secret_key
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
-
-DB_NAME=nmpralekh
-DB_USER=mis_user
-DB_PASSWORD=your_strong_password
-DB_HOST=127.0.0.1
-DB_PORT=5432
-
-JWT_ACCESS_MINUTES=30
-JWT_REFRESH_DAYS=7
-
-TIME_ZONE=Asia/Kolkata
-
-CORS_ALLOWED_ORIGINS=https://localhost:5173
-
-REDIS_URL=redis://127.0.0.1:6379/1
-```
-
-Generate a secure secret key:
+| Key | Example | Notes |
+|---|---|---|
+| `SECRET_KEY` | long random string | generate below |
+| `DEBUG` | `True` | `False` in production |
+| `TIME_ZONE` | `Asia/Kolkata` | |
+| `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST` | `nmpralekh`, `mis_user`, … | |
+| `DB_PORT` | `6432` | `6432` through pgBouncer, `5432` straight to PostgreSQL |
+| `REDIS_URL` | `redis://127.0.0.1:6379` | |
+| `CORS_ALLOWED_ORIGINS` | `https://localhost:5173` | comma-separated |
+| `CSRF_TRUSTED_ORIGINS` | `https://localhost:5173` | must match the line above |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | |
 
 ```bash
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
-### 7. Run migrations
+> Keep `settings.py` identical to `settings.example.py` except for local secrets, and keep `.env` and `.env.example` with the same keys.
+
+**1.5 Migrate and create the master account**
 
 ```bash
-python manage.py makemigrations accounts schools audit records export
 python manage.py migrate
+python manage.py createsuperuser   # this account gets the master role
 ```
 
-### 8. Create the master user
+**1.6 pgBouncer (recommended)**
+
+Follow [pgBouncer](#pgbouncer) below, or skip it and set `DB_PORT=5432`.
+
+**1.7 Nginx**
+
+The web client sends `/api` to Nginx on port 7567, and Nginx passes it to Gunicorn on `127.0.0.1:8000`. Set it up as in [Nginx](#nginx).
+To skip Nginx during development, change the proxy `target` in `client/vite.config.js` to `http://localhost:8000`.
+
+**1.8 Check it works**
 
 ```bash
-python manage.py createsuperuser
+python manage.py check
+python manage.py runserver        # dev server with auto-reload, http://127.0.0.1:8000
 ```
 
-Enter username, email and password when prompted. This account gets the `master` role automatically.
+With `DEBUG=True`, interactive API docs are at **http://127.0.0.1:8000/api/docs/**.
 
-### 9. Generate local SSL certificates (mkcert)
+### 2. Web client setup
 
-The Vite frontend is configured to run on HTTPS. You need to generate local trusted certificates in the **project root**:
+**2.1 Local HTTPS certificates** (in the project root)
 
 ```bash
-# Install mkcert if you don't have it (e.g. on Ubuntu: sudo apt install mkcert libnss3-tools)
-cd ..  # Move to the nmpralekh root folder
+sudo apt install mkcert libnss3-tools -y
 mkcert -install
-mkcert localhost 127.0.0.1 ::1
+mkcert localhost 127.0.0.1        # creates localhost+1.pem and localhost+1-key.pem
 ```
-This generates `localhost+1.pem` and `localhost+1-key.pem` which Vite expects.
 
-### 10. Install frontend dependencies
+Vite uses these files when they exist and falls back to plain HTTP otherwise.
+
+**2.2 Install and configure**
 
 ```bash
 cd client
 npm install
+cp .env.example .env              # VITE_API_BASE_URL=/api for local development
+```
+
+**2.3 Run**
+
+```bash
+npm run dev                       # https://localhost:5173
+```
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | dev server with hot reload |
+| `npm run build` | production build into `client/dist/` |
+| `npm run preview` | serve the production build locally |
+| `npm run lint` | ESLint |
+| `npm test` | unit tests (`node --test`) |
+
+### 3. Android app setup
+
+| Item | Value |
+|---|---|
+| Package | `com.aarushchaudhary.nmpralekh` |
+| Min / target SDK | 24 (Android 7.0) / 36 |
+| Build | Gradle with Android Gradle Plugin 9.3, JDK 21 |
+| Default server | `http://10.0.2.2:8000` (the host computer, seen from the emulator) |
+
+**3.1 Open and build**
+
+1. Open `android-client/` in Android Studio and let Gradle sync.
+2. Start the server (step 1 or `./start.sh`).
+3. Press **Run** to install on an emulator or phone.
+
+Or from the command line:
+
+```bash
+cd android-client
+./gradlew assembleDebug
+# APK: android-client/app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+**3.2 Point the app at your server**
+
+Tap the ⚙️ settings button on the login screen and enter the server address:
+
+| Where the app runs | Server URL |
+|---|---|
+| Android emulator | `http://10.0.2.2:8000` (default) |
+| Phone on the same Wi-Fi | `http://<your-computer-LAN-IP>:7567` (through Nginx; Gunicorn only listens on localhost) |
+
+**3.3 What the app does**
+
+| Role | Screens |
+|---|---|
+| Faculty | Dashboard; add, edit and delete own records in all 7 modules |
+| Admin | School records, clubs, faculty list, received MIS data |
+| Super Admin | Read-only records across the campus, campus users |
+| Delete Auth | Pending requests with field differences, approve / reject, history |
+
+Other roles use the web portal.
+
+Session behaviour:
+- After the 30-minute access token expires, the app refreshes it and retries the request, without the user noticing.
+- The login survives closing the app: cookies are saved in the app's private `no_backup` folder, which is never copied to cloud backups. Signing out deletes them.
+- Network logging is on only in debug builds, and logs the request line and status only (never bodies, so never passwords or tokens).
+
+### 4. Running everything
+
+**One command** (asks for `sudo` to start Redis and pgBouncer):
+
+```bash
+./start.sh
+```
+
+It starts Redis, pgBouncer, Gunicorn, the Celery worker, Celery beat and the Vite dev server. **Ctrl+C** stops them all.
+
+**Or in separate terminals:**
+
+| Terminal | Command (from the project root) |
+|---|---|
+| Services | `sudo systemctl start redis pgbouncer nginx` |
+| Backend | `cd server && source venv/bin/activate && gunicorn -c gunicorn.conf.py config.wsgi:application` |
+| Celery worker | `cd server && source venv/bin/activate && celery -A config worker --loglevel=info --concurrency=4` |
+| Celery beat | `cd server && source venv/bin/activate && celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler` |
+| Web client | `cd client && npm run dev` |
+
+> The Celery worker must be running for "Export all", nightly exports and backups. Without it, "Export all" waits 5 minutes and then shows an error.
+
+Open **https://localhost:5173**.
+
+**First use**
+
+```mermaid
+flowchart LR
+    a["Log in as master"] --> b["Create a campus"] --> c["Create schools"] --> d["Create users"] --> e["Assign users<br/>to schools"]
+    e --> f["Admin adds clubs"] --> g["Admin / faculty<br/>add records"] --> h["Edits and deletes<br/>go to Delete Auth"]
+
+    classDef m fill:#2A2A2A,stroke:#000,color:#fff,stroke-width:2px
+    classDef s fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,stroke-width:2px
+    classDef r fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:2px
+    classDef v fill:#FDECEC,stroke:#CC2626,color:#8A1A1A,stroke-width:2px
+    class a m
+    class b,c,d,e s
+    class f,g r
+    class h v
 ```
 
 ---
 
-## Database Optimization (pgBouncer)
+## Infrastructure tuning
 
-For production-grade connection pooling, it is highly recommended to use **pgBouncer**.
+### pgBouncer
 
-### Step 1 — Install pgBouncer
+pgBouncer shares a small pool of database connections between all Gunicorn and Celery threads.
+
 ```bash
-sudo apt update
 sudo apt install pgbouncer -y
-
+sudo cp server/config/pgbouncer.example.ini /etc/pgbouncer/pgbouncer.ini   # then fill in your values
 ```
 
-Verify installation:
+The important settings: `listen_port = 6432`, `pool_mode = transaction`, `default_pool_size = 20`, `auth_type = scram-sha-256`.
 
-```bash
-pgbouncer --version
-
-```
-
-### Step 2 — Configure pgBouncer
-
-Open the config file:
-
-```bash
-sudo nano /etc/pgbouncer/pgbouncer.ini
-
-```
-
-Replace the entire content with:
-
-```ini
-[databases]
-nmpralekh = host=127.0.0.1 port=5432 dbname=nmpralekh
-
-[pgbouncer]
-listen_port          = 6432
-listen_addr          = 127.0.0.1
-auth_type            = scram-sha-256
-auth_file            = /etc/pgbouncer/userlist.txt
-
-pool_mode            = transaction
-max_client_conn      = 200
-default_pool_size    = 20
-reserve_pool_size    = 5
-reserve_pool_timeout = 5
-
-# Timeouts to prevent idle connections and bottlenecks
-server_idle_timeout  = 600
-client_idle_timeout  = 300
-query_wait_timeout   = 30
-
-log_connections      = 0
-log_disconnections   = 0
-log_pooler_errors    = 1
-
-# In transaction mode, server_reset_query is ignored anyway
-# but DISCARD ALL is expensive if it were used.
-server_reset_query   = DISCARD ALL
-ignore_startup_parameters = extra_float_digits
-
-admin_users = pgbouncer
-stats_users = pgbouncer
-
-```
-
-### Step 3 — Generate SCRAM-SHA-256 Passwords
-
-pgBouncer needs its own user authentication file with secure SCRAM hashes generated by PostgreSQL.
-
-Log into PostgreSQL as the postgres administrator:
-
-```bash
-sudo -u postgres psql
-
-```
-
-Run the following SQL commands to generate the hashes:
+Create `/etc/pgbouncer/userlist.txt` from PostgreSQL's own password hashes:
 
 ```sql
--- Ensure PostgreSQL uses SCRAM encryption
+-- sudo -u postgres psql
 SET password_encryption = 'scram-sha-256';
-
--- Update your main database user to generate the hash
 ALTER USER mis_user WITH PASSWORD 'your_strong_password';
-
--- Create the internal pgbouncer admin user
-CREATE USER pgbouncer WITH PASSWORD 'admin';
-
--- Extract the generated hashes to copy
-SELECT rolname, rolpassword FROM pg_authid WHERE rolname IN ('mis_user', 'pgbouncer');
-
+SELECT rolname, rolpassword FROM pg_authid WHERE rolname = 'mis_user';
 ```
-
-Copy the long strings that start with `SCRAM-SHA-256$4096:...` and type `\q` to exit.
-
-### Step 4 — Create pgBouncer User File
-
-Open the userlist file:
-
-```bash
-sudo nano /etc/pgbouncer/userlist.txt
-
-```
-
-Add the users using the hashes you just copied (keep the double quotes):
 
 ```text
 "mis_user" "SCRAM-SHA-256$4096:..."
-"pgbouncer" "SCRAM-SHA-256$4096:..."
-
 ```
-
-### Step 5 — Start pgBouncer
 
 ```bash
-sudo systemctl restart pgbouncer
-sudo systemctl enable pgbouncer
-sudo systemctl status pgbouncer
-
+sudo systemctl enable --now pgbouncer
+psql -U mis_user -d nmpralekh -h 127.0.0.1 -p 6432     # test, then \q
 ```
 
-Should show `active (running)`.
+Then set `DB_PORT=6432` in `server/.env`. The settings already include what transaction pooling needs: `CONN_MAX_AGE = 0`, and `DISABLE_SERVER_SIDE_CURSORS = True` so large exports work through pgBouncer.
 
-### Step 6 — Test pgBouncer Connection
+### Redis
 
-```bash
-psql -U mis_user -d nmpralekh -h 127.0.0.1 -p 6432
-
-```
-
-If it connects successfully type `\q` to exit.
-
-### Step 7 — Update Django to Use pgBouncer Port
-
-Open `server/.env` and change the port from `5432` to `6432`:
-
-```ini
-DB_PORT=6432
-
-```
-
-
-## Redis Configuration (Optimization & Limits)
-
-To prevent Redis from growing unbounded and to ensure it can handle a high volume of concurrent users (e.g., 10,000+), you must configure strict memory caps, an eviction policy, and connection limits.
-
-### Step 1 — Edit redis.conf
-
-Open the Redis configuration file:
-```bash
-sudo nano /etc/redis/redis.conf
-```
-
-**1a. Set Memory Limits:**
-Search for the `# maxmemory <bytes>` section and add (or uncomment):
+Redis holds the cache, the rate-limit counters and the Celery queue. Template: `server/config/redis.example.conf`. In `/etc/redis/redis.conf`:
 
 ```conf
 maxmemory 512mb
-maxmemory-policy volatile-lru
-```
-
-*(This limits Redis to 512 MB of RAM. Once full, it evicts the least recently used keys **that have an expiry** — cache entries and rate-limit counters. The Celery task queue never expires, so `volatile-lru` keeps queued backups and exports safe; `allkeys-lru` could delete them.)*
-
-**1b. Set Connection Limits:**
-Search for the `# maxclients 10000` section and update it to allow a safe buffer for web workers and Celery:
-
-```conf
+maxmemory-policy volatile-lru   # evict only keys with an expiry; never the Celery queue
 maxclients 20000
 ```
 
-### Step 2 — Increase System File Descriptor Limits
-
-Linux limits the number of file descriptors (network connections) a service can open. To allow Redis to actually accept 20,000 clients, you must increase this limit at the system level.
-
-Open the Redis service override file:
+Raise the file limit so Redis can accept that many clients:
 
 ```bash
-sudo systemctl edit redis
+sudo systemctl edit redis        # add:  [Service]  LimitNOFILE=65536
+sudo systemctl daemon-reload && sudo systemctl restart redis
 ```
 
-Add the following lines at the **very top** of the file (do not use a `#` at the beginning):
+Or apply the memory settings live: `redis-cli CONFIG SET maxmemory 512mb` and `redis-cli CONFIG SET maxmemory-policy volatile-lru`.
 
-```ini
-[Service]
-LimitNOFILE=65536
-```
+If Redis goes down, the site keeps working: rate limits "fail open", and login falls back to an in-process limit of 1 attempt per second per user. The Service Admin dashboard shows Redis health.
 
-Save and exit the editor.
+### Gunicorn
 
-### Step 3 — Apply the changes
-
-Reload the systemd daemon to recognize the new file limit, then restart Redis to apply all configurations:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart redis
-```
-
-*(Optional) If you only want to apply the memory limits live without a restart, you can use:*
-
-```bash
-redis-cli CONFIG SET maxmemory 256mb
-redis-cli CONFIG SET maxmemory-policy volatile-lru
-# Note: maxclients and LimitNOFILE require a restart to take effect safely.
-```
-
-
----
-
-## Gunicorn Configuration
-
-The project uses **Gunicorn** with `gthread` workers as its production WSGI server. The config lives in `server/gunicorn.conf.py`.
-
-### Why WSGI / Gunicorn and not ASGI / Uvicorn?
-
-The entire codebase is synchronous Django — every view, ORM call, and Celery task uses sync code. ASGI would run those sync views inside a thread pool anyway, adding overhead with no benefit. Move to ASGI only if you add Django Channels (WebSockets) or rewrite critical views as `async def`.
-
-### Thread math and pgBouncer
+Config: `server/gunicorn.conf.py`. The code is fully synchronous Django, so WSGI with threads fits better than ASGI.
 
 ```
-workers  = (CPU cores × 2) + 1   →  9 on a 4-core machine
-threads  = 2                      →  lowered from 8 (was exhausting the pool)
-─────────────────────────────────────────────────────
-total DB connections = 9 × 2 = 18  ←  fits inside pgBouncer's pool of 20
+workers = CPU cores × 2 + 1     → 9 on a 4-core machine
+threads = 2                     → 9 × 2 = 18 DB connections, inside pgBouncer's pool of 20
 ```
 
-> **Why not 8 threads?** 9 workers × 8 threads = 72 concurrent DB connections against a pgBouncer pool capped at 20 → connection exhaustion under load.
-
-### Key settings
-
-| Setting | Value | Reason |
+| Setting | Value | Why |
 |---|---|---|
-| `worker_class` | `gthread` | Thread-based — good for I/O-bound Django |
-| `threads` | `2` | Keeps total connections ≤ pgBouncer pool |
-| `timeout` | `120` | Covers slow Excel export generation |
-| `max_requests` | `1000` | Recycles workers to prevent memory leaks |
-| `max_requests_jitter` | `100` | Staggers restarts to avoid thundering-herd |
-| `worker_tmp_dir` | `/dev/shm` | RAM-based tmp — faster heartbeat checks |
-| `preload_app` | `True` | Forks after import — faster startup, less RAM |
-| `graceful_timeout` | `30` | Lets in-flight requests finish on shutdown |
-| `limit_request_line` | `4096` | Rejects oversized request lines |
-| `limit_request_fields`| `100` | Caps HTTP header count |
+| `bind` | `127.0.0.1:8000` | only Nginx can reach it |
+| `worker_class` | `gthread` | good for I/O-bound Django |
+| `timeout` | `120` | covers slow exports |
+| `max_requests` / jitter | `1000` / `100` | recycles workers to cap memory growth |
+| `preload_app` | `True` | faster start, less memory |
 
----
+### Nginx
 
-## Nginx Configuration
-
-Nginx sits between the public internet and Gunicorn, acting as the **only public entry point**. It handles rate limiting, security headers, static file serving, and blocks direct access to the Django admin panel.
-
-### Traffic flow
-
-```
-Browser / Client  (https://localhost:5173)
-    ↓  /api/* proxied by Vite dev server
-Nginx             (http://localhost:7567)        ← public entry point
-    ↓  proxy_pass
-Gunicorn          (http://127.0.0.1:8000)        ← internal only
-    ↓
-Django
-```
-
-### Step 1 — Install Nginx
-
-```bash
-sudo apt update && sudo apt install nginx -y
-```
-
-### Step 2 — Create the backend config
-
-```bash
-sudo nano /etc/nginx/sites-available/nmpralekh-backend
-```
-
-Paste the following (replace `/path/to/nmpralekh` with your actual project path):
+Nginx is the only public entry point: rate limiting (30 req/s per IP, burst 50), security headers, static files, and `/admin/` limited to localhost.
 
 ```nginx
+# /etc/nginx/sites-available/nmpralekh-backend
 limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
 
 server {
     listen 7567;
-    server_name localhost;   # replace with your domain in production
+    server_name localhost;                       # your domain in production
 
-    # --- Security Headers ---
-    add_header X-Frame-Options         "DENY"                            always;
-    add_header X-Content-Type-Options  "nosniff"                         always;
-    add_header Referrer-Policy         "strict-origin-when-cross-origin" always;
+    add_header X-Frame-Options        "DENY"                            always;
+    add_header X-Content-Type-Options "nosniff"                         always;
+    add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
 
-    # --- Django static files (Admin panel assets) ---
-    # Run `python manage.py collectstatic` first
     location /static/ {
-        alias /path/to/nmpralekh/server/staticfiles/;
+        alias /path/to/nmpralekh/server/staticfiles/;   # after collectstatic
         expires 30d;
     }
 
-    # --- Block /admin/ from public internet, allow only from localhost ---
     location /admin/ {
         allow 127.0.0.1;
         deny all;
-
-        proxy_pass         http://127.0.0.1:8000;
-        proxy_set_header   Host              $host;
-        proxy_set_header   X-Real-IP         $remote_addr;
-        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_pass       http://127.0.0.1:8000;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # --- Proxy all other requests (including /api/*) to Gunicorn ---
     location / {
         limit_req zone=api burst=50 nodelay;
-
-        proxy_pass         http://127.0.0.1:8000;
-        proxy_set_header   Host              $host;
-        proxy_set_header   X-Real-IP         $remote_addr;
-        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_pass            http://127.0.0.1:8000;
+        proxy_set_header      Host              $host;
+        proxy_set_header      X-Real-IP         $remote_addr;
+        proxy_set_header      X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header      X-Forwarded-Proto $scheme;
         proxy_read_timeout    120s;
         proxy_connect_timeout 10s;
         client_max_body_size  20M;
@@ -745,630 +771,313 @@ server {
 }
 ```
 
-### Step 3 — Enable the site
+```bash
+sudo ln -s /etc/nginx/sites-available/nmpralekh-backend /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+cd server && source venv/bin/activate && python manage.py collectstatic
+```
+
+Firewall (optional on a dev machine):
 
 ```bash
-# Enable the nmpralekh site
-sudo ln -s /etc/nginx/sites-available/nmpralekh-backend /etc/nginx/sites-enabled/nmpralekh-backend
-
-# Disable the default site — it may conflict if it listens on the same port
-sudo rm /etc/nginx/sites-enabled/default
-
-# Test config syntax
-sudo nginx -t
-
-# Apply changes
-sudo systemctl reload nginx
+sudo ufw allow ssh && sudo ufw allow 7567/tcp && sudo ufw deny 8000/tcp && sudo ufw enable
 ```
 
-### Step 4 — Collect Django static files
-
-Required so the Admin panel loads its CSS/JS through Nginx:
-
-```bash
-cd server
-source venv/bin/activate
-python manage.py collectstatic
-```
-
-### Step 5 — Lock Gunicorn to localhost
-
-In `server/gunicorn.conf.py`:
-
-```python
-bind = '127.0.0.1:8000'  # was 0.0.0.0:8000 — only Nginx can now reach it
-```
-
-### Step 6 — Configure UFW firewall
-
-```bash
-sudo ufw allow ssh              # don't lock yourself out
-sudo ufw allow 7567/tcp         # nginx port (use 80/443 in production)
-sudo ufw deny 8000/tcp          # block direct Gunicorn access
-sudo ufw enable
-```
-
-### Step 7 — Update Vite proxy
-
-In `client/vite.config.js`, set the `/api` proxy to point to Nginx instead of Gunicorn directly:
-
-```javascript
-proxy: {
-  '/api': {
-    target: 'http://localhost:7567',   // Nginx, not Gunicorn
-    changeOrigin: true,
-    secure: false,
-  }
-}
-```
-
-### Verifying Nginx is working
-
-```bash
-# Confirm Server header shows nginx
-curl -sI http://localhost:7567/api/auth/me/ | grep -i server
-# → Server: nginx/1.x.x
-
-# Watch live request log
-sudo tail -f /var/log/nginx/access.log
-
-# Confirm /admin/ is blocked from external IPs (returns 403)
-# From localhost it returns 302 (allowed through to Django login)
-curl -s -o /dev/null -w "%{http_code}" http://localhost:7567/admin/
-
-# Confirm all services are listening on the right ports
-ss -tlnp | grep -E '7567|8000|5173'
-```
-
-### Production deployment checklist
-
-When deploying to a real server, update `server/.env`:
-
-```ini
-DEBUG=False
-ALLOWED_HOSTS=api.yourdomain.com
-CORS_ALLOWED_ORIGINS=https://yourdomain.com
-CSRF_TRUSTED_ORIGINS=https://yourdomain.com
-```
-
-And in the Nginx config:
-- `listen 7567` → `listen 80` (then set up `certbot` for HTTPS on 443)
-- `server_name localhost` → `server_name api.yourdomain.com`
-- Update the `/static/` alias to the absolute path on the server
+Check: `curl -sI http://localhost:7567/api/auth/me/ | grep -i server` shows `nginx`.
 
 ---
 
-## Running Locally
+## API reference
 
-### Option A — Single command
+All endpoints are under `/api/`. With `DEBUG=True` the full interactive schema is at `/api/docs/` (Swagger) and `/api/schema/` (OpenAPI).
 
-```bash
-cd ~/nmpralekh
-chmod +x start.sh
-./start.sh
+<details>
+<summary><b>Auth and users</b></summary>
+
 ```
+POST   /api/auth/login/                       sets httpOnly cookies (10 / min per IP)
+POST   /api/auth/refresh/                     rotates tokens (30 / min per IP)
+POST   /api/auth/logout/                      blacklists the refresh token, clears cookies
+GET    /api/auth/me/
 
-Starts Redis, pgBouncer, Django, Celery, and React with clean Ctrl+C shutdown.
-
-### Option B — Separate terminals
-
-**Terminal 1 — Services**
-```bash
-sudo systemctl start redis
-sudo systemctl start pgbouncer
+GET    POST            /api/users/            master
+GET    PUT PATCH DELETE /api/users/<id>/      master (delete = deactivate)
+GET    POST PATCH      /api/users/master/service-user/
+GET    POST PATCH      /api/users/master/chronicle-master/
+GET    /api/users/school-faculties/           admin
+GET    /api/users/campus-users/               super admin
+GET    /api/users/accumulator-coordinators/   MIS accumulator
+GET    /api/users/chronicle/accumulators/     chronicle master
 ```
+</details>
 
-**Terminal 2 — Backend (Gunicorn)**
-```bash
-cd ~/nmpralekh
-source venv/bin/activate
-cd server
-gunicorn -c gunicorn.conf.py config.wsgi:application
+<details>
+<summary><b>Campuses and schools</b></summary>
+
 ```
-
-> **Development note:** If you need Django's auto-reload while working on the backend, you can still use `python manage.py runserver` locally. Use Gunicorn for any staging or production-like testing.
-
-**Terminal 3 — Celery**
-```bash
-cd ~/nmpralekh/server
-source ~/nmpralekh/venv/bin/activate
-celery -A config worker --loglevel=info --concurrency=4
-```
-
-**Terminal 4 — React**
-```bash
-cd ~/nmpralekh/client
-npm run dev
-```
-
-Open `https://localhost:5173` in your browser.
-
----
-
-## First Use Flow
-
-```mermaid
-flowchart TD
-    step1[1. Log in as master] --> step2[2. Create Campus <br> e.g. NMIMS Hyderabad]
-    step2 --> step3[3. Create School <br> e.g. School of Technology]
-    step3 --> step4[4. Create Users <br> super_admin, admin, faculty, delete_auth]
-    step4 --> step5[5. Assign Admin & Faculty to School]
-    
-    step5 --> step6[6. Admin creates Clubs & Committees]
-    step6 --> step7[7. Admin/Faculty add MIS Records <br> Publications, Patents, etc.]
-    
-    step7 --> step8[8. Submit Record for Approval <br> Edit/Delete]
-    step8 --> step9[9. delete_auth Reviewer <br> Approves/Rejects changes]
-```
-
----
-
-## API Reference
-
-### Authentication
-```
-POST   /api/auth/login/        → Returns user object, sets httpOnly cookies
-POST   /api/auth/refresh/      → Refreshes access token cookie
-POST   /api/auth/logout/       → Blacklists token, clears cookies
-GET    /api/auth/me/           → Current user profile
-```
-
-### Users (master only)
-```
-GET    /api/users/
-POST   /api/users/
-PUT    /api/users/<id>/
-DELETE /api/users/<id>/
-GET/POST /api/users/master/chronicle-master/
-GET/POST /api/users/master/service-user/
-```
-
-### User Visibility
-```
-GET    /api/users/school-faculties/        → Admin: faculty in their school(s)
-GET    /api/users/campus-users/            → Super Admin: all users in campus
-GET    /api/users/accumulator-coordinators/→ MIS Accumulator: MIS coordinators
-GET    /api/users/chronicle/accumulators/  → Chronicle Master: MIS accumulators
-```
-Both endpoints support `?search=`, `?role=`, `?school_code=`, and server-side pagination.
-
-### Campuses (master only)
-```
-GET    /api/schools/campuses/
-POST   /api/schools/campuses/
-PUT    /api/schools/campuses/<id>/
-DELETE /api/schools/campuses/<id>/
+GET    POST             /api/schools/campuses/
+GET    PUT PATCH DELETE /api/schools/campuses/<id>/
+POST   /api/schools/campuses/<id>/reactivate/
 GET    /api/schools/campuses/<id>/schools/
 GET    /api/schools/campuses/<id>/users/
-```
-
-### Schools
-```
-GET    /api/schools/
-POST   /api/schools/
-PUT    /api/schools/<id>/
-POST   /api/schools/assign/
-DELETE /api/schools/assign/<id>/
+GET    POST             /api/schools/
+GET    PUT PATCH DELETE /api/schools/<id>/
+POST   /api/schools/<id>/reactivate/
+GET    POST             /api/schools/assign/
+GET    DELETE           /api/schools/assign/<id>/
 GET    /api/schools/my-schools/
 GET    /api/schools/faculty/
 ```
+</details>
 
-### Clubs & Committees
-```
-GET    /api/records/clubs/              → List (admin + faculty)
-POST   /api/records/clubs/              → Create (admin only)
-PUT    /api/records/clubs/<id>/         → Update (admin only)
-DELETE /api/records/clubs/<id>/         → Delete (admin only)
-```
-Supports `?school=`, `?type=`, `?is_active=` query params.
+<details>
+<summary><b>Records, clubs, backups</b></summary>
 
-### Records (scoped to user's school)
 ```
-GET/POST       /api/records/school-activities/
-GET/POST       /api/records/student-activities/
-GET/POST       /api/records/fdp/
-GET/POST       /api/records/publications/
-GET/POST       /api/records/patents/
-GET/POST       /api/records/certifications/
-GET/POST       /api/records/placements/
+GET    POST             /api/records/<module>/
+GET    PUT PATCH DELETE /api/records/<module>/<id>/      update / delete → 202, goes to audit
+       <module> = school-activities | student-activities | fdp | publications
+                  | patents | certifications | placements | clubs
+GET    POST             /api/records/publications/<id>/authors/
+GET    PUT PATCH DELETE /api/records/publications/<id>/authors/<id>/
+GET    POST             /api/records/patents/<id>/applicants/
+GET    PUT PATCH DELETE /api/records/patents/<id>/applicants/<id>/
+GET    /api/records/dashboard-counts/                    cached 60 s
+GET    /api/records/faculty-users/
+GET    PUT  /api/records/backup-config/                  master
+POST   /api/records/backup-manual/                       master
+```
+</details>
 
-GET/POST       /api/records/publications/<id>/authors/
-GET/POST       /api/records/patents/<id>/applicants/
-GET            /api/records/dashboard-counts/
-```
+<details>
+<summary><b>Audit</b></summary>
 
-### Audit
 ```
-GET    /api/audit/
+GET    /api/audit/                    pending requests
 GET    /api/audit/<id>/
 POST   /api/audit/<id>/approve/
 POST   /api/audit/<id>/reject/
 GET    /api/audit/history/
 ```
+</details>
 
-### Service Portal
+<details>
+<summary><b>Exports and MIS reports</b></summary>
+
+```
+GET    /api/export/<module>/                     one module as .xlsx (10 / min, max 5000 rows)
+POST   /api/export/all/                          start "Export all" → 202 {task_id} (5 / min)
+GET    /api/export/jobs/<task_id>/               processing | ready | failed
+GET    /api/export/jobs/<task_id>/download/      the file, only for the user who started it
+GET    /api/export/coordinator/                  MIS coordinator export
+GET    /api/export/accumulator/dashboard/   GET /api/export/accumulator/export/
+POST   /api/export/accumulator/request-all/
+GET    /api/export/chronicle/dashboard/     GET /api/export/chronicle/export/
+GET    POST /api/export/chronicle/data-requests/
+
+GET    /api/export/history/                      master: generated files
+GET    /api/export/download/<id>/
+POST   /api/export/manual/                       master: campus export (Celery)
+POST   /api/export/nightly/trigger/
+GET    /api/export/status/<task_id>/
+
+GET    POST          /api/export/data-requests/
+GET    PUT PATCH     /api/export/data-requests/<id>/
+GET    POST          /api/export/reports/
+GET    /api/export/reports/received/
+POST   /api/export/reports/<id>/send-admin/ | send-accumulator/ | send-superadmin/ | send-chronicle/
+```
+</details>
+
+<details>
+<summary><b>Service portal</b></summary>
+
 ```
 GET    /api/service/stats/
-GET    /api/service/api-status/
-GET    /api/service/tickets/            → Admin view of error tickets
+GET    /api/service/api-status/             PostgreSQL, Redis, Celery health
+GET    /api/service/tickets/
+GET    /api/service/tickets/<id>/
 POST   /api/service/tickets/<id>/status/
-GET/POST /api/service/bug-reports/      → Submit or view bug reports
-POST   /api/service/report-error/       → Frontend automated error ingestion
+GET    /api/service/bug-reports/
+POST   /api/service/bug-reports/submit/
+GET    PUT PATCH /api/service/bug-reports/<id>/
+POST   /api/service/report-error/           automatic error reports from the clients
 ```
+</details>
 
-### Export & MIS Reporting
-```
-GET    /api/export/school-activities/
-GET    /api/export/student-activities/
-GET    /api/export/fdp/
-GET    /api/export/publications/
-GET    /api/export/patents/
-GET    /api/export/certifications/
-GET    /api/export/placements/
-GET    /api/export/all/
-
-GET    /api/export/reports/             → List/Create final text-based MIS reports (Coord/Accumulator)
-GET    /api/export/reports/received/    → Accumulator lists reports sent by Coordinators
-GET    /api/export/reports/admin/       → Admin lists final reports sent by Coordinators
-POST   /api/export/reports/<id>/send-accumulator/
-POST   /api/export/reports/<id>/send-admin/
-POST   /api/export/reports/<id>/send-superadmin/
-POST   /api/export/reports/<id>/send-chronicle/
-
-GET    /api/export/data-requests/       → Accumulator requests data from Coordinators
-```
-
-### Common Query Parameters
-```
-?school_id=1
-?campus_id=1
-?date_from=2024-01-01
-?date_to=2024-12-31
-?page=1
-?page_size=25
-?search=keyword
-?status=pending
-?type=FDP
-?author_type=faculty
-?is_active=true
-?school_code=SOT
-```
+Common query parameters: `page`, `page_size` (default 25), `search`, `school_id`, `campus_id`, `date_from`, `date_to`, `status`, `type`, `is_active`, `role`, `school_code`.
 
 ---
 
-## Database Schema
+## Database schema
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#FDECEC','primaryBorderColor':'#CC2626','primaryTextColor':'#2A2A2A','lineColor':'#5A5A5A','tertiaryColor':'#E3F2FD'}}}%%
 erDiagram
-    CAMPUSES ||--o{ SCHOOLS : "contains"
-    CAMPUSES ||--o{ USERS : "belongs to"
-    SCHOOLS ||--o{ USER_SCHOOL_MAPPING : "maps users"
-    USERS ||--o{ USER_SCHOOL_MAPPING : "assigned to"
-    SCHOOLS ||--o{ CLUBS : "has"
-    
-    CLUBS ||--o{ STUDENT_ACTIVITIES : "conducted by"
-    SCHOOLS ||--o{ SCHOOL_ACTIVITIES : "has"
-    SCHOOLS ||--o{ STUDENT_ACTIVITIES : "has"
-    SCHOOLS ||--o{ FACULTY_PUBLICATIONS : "has"
-    SCHOOLS ||--o{ PATENTS : "has"
-    SCHOOLS ||--o{ CERTIFICATIONS : "has"
-    SCHOOLS ||--o{ PLACEMENT_ACTIVITIES : "has"
-    
-    FACULTY_PUBLICATIONS ||--o{ PUBLICATION_AUTHORS : "has"
-    PATENTS ||--o{ PATENT_APPLICANTS : "has"
-    
-    MIS_RECORDS }o--o| AUDIT_REQUESTS : "pending_audit_id"
+    CAMPUS ||--o{ SCHOOL : contains
+    CAMPUS ||--o{ USER : "home campus"
+    USER ||--o{ USER_SCHOOL_MAPPING : "assigned to"
+    SCHOOL ||--o{ USER_SCHOOL_MAPPING : has
+    SCHOOL ||--o{ CLUB : has
+    SCHOOL ||--o{ MIS_RECORD : owns
+    CLUB ||--o{ MIS_RECORD : "conducts (student activities)"
+    MIS_RECORD ||--o{ PUBLICATION_AUTHOR : "authors (publications)"
+    MIS_RECORD ||--o{ PATENT_APPLICANT : "applicants (patents)"
+    MIS_RECORD }o--o| AUDIT_REQUEST : "pending change"
+    USER ||--o{ AUDIT_REQUEST : "requests / reviews"
+    USER ||--o{ MIS_DATA_REQUEST : "asks / answers"
+    USER ||--o{ MIS_REPORT : writes
+    USER ||--o{ GENERATED_EXPORT : generates
+    CAMPUS ||--o{ GENERATED_EXPORT : "exported"
+    ERROR_TICKET ||--o{ ERROR_OCCURRENCE : groups
 ```
 
-All record tables share this pattern:
-```
-school_id        → data isolation per school
-created_by       → audit trail
-created_at       → immutable timestamp
-updated_at       → auto-updated on every save
-pending_audit_id → FK to pending change request
-```
+`MIS_RECORD` stands for the 7 module tables. They all share `school_id` (data isolation), `created_by`, `created_at`, `updated_at` and `pending_audit` (link to an open change request).
+
+Rules the database enforces itself:
+- End dates are never before start dates (FDP, data requests, reports).
+- Only one Service Admin and one Chronicle Master.
+- Only one pending data request per accumulator, coordinator and date range.
+- PostgreSQL runs with `fsync`, `synchronous_commit` and `full_page_writes` on; multi-step writes run inside transactions, and counters use row locks.
 
 ---
 
-## Performance
+## Testing and CI
 
-```
-Concurrent users     →  500 (dev) / 1500+ (Gunicorn 9 workers × 2 threads)
-Response time        →  <50ms cached / <150ms uncached
-Dashboard loads      →  <5ms (Redis cached 60 seconds)
-Export row limit     →  5000 rows per file
-Pagination           →  25 records per page server-side
-DB indexes           →  On school, date, created_by, status columns
-Connection pooling   →  CONN_MAX_AGE = 0 (pgBouncer transaction mode)
-                        9 workers × 2 threads = 18 connections (pool cap: 20)
-Rate limiting        →  60/min anonymous, 300/min authenticated
-```
-
----
-
-## Load Testing (Locust)
-
-The project ships with a Locust test script at `server/locustfile.py` that simulates realistic multi-role traffic against all API endpoints across all 9 user roles.
-
-### Install Locust
-
-Locust is included in `requirements.txt`, so it is already installed in the virtualenv:
+### Server: 420 tests
 
 ```bash
-cd server
-source venv/bin/activate
+cd server && source venv/bin/activate
+python manage.py test                     # all apps
+python manage.py test apps.export         # one app
 ```
 
-### Set up tokens
+Tests run on real PostgreSQL (port 5432 directly, never through pgBouncer) and on Redis database **15**, so they never touch the app's cache or Celery queue. `mis_user` needs `CREATEDB`.
 
-The script authenticates each virtual user by injecting a pre-captured JWT into the `access_token` cookie. Set tokens via environment variables (capture from DevTools → Application → Cookies):
-
-```bash
-export LOCUST_TOKEN_MASTER="eyJ..."
-export LOCUST_TOKEN_SUPER_ADMIN="eyJ..."
-export LOCUST_TOKEN_ADMIN="eyJ..."
-export LOCUST_TOKEN_FACULTY="eyJ..."
-export LOCUST_TOKEN_DELETE_AUTH="eyJ..."
-export LOCUST_TOKEN_MIS_COORDINATOR="eyJ..."
-export LOCUST_TOKEN_MIS_ACCUMULATOR="eyJ..."
-export LOCUST_TOKEN_CHRONICLE_MASTER="eyJ..."
-export LOCUST_TOKEN_SERVICE_ADMIN="eyJ..."
-```
-
-### User classes and weights
-
-| Class | Weight | Role | Endpoints hit |
-|---|---|---|---|
-| `MasterUser` | 1 | master | Campuses, schools, users, assignments, export history, backup config |
-| `SuperAdminUser` | 10 | super_admin | Dashboard counts, campus users, all record types, export all, audit history |
-| `AdminUser` | 15 | admin | Dashboard counts, clubs, school/student activities, placements, faculties, exports |
-| `FacultyUser` | 60 | faculty | Dashboard counts, publications, patents, certifications, FDP, activities, faculty search, **error reporting (POST)**, **bug report (POST)**, exports |
-| `DeleteAuthUser` | 5 | delete_auth | Pending audit requests, audit history |
-| `MISCoordinatorUser` | 8 | mis_coordinator | Dashboard counts, school activities, publications, FDP, coordinator export, MIS reports |
-| `MISAccumulatorUser` | 3 | mis_accumulator | Received reports, own reports, data requests, coordinator list |
-| `ChronicleMasterUser` | 1 | chronicle_master | Received reports, own reports, accumulator list |
-| `ServiceAdminUser` | 1 | service_admin | Service dashboard stats, error tickets (all + filtered), bug reports, API status |
-
-Weights reflect realistic traffic distribution: faculty make up ~60% of users. `wait_time = between(600, 1800)` (10–30 min) simulates actual human think time.
-
-### Tagged tasks
-
-Each task is tagged for selective execution. Available tags: `structure`, `users`, `dashboard`, `records`, `audit`, `export`, `reports`, `service`, `schools`, `config`, `auth`.
-
-```bash
-# Run only record-related tasks
-locust -f locustfile.py --tags records --host=https://127.0.0.1:8000
-
-# Run only service portal tasks
-locust -f locustfile.py --tags service --host=https://127.0.0.1:8000
-
-# Exclude export tasks (they generate large files)
-locust -f locustfile.py --exclude-tags export --host=https://127.0.0.1:8000
-```
-
-### Write operations
-
-The faculty user class includes **write (POST) operations** to realistically simulate frontend behavior:
-- **Error reporting** — sends randomized error payloads to `/api/service/report-error/` (tests the deduplication pipeline)
-- **Bug report submission** — posts to `/api/service/bug-reports/submit/`
-
-### Running the tests
-
-**Option A — via helper script (recommended)**
-
-```bash
-cd ~/nmpralekh
-chmod +x locust.sh
-./locust.sh
-```
-
-Then open the Locust UI at **http://localhost:8089** and configure user count and spawn rate.
-
-**Option B — manual**
-
-```bash
-source venv/bin/activate
-cd server
-locust -f locustfile.py --host=https://127.0.0.1:8000
-```
-
-**Option C — headless (CI/scripted runs)**
-
-```bash
-locust -f locustfile.py \
-  --host=https://127.0.0.1:8000 \
-  --headless \
-  --users 500 \
-  --spawn-rate 10 \
-  --run-time 5m
-```
-
-### Interpreting results
-
-| Metric | Healthy target |
+| App | Covers |
 |---|---|
-| Median response time | < 150 ms |
-| 95th percentile | < 500 ms |
-| Failure rate | < 1 % |
-| Gunicorn worker CPU | < 80 % sustained |
+| accounts | user model, all permission classes, login / refresh / logout, rate limits during a Redis outage, single Service Admin and Chronicle Master |
+| schools | campus and school CRUD, scoping per role, mapping rules |
+| records | all modules, audit-gated updates (202), soft delete, date rules, dashboard counts |
+| audit | approve and reject, history, permissions |
+| export | exports, background "Export all" (owner-only download), MIS requests and reports, integrity rules |
+| service | error fingerprinting and de-duplication, affected-user counts, tickets, bug reports |
 
-> **Note:** The test script disables SSL verification (`urllib3.disable_warnings`) because the dev server uses a self-signed certificate. Remove that line when testing against a properly signed staging environment.
-
----
-
-## Testing
-
-### Running the Automated Test Suite
+### Web client
 
 ```bash
-cd server
-python manage.py test
+cd client
+npm run lint && npm test && npm run build
 ```
 
-This runs **390 automated tests** across all 6 Django apps. No frontend, no browser, no Postman needed — Django spins up a temporary test database, simulates HTTP requests to every API endpoint, and tears it down when done.
-
-To run tests for a specific app:
+### Android
 
 ```bash
-python manage.py test apps.accounts       # Accounts only
-python manage.py test apps.schools        # Schools only
-python manage.py test apps.records        # Records only
-python manage.py test apps.audit          # Audit only
-python manage.py test apps.export         # Export only
-python manage.py test apps.service        # Service only
+cd android-client && ./gradlew assembleDebug
 ```
 
-For verbose output:
+### Continuous integration
+
+`.github/workflows/release.yml` runs on every push and pull request to `main`:
+
+```mermaid
+flowchart LR
+    push["push / PR to main"] --> c["Client<br/>npm ci · lint · test · build<br/>Node 24"]
+    push --> s["Server<br/>check · 420 tests<br/>Python 3.12, Postgres 16, Redis 7"]
+    push --> a["Android<br/>assembleDebug<br/>JDK 21"]
+
+    classDef p fill:#2A2A2A,stroke:#000,color:#fff,stroke-width:2px
+    classDef cc fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,stroke-width:2px
+    classDef ss fill:#FDECEC,stroke:#CC2626,color:#8A1A1A,stroke-width:2px
+    classDef aa fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:2px
+    class push p
+    class c cc
+    class s ss
+    class a aa
+```
+
+### Load testing (Locust)
+
+`server/locustfile.py` simulates all 9 roles, weighted like real traffic (faculty about 60%). Each virtual user reads a JWT from an environment variable such as `LOCUST_TOKEN_FACULTY` (copy the `access_token` cookie from the browser's DevTools).
 
 ```bash
-python manage.py test --verbosity=2
+./locust.sh                                                    # UI at http://localhost:8089
+cd server && locust -f locustfile.py --host=http://127.0.0.1:8000 --headless --users 500 --spawn-rate 10 --run-time 5m
+locust -f locustfile.py --tags records --host=http://127.0.0.1:8000           # one area only
 ```
 
-### What the Automated Tests Cover
+Tags: `structure`, `users`, `dashboard`, `records`, `audit`, `export`, `reports`, `service`, `schools`, `config`, `auth`.
+Healthy targets: median under 150 ms, 95th percentile under 500 ms, failures under 1%.
 
-| Test File | Tests | What It Validates |
-|-----------|-------|-------------------|
-| `apps/accounts/tests.py` | ~45 | User model creation, `UserManager` (`create_user`, `create_superuser`), email normalization, all 13 permission classes, serializer validation (password min-length, `ChangePasswordSerializer`), login/logout/me API, user CRUD (list, create, update, soft-delete), self-deactivation prevention, service user & chronicle master singleton management, school faculties & campus users views |
-| `apps/schools/tests.py` | ~40 | Campus/School/UserSchoolMapping models (`__str__`, unique constraints, FK cascades, `RESTRICT` delete protection), `get_user_school_ids()` utility for all role types with caching, campus CRUD + soft-deactivate + reactivate, school CRUD + scoping (master sees all, super_admin sees campus only), mapping creation with validation (role check, duplicate check, cross-campus check), my-schools (no pagination), school faculty view |
-| `apps/records/tests.py` | ~35 | All 13 models — Club (`unique_together`), SchoolActivity, StudentActivity (club_name auto-fill), FDP/Workshop/GL, Publications, Patents, Certifications, Placements, PublicationAuthor (cascade + ordering), PatentApplicant, BackupConfiguration. Serializer auto-set `created_by`. API CRUD with permission checks. Audit-gated updates (202 response). Soft-delete behavior (records never hard-deleted). Dashboard counts endpoint |
-| `apps/audit/tests.py` | ~20 | AuditRequest model (all field types, choices, FK behaviors — CASCADE on school, RESTRICT on requested_by, SET_NULL on reviewed_by). Serializer with nested `UserSerializer`. Approve DELETE (sets `is_deleted=True`), approve UPDATE (applies field changes via whitelist), reject (clears `pending_audit`, record unchanged). History view (excludes pending, allows master/super_admin/delete_auth). Permission gating on all endpoints |
-| `apps/export/tests.py` | ~30 | GeneratedExport, MISDataRequest, MISReport models (defaults, `__str__`, FK behaviors). Serializer auto-set `accumulator`/`created_by` from request. Export history (master only). MIS report send workflow (send-admin, send-accumulator, send-superadmin, send-chronicle with permission checks). Coordinator, Accumulator, and Chronicle Master dashboard and export access. Chronicle Data Requests. `validate_export_params` helper (valid/invalid school_id, date formats) |
-| `apps/service/tests.py` | ~35 | ErrorTicket, ErrorOccurrence, BugReport models. `make_fingerprint` normalization (digits→N, hex→0xADDR, SHA256, truncation at 200 chars). Error deduplication (same error → 1 ticket, 2 occurrences). `affected_users_count` tracking (unique users only). Closed ticket reopening on recurrence. Invalid payload returns `{ok: false}`. Bug report creation with user auto-set. Ticket list filtering (status, source, search, sort). Ticket status transitions with `resolved_by`/`resolved_at` set on close and cleared on reopen. Bug report admin updates (status, admin_note, linked_ticket). Service dashboard stats |
+### Code knowledge graph
 
-### What the Tests Specifically Validate
-
-- **Models**: Creation, `__str__` output, default values, `unique_together`, FK cascade behavior (`CASCADE`, `RESTRICT`, `SET_NULL`), field choices, ordering, `db_table`
-- **Permissions**: All 13 custom permission classes tested with correct and incorrect roles, including edge cases (e.g., `IsMaster` excludes `is_service_admin` users)
-- **Serializers**: Field validation, password min-length, `created_by` auto-injection, `club_name` auto-fill from FK, nested read-only fields (`campus_name`, `school_name`, `user_full_name`)
-- **API Endpoints**: Correct HTTP status codes (200, 201, 202, 400, 401, 403, 404), response data, pagination, role-based access control on every endpoint
-- **Business Logic**: Audit approve/reject workflow, error fingerprint deduplication, soft-delete (never hard-delete), school-scoped data isolation, singleton patterns (service user, chronicle master), token blacklisting on logout
-
-### What You Must Test Manually
-
-The automated tests cover all backend API logic, but the following areas require manual verification because they depend on the browser, external services, or visual inspection.
-
-#### Frontend UI (browser testing)
-
-| What to Test | Why |
-|--------------|-----|
-| Pages load without blank screens | React rendering, routing, lazy loading |
-| Forms show validation errors correctly | Client-side validation, field highlighting |
-| Buttons and links navigate correctly | React Router, sidebar, breadcrumbs |
-| Tables display data with pagination | Sorting UI, empty states, page controls |
-| Modals open and close properly | Create/edit/delete confirmation dialogs |
-| Responsive layout on mobile/tablet | Breakpoints, sidebar collapse |
-| Loading spinners and error toasts | UX feedback on slow or failed requests |
-
-#### End-to-End (frontend + backend together)
-
-| What to Test | Why |
-|--------------|-----|
-| Login → Dashboard flow | Full cookie-based JWT auth through the browser, CSRF tokens |
-| Session stays alive after 30 min | Auto token refresh without logging out |
-| Excel file downloads | Click Export → `.xlsx` downloads and opens correctly |
-| Role-based UI visibility | Admin sees admin panels, faculty doesn't |
-| Date pickers, dropdowns, search bars | Real filter interactions with live API |
-
-#### Infrastructure (requires running services)
-
-| What to Test | Why |
-|--------------|-----|
-| Rate limiting | Hit login 11 times rapidly → should get blocked (needs Redis) |
-| Nightly export Celery task | Scheduled job runs at midnight and creates files (needs Celery + Redis) |
-| Manual backup trigger | Backup creates `.dump` file on disk (needs PostgreSQL) |
-| Dashboard caching | Second load is faster (needs Redis) |
-
-#### Quick Manual Test Checklist
-
-```
-□ Login with each role: master, super_admin, admin, user, delete_auth,
-  mis_coordinator, mis_accumulator, chronicle_master, service_admin
-□ Download one Excel export and open it in Excel/Sheets
-□ Trigger a manual backup and verify the .dump file exists
-□ Leave a session idle for 30+ min, verify it auto-refreshes
-□ Rapid-fire 11+ login attempts to confirm rate limiting
-□ Check all pages on a mobile screen size
-□ Submit a bug report from the frontend and verify it appears in the service portal
-```
+`graphify-out/` holds a code map built with [graphify](https://github.com/Graphify-Labs/graphify). After cloning, run `graphify update .` once (code only, no API cost) and `graphify hook install` to rebuild it after every commit. Then `graphify query "how does export work"` answers code questions without reading every file.
 
 ---
 
 ## Security
 
-```
-Authentication   →  JWT in httpOnly SameSite=Lax cookies (XSS safe)
-Token refresh    →  Automatic via Axios interceptor on 401
-Token rotation   →  Refresh tokens rotate on every use
-Token blacklist  →  Logout blacklists token in database
-Data isolation   →  Every query scoped to user's school and campus
-Soft deletes     →  Records never hard deleted without approval
-Audit trail      →  Every change logged with who, when, what
-Password hashing →  Django PBKDF2 with SHA256
-CORS             →  Restricted to configured origins only (via .env)
-SQL injection    →  Django ORM parameterised queries throughout
-Reverse proxy    →  Nginx is the only public entry point; Gunicorn bound to 127.0.0.1
-Admin panel      →  /admin/ blocked at Nginx level for all external IPs
-Rate limiting    →  30 req/s at Nginx + DRF throttles (60/min anon, 300/min auth)
-Firewall         →  UFW blocks all ports except SSH and the Nginx port
-HSTS             →  Enabled in production (DEBUG=False) — 1-year max-age
-```
+| Area | How |
+|---|---|
+| Login tokens | JWT in `httpOnly` cookies, so page scripts cannot read them |
+| Session length | 30-minute access token, 6-hour refresh token, rotated on every use, old one blacklisted |
+| Logout | refresh token blacklisted in the database, cookies cleared (works even with an expired token) |
+| Brute force | login 10 / min per IP; 1 / s per user fallback if Redis is down; Nginx 30 req/s |
+| API throttles | 60 / min anonymous, 300 / min signed in; exports 5–10 / min per user |
+| Data isolation | every query scoped to the user's schools and campus |
+| Changes | updates and deletes need reviewer approval; records are soft-deleted |
+| Passwords | Django PBKDF2-SHA256 |
+| CORS / CSRF | only the configured origins |
+| SQL injection | Django ORM parameterised queries only |
+| Admin panel | `/admin/` reachable from localhost only (Nginx) |
+| HTTPS | HSTS (1 year) and HTTPS redirect when `DEBUG=False` |
+| Android | debug-only, body-free network logs; saved login kept out of cloud backups |
 
 ---
 
-## Important Rules
+## Going to production
 
-- Never commit `.env` or sensitive configuration files
-- Never gitignore `migrations/` — they must be committed
-- All record edits and deletes go through audit — nothing is directly modified
-- Faculty only see and manage their own publications, patents, certifications
-- Super admins are strictly read-only
-- Master is the only role that creates campuses, schools, and users
-- DOI/Link fields are mandatory for Publications, Patents, and Certifications
-- All dropdown menus use the searchable `SearchableSelect` component
+The app currently runs in alpha on localhost. Before a real deployment:
+
+- [ ] `DEBUG=False` and a new `SECRET_KEY` in `server/.env`
+- [ ] Restrict `ALLOWED_HOSTS` in `settings.py` (it is `['*']` for local alpha use) and set `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` to the real domain
+- [ ] Nginx on 80 / 443 with `certbot`, `server_name` set to the domain, static path updated
+- [ ] Production build of the client (`npm run build`), with `VITE_API_BASE_URL` set if the API is on another domain
+- [ ] Android: a release build signed with your key, `usesCleartextTraffic` turned off, HTTPS server URL
+- [ ] Redis `volatile-lru`, pgBouncer, a Celery worker and beat running as services
+- [ ] Backups configured by the master, and tested with a restore
 
 ---
 
-## Mobile App (Android)
+## Project rules
 
-An Android mobile client is available to provide easy access on the go. It is built using the native Android SDK (Java) and seamlessly connects to the same Django REST API as the web client, ensuring a unified data source across all platforms. The application is highly optimized for performance, security, and a native Material Design experience.
+- Never commit `.env`, `settings.py` or `wsgi.py`. Copy them from the `.example` files.
+- Always commit `migrations/`.
+- All edits and deletes of records go through audit.
+- Faculty see and manage only their own publications, patents and certifications.
+- Super Admins are read-only.
+- Only the master creates campuses, schools and users.
+- DOI / link is required for publications, patents and certifications.
+- Dropdowns use the searchable `SearchableSelect` component.
 
-### Key Features
+---
 
-#### 1. Role-Based Dashboards & Routing
-The application dynamically configures the user interface, navigation drawer, and available actions based on the authenticated user's role:
-- **Faculty**: Complete CRUD access to self-managed modules (School Activities, Student Activities, FDP, Publications, Patents, Certifications, Placements).
-- **Admin**: View records, manage school clubs, handle faculty lists, and export MIS data specifically for their assigned school.
-- **Super Admin**: Global read-only overview across all 9 campuses and schools, plus exclusive access to the Campus Users directory.
-- **Delete Auth**: Specialized dashboard mimicking the web portal to review, approve, or reject pending modification/deletion requests, along with an audit history log.
+## Developer and license
 
-#### 2. Advanced Security & Session Management
-- **Secure Authentication**: Authenticates via the `/api/auth/login/` endpoint using HTTPOnly JWT cookies, ensuring protection against XSS.
-- **Smart Session Recovery**: Uses `SharedPreferences` to remember user profiles. If the app is fully closed and the in-memory cookie jar is cleared, the app intelligently detects the lost session, routes the user back to the login screen, and pre-fills their username so they only have to enter their password.
-- **Role-Gated Actions**: Modules like "Add Record" or "Edit/Delete" buttons are dynamically hidden if a user is operating under a read-only role (like Super Admin) or viewing historical data.
+Designed and developed by **Aarush Chaudhary**.
 
-#### 3. Native UI/UX & Architecture
-- **Material Design 3**: Utilizes Google's Material Components for Android (`MaterialCardView`, `MaterialButton`, `TextInputLayout`) for a clean, light-blue branded, and highly responsive interface.
-- **Dynamic Lists**: Implements highly optimized `RecyclerView` setups with custom adapters to render complex record cards, including status badges and inline difference views for audit logs.
-- **Robust Networking**: Powered by **Retrofit2** and **OkHttp3** for fast, reliable, and asynchronous API requests, coupled with **Gson** for type-safe JSON parsing.
+Copyright © 2026 Aarush Chaudhary
 
-### Setup and Running Locally
+This program is free software: you can redistribute it and/or modify it under the terms of the
+**GNU General Public License** as published by the Free Software Foundation, either **version 3** of the
+License, or (at your option) any later version.
 
-#### Using Android Studio (Recommended)
-1. Launch **Android Studio** and select `Open an existing project`.
-2. Navigate to and select the `nmpralekh/android-client/` directory.
-3. Allow Gradle to sync the project dependencies.
-4. Ensure your local Django server is running. If you are using the default Android emulator, it connects to `10.0.2.2`. 
-   *(Note: Ensure your Django `ALLOWED_HOSTS` includes `10.0.2.2` or `*` for local testing).*
-5. Click the **Run** button (Shift + F10) to deploy to your emulator or physical device.
+This program is distributed in the hope that it will be useful, but **without any warranty**; without even
+the implied warranty of merchantability or fitness for a particular purpose. See the
+[GNU General Public License](LICENSE) for more details.
 
-#### Using Command Line
-If you prefer building without an IDE, you can generate the APK directly using the Gradle wrapper:
-```bash
-cd android-client/
-# Build a debug APK
-./gradlew assembleDebug
+You should have received a copy of the GNU General Public License along with this program.
+If not, see <https://www.gnu.org/licenses/>.
 
-# The generated APK will be located at:
-# android-client/app/build/outputs/apk/debug/app-debug.apk
-```
+SPDX-License-Identifier: `GPL-3.0-or-later`

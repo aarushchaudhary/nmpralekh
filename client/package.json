@@ -2,6 +2,8 @@
   "name": "client",
   "private": true,
   "version": "0.0.0",
+  "license": "GPL-3.0-or-later",
+  "author": "Aarush Chaudhary",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +14,6 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    
     "axios": "^1.13.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
