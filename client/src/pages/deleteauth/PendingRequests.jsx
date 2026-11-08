@@ -2,19 +2,20 @@ import { useState, useEffect, useCallback } from 'react'
 import PageHeader from '../../components/ui/PageHeader'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
+import EmptyState from '../../components/ui/EmptyState'
 import api from '../../api/axios'
 
 function DiffRow({ field, oldVal, newVal }) {
     const changed = String(oldVal) !== String(newVal)
     return (
-        <tr className={changed ? 'bg-yellow-50' : ''}>
-            <td className="px-3 py-2 text-xs font-medium text-gray-500 capitalize w-1/4">
+        <tr className={changed ? 'bg-gray-50' : ''}>
+            <td className="px-3 py-2 text-xs font-medium text-gray-600 capitalize w-1/4">
                 {field.replace(/_/g, ' ')}
             </td>
-            <td className="px-3 py-2 text-xs text-red-600 w-3/8">
+            <td className={`px-3 py-2 text-xs w-3/8 ${changed ? 'text-gray-500 line-through' : 'text-gray-700'}`}>
                 {oldVal !== null && oldVal !== undefined ? String(oldVal) : '—'}
             </td>
-            <td className="px-3 py-2 text-xs text-green-600 w-3/8">
+            <td className={`px-3 py-2 text-xs w-3/8 ${changed ? 'text-gray-900 font-semibold' : 'text-gray-700'}`}>
                 {newVal !== null && newVal !== undefined ? String(newVal) : '—'}
             </td>
         </tr>
@@ -33,25 +34,25 @@ function AuditCard({ request, onApprove, onReject, loading }) {
     const allFields = Object.keys(oldData).filter(k => !skipFields.includes(k))
 
     return (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
 
             {/* Card Header */}
-            <div className="flex items-center justify-between px-5 py-4
-                      border-b border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3
+                      border-b border-gray-200">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
                         <Badge
                             label={request.action}
-                            color={isDelete ? 'red' : 'yellow'}
+                            color={isDelete ? 'red' : 'gray'}
                         />
                         <span className="text-sm font-semibold text-gray-800 capitalize">
                             {request.table_name?.replace(/_/g, ' ')}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-500 tabular-nums">
                             Record #{request.record_id}
                         </span>
                     </div>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-500">
                         Requested by{' '}
                         <span className="font-medium text-gray-600">
                             {request.requested_by_detail?.full_name}
@@ -87,18 +88,18 @@ function AuditCard({ request, onApprove, onReject, loading }) {
             <div className="overflow-x-auto">
                 {isDelete ? (
                     // For DELETE show what will be removed
-                    <div className="p-5">
-                        <p className="text-xs font-semibold text-red-500 uppercase mb-3">
+                    <div className="p-4">
+                        <p className="text-xs font-semibold text-primary-700 uppercase tracking-wide mb-3">
                             Record to be deleted
                         </p>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                             {allFields.map(field => (
                                 <div key={field}
-                                    className="bg-red-50 rounded-lg p-3">
-                                    <p className="text-xs text-gray-400 capitalize mb-0.5">
+                                    className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                                    <p className="text-xs text-gray-500 capitalize mb-0.5">
                                         {field.replace(/_/g, ' ')}
                                     </p>
-                                    <p className="text-sm text-red-700 font-medium break-words">
+                                    <p className="text-sm text-gray-900 font-medium break-words">
                                         {oldData[field] !== null && oldData[field] !== undefined
                                             ? String(oldData[field]) : '—'}
                                     </p>
@@ -110,10 +111,10 @@ function AuditCard({ request, onApprove, onReject, loading }) {
                     // For UPDATE show before/after diff
                     <div>
                         <div className="grid grid-cols-3 px-3 py-2 bg-gray-50
-                            border-b border-gray-100">
-                            <p className="text-xs font-semibold text-gray-400 uppercase">Field</p>
-                            <p className="text-xs font-semibold text-red-400 uppercase">Before</p>
-                            <p className="text-xs font-semibold text-green-500 uppercase">After</p>
+                            border-b border-gray-200">
+                            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Field</p>
+                            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Before</p>
+                            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">After</p>
                         </div>
                         <table className="w-full">
                             <tbody>
@@ -204,10 +205,10 @@ export default function PendingRequests() {
             {/* Toast message */}
             {message && (
                 <div className={`
-          fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium
+          fixed top-4 right-4 z-50 px-4 py-3 rounded-md shadow-lg text-sm font-medium
           ${message.type === 'success'
-                        ? 'bg-green-500 text-white'
-                        : 'bg-red-500 text-white'
+                        ? 'bg-gray-800 text-white'
+                        : 'bg-primary-600 text-white'
                     }
         `}>
                     {message.text}
@@ -220,23 +221,10 @@ export default function PendingRequests() {
                           border-b-2 border-primary-600" />
                 </div>
             ) : requests.length === 0 ? (
-                <div className="flex flex-col items-center justify-center
-                        py-16 text-center">
-                    <div className="w-12 h-12 rounded-full bg-green-100
-                          flex items-center justify-center mb-3">
-                        <svg className="w-6 h-6 text-green-500" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round"
-                                strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                    </div>
-                    <p className="text-sm text-gray-400">
-                        All caught up — no pending requests
-                    </p>
-                </div>
+                <EmptyState message="All caught up — no pending requests" />
             ) : (
                 <div className="space-y-4">
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-600 tabular-nums">
                         {totalCount} pending request{totalCount !== 1 ? 's' : ''}
                     </p>
                     {requests.map(req => (
@@ -252,25 +240,25 @@ export default function PendingRequests() {
                     {/* Pagination controls */}
                     {totalPages > 1 && (
                         <div className="flex items-center justify-center gap-2 pt-2">
-                            <button
+                            <Button
+                                variant="secondary"
+                                size="sm"
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200
-                                           disabled:opacity-40 hover:bg-gray-50 transition-colors"
                             >
                                 Previous
-                            </button>
-                            <span className="text-xs text-gray-500">
+                            </Button>
+                            <span className="text-sm text-gray-600 tabular-nums">
                                 Page {currentPage} of {totalPages}
                             </span>
-                            <button
+                            <Button
+                                variant="secondary"
+                                size="sm"
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200
-                                           disabled:opacity-40 hover:bg-gray-50 transition-colors"
                             >
                                 Next
-                            </button>
+                            </Button>
                         </div>
                     )}
                 </div>

@@ -127,50 +127,36 @@ export default function Sidebar({ isOpen, onClose }) {
         navigate('/login')
     }
 
+    const portal = user?.is_service_admin ? 'Service Portal' : user?.is_chronicle_master ? 'Chronicle Portal' : 'MIS Portal'
+
     return (
         <>
             {/* Mobile overlay */}
             {isOpen && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 md:hidden transition-opacity"
-                    onClick={onClose} />
+                <div className="fixed inset-0 bg-black/40 z-20 md:hidden" onClick={onClose} />
             )}
 
             <aside className={`
-                fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200
-                z-30 flex flex-col transition-[transform,visibility] duration-300 ease-in-out shadow-sm
+                fixed top-0 left-0 h-full w-60 bg-gray-800 text-gray-300
+                z-30 flex flex-col transition-[transform,visibility] duration-200 ease-out
                 ${isOpen ? 'translate-x-0' : '-translate-x-full invisible'}
                 md:translate-x-0 md:visible md:static md:z-auto
             `}>
 
-                {/* Logo */}
-                <div className="px-6 py-6 border-b border-gray-100 flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                            <span className="w-2.5 h-6 bg-primary-600 rounded-full"></span>
-                            NMPralekh
-                        </h1>
-                        <p className="text-[11px] text-gray-500 mt-1 font-semibold ml-4 tracking-wider uppercase">
-                            {user?.is_service_admin ? 'Service Portal' : user?.is_chronicle_master ? 'Chronicle Portal' : 'MIS Portal'}
-                        </p>
+                {/* Brand */}
+                <div className="h-14 px-5 flex items-center gap-2.5 border-b border-white/10 flex-shrink-0">
+                    <span className="w-1.5 h-6 bg-primary-600" aria-hidden="true" />
+                    <div className="leading-tight">
+                        <p className="text-[15px] font-semibold text-white">NMPralekh</p>
+                        <p className="text-[11px] text-gray-400">{portal}</p>
                     </div>
                 </div>
 
-                {/* User info */}
-                <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-                    <p className="text-sm font-semibold text-gray-800 truncate">
-                        {user?.full_name}
-                    </p>
-                    <span className="inline-flex mt-1.5 text-[10px] px-2 py-0.5 rounded
-                           bg-gray-900 text-white font-bold capitalize tracking-wide">
-                        {user?.role?.replace(/_/g, ' ')}
-                    </span>
-                </div>
-
                 {/* Nav links */}
-                <nav className="flex-1 overflow-y-auto px-3 py-6 space-y-1 custom-scrollbar">
+                <nav aria-label="Main" className="flex-1 overflow-y-auto px-2.5 py-3">
                     {links.map((link, i) => (
                         link.path === null ? (
-                            <p key={i} className="px-3 pt-5 pb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            <p key={i} className="px-3 pt-5 pb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
                                 {link.label.replace('— ', '')}
                             </p>
                         ) : (
@@ -180,10 +166,11 @@ export default function Sidebar({ isOpen, onClose }) {
                                 end={link.path.split('/').length === 2}
                                 onClick={onClose}
                                 className={({ isActive }) => `
-                                    group flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-l-4
+                                    flex items-center px-3 py-2 my-px rounded-md text-sm border-l-[3px]
+                                    focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70
                                     ${isActive
-                                        ? 'bg-primary-50 text-primary-700 border-primary-600'
-                                        : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300'
+                                        ? 'bg-white/10 text-white font-medium border-primary-600'
+                                        : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'
                                     }
                                 `}
                             >
@@ -193,12 +180,17 @@ export default function Sidebar({ isOpen, onClose }) {
                     ))}
                 </nav>
 
-                {/* Logout */}
-                <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+                {/* User + sign out */}
+                <div className="px-4 py-3 border-t border-white/10 flex items-center justify-between gap-3 flex-shrink-0">
+                    <div className="min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{user?.full_name}</p>
+                        <p className="text-xs text-gray-400 capitalize truncate">{user?.role?.replace(/_/g, ' ')}</p>
+                    </div>
                     <button onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600
-                       hover:bg-red-50 hover:text-red-600 rounded-md transition-colors border border-gray-200 hover:border-red-200 bg-white shadow-sm">
-                        Sign Out
+                        className="flex-shrink-0 px-2.5 h-8 text-xs font-medium text-gray-200 rounded-md border border-white/20
+                                   hover:bg-white/10 hover:text-white
+                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                        Sign out
                     </button>
                 </div>
             </aside>

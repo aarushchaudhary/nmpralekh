@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import PageHeader from '../../components/ui/PageHeader'
 import Table from '../../components/ui/Table'
 import Badge from '../../components/ui/Badge'
+import Panel from '../../components/ui/Panel'
 import api from '../../api/axios'
 
 const PAGE_SIZE = 25
@@ -56,7 +57,7 @@ export default function SchoolFacultiesPage() {
             render: row => (
                 <Badge
                     label={row.is_active ? 'Active' : 'Inactive'}
-                    color={row.is_active ? 'green' : 'gray'}
+                    color={row.is_active ? 'dark' : 'gray'}
                 />
             )
         },
@@ -69,32 +70,34 @@ export default function SchoolFacultiesPage() {
                 subtitle="Faculty members assigned to your school(s)"
             />
 
-            <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-6">
-                <p className="text-sm text-primary-700">
+            <Panel className="mb-6">
+                <p className="text-sm text-gray-700">
                     Showing all faculty members who are assigned to the same school(s) as you.
                     This is a <strong>read-only</strong> view.
                 </p>
-            </div>
+            </Panel>
 
             {/* Filter Bar */}
             <div className="flex flex-wrap gap-3 mb-6">
                 <input
                     type="text"
                     placeholder="Search by name, username or email..."
+                    aria-label="Search faculty"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="flex-1 min-w-[220px] px-4 py-2 border border-gray-200 rounded-lg
-                               text-sm focus:outline-none focus:ring-2 focus:ring-primary-200
-                               focus:border-primary-400 transition-all bg-white"
+                    className="flex-1 min-w-[220px] px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded-md
+                               placeholder:text-gray-400 transition-colors focus:outline-none
+                               focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20"
                 />
                 <input
                     type="text"
                     placeholder="Filter by School Code..."
+                    aria-label="Filter by school code"
                     value={schoolCode}
                     onChange={e => setSchoolCode(e.target.value)}
-                    className="w-48 px-4 py-2 border border-gray-200 rounded-lg
-                               text-sm focus:outline-none focus:ring-2 focus:ring-primary-200
-                               focus:border-primary-400 transition-all bg-white"
+                    className="w-48 px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded-md
+                               placeholder:text-gray-400 transition-colors focus:outline-none
+                               focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20"
                 />
             </div>
 

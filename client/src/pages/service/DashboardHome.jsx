@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
+import PageHeader from '../../components/ui/PageHeader'
+import StatCard from '../../components/ui/StatCard'
+import Panel from '../../components/ui/Panel'
+import Badge from '../../components/ui/Badge'
+
+const serviceStatus = {
+    online: 'dark',
+    placeholder: 'gray',
+}
 
 export default function DashboardHome() {
     const [stats, setStats] = useState(null)
@@ -34,75 +43,70 @@ export default function DashboardHome() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900">System Monitoring Dashboard</h1>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Open Error Tickets" value={stats.open_tickets} subtitle={`${stats.investigating} investigating`} />
-                <StatCard title="Total Error Tickets" value={stats.total_tickets} subtitle={`${stats.resolved_today} resolved today`} />
-                <StatCard title="Open Bug Reports" value={stats.open_reports} subtitle={`${stats.critical_reports} critical`} />
-                <StatCard title="Total Bug Reports" value={stats.total_reports} />
+            <PageHeader
+                title="System Monitoring Dashboard"
+                subtitle="Refreshes every 10 seconds"
+            />
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-200 border border-gray-200 rounded-md overflow-hidden">
+                <StatCard label="Open error tickets" value={stats.open_tickets} hint={`${stats.investigating} investigating`} />
+                <StatCard label="Total error tickets" value={stats.total_tickets} hint={`${stats.resolved_today} resolved today`} />
+                <StatCard label="Open bug reports" value={stats.open_reports} hint={`${stats.critical_reports} critical`} />
+                <StatCard label="Total bug reports" value={stats.total_reports} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Backend Services Status</h2>
-                    <div className="space-y-3">
+                <Panel title="Backend services status" padded={false}>
+                    <ul className="divide-y divide-gray-100">
                         {stats.services?.map((svc, i) => (
-                            <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span className="font-medium text-gray-700">{svc.name}</span>
-                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                    svc.status === 'online' ? 'bg-green-100 text-green-700' :
-                                    svc.status === 'placeholder' ? 'bg-gray-100 text-gray-600' :
-                                    'bg-red-100 text-red-700'
-                                }`}>
-                                    {svc.status.toUpperCase()}
-                                </span>
-                            </div>
+                            <li key={i} className="flex justify-between items-center gap-3 px-4 py-3">
+                                <span className="text-sm font-medium text-gray-800">{svc.name}</span>
+                                <Badge
+                                    label={svc.status.charAt(0).toUpperCase() + svc.status.slice(1)}
+                                    color={serviceStatus[svc.status] || 'red'}
+                                />
+                            </li>
                         ))}
-                    </div>
-                </div>
+                    </ul>
+                </Panel>
 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">System Utilization</h2>
+                <Panel title="System utilization">
                     {stats.system_stats && (
                         <div className="space-y-5">
-                            <UtilizationBar label="CPU Usage" percent={stats.system_stats.cpu} />
-                            <UtilizationBar label="RAM Usage" percent={stats.system_stats.ram_percent} 
+                            <UtilizationBar label="CPU usage" percent={stats.system_stats.cpu} />
+                            <UtilizationBar label="RAM usage" percent={stats.system_stats.ram_percent}
                                 detail={`${formatBytes(stats.system_stats.ram_used)} / ${formatBytes(stats.system_stats.ram_total)}`} />
-                            <UtilizationBar label="Disk Usage" percent={stats.system_stats.disk_percent}
+                            <UtilizationBar label="Disk usage" percent={stats.system_stats.disk_percent}
                                 detail={`${formatBytes(stats.system_stats.disk_used)} / ${formatBytes(stats.system_stats.disk_total)}`} />
-                            <div className="pt-2 border-t border-gray-100 flex justify-between">
-                                <span className="text-sm font-medium text-gray-500">PostgreSQL DB Size</span>
-                                <span className="text-sm font-bold text-gray-800">{stats.db_size}</span>
+                            <div className="pt-3 border-t border-gray-100 flex justify-between">
+                                <span className="text-sm font-medium text-gray-600">PostgreSQL DB size</span>
+                                <span className="text-sm font-semibold text-gray-900 tabular-nums">{stats.db_size}</span>
                             </div>
                         </div>
                     )}
-                </div>
+                </Panel>
             </div>
-        </div>
-    )
-}
-function StatCard({ title, value, subtitle }) {
-    return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-sm font-medium text-gray-500">{title}</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
-            {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
         </div>
     )
 }
 
+// Load level is shown as text (High / Elevated) as well as by the bar colour
 function UtilizationBar({ label, percent, detail }) {
+    const level = percent > 85 ? 'high' : percent > 70 ? 'elevated' : null
     return (
         <div>
-            <div className="flex justify-between items-center mb-1">
+            <div className="flex justify-between items-center gap-2 mb-1">
                 <span className="text-sm font-medium text-gray-700">{label}</span>
-                <span className="text-sm font-semibold text-gray-900">{percent}%</span>
+                <span className="flex items-center gap-2">
+                    {level === 'high' && <Badge label="High" color="red" />}
+                    {level === 'elevated' && <Badge label="Elevated" color="outline" />}
+                    <span className="text-sm font-semibold text-gray-900 tabular-nums">{percent}%</span>
+                </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
-                <div className={`h-2 rounded-full ${percent > 85 ? 'bg-red-500' : percent > 70 ? 'bg-yellow-500' : 'bg-primary-500'}`} style={{ width: `${percent}%` }}></div>
+            <div className="w-full bg-gray-200 rounded-sm h-2 mb-1 overflow-hidden">
+                <div className={`h-2 ${level === 'high' ? 'bg-primary-600' : level === 'elevated' ? 'bg-gray-800' : 'bg-gray-600'}`} style={{ width: `${percent}%` }}></div>
             </div>
-            {detail && <p className="text-xs text-gray-400 text-right">{detail}</p>}
+            {detail && <p className="text-xs text-gray-500 text-right tabular-nums">{detail}</p>}
         </div>
     )
 }

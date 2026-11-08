@@ -16,18 +16,19 @@ export default function FormInput({
     }
 
     const baseClass = `
-    w-full px-3 py-2 text-sm border rounded-md transition-colors
-    focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:border-transparent
-    disabled:bg-gray-50 disabled:text-gray-400
-    ${error ? 'border-red-300' : 'border-gray-300 shadow-sm'}
+    w-full px-3 py-2 text-sm text-gray-900 bg-white border rounded-md transition-colors
+    placeholder:text-gray-400
+    focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20
+    disabled:bg-gray-50 disabled:text-gray-500
+    ${error ? 'border-primary-600' : 'border-gray-300'}
   `
 
     return (
         <div>
             {label && (
-                <label id={labelId} htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
+                <label id={labelId} htmlFor={id} className="block text-sm font-medium text-gray-800 mb-1">
                     {label}
-                    {required && <span className="text-red-400 ml-1" aria-hidden="true">*</span>}
+                    {required && <span className="text-primary-600 ml-0.5" aria-hidden="true">*</span>}
                 </label>
             )}
 
@@ -68,7 +69,7 @@ export default function FormInput({
             )}
 
             {error && (
-                <p id={errorId} className="text-xs text-red-500 mt-1">{error}</p>
+                <p id={errorId} className="text-xs text-primary-700 mt-1">{error}</p>
             )}
         </div>
     )

@@ -1,10 +1,18 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useId } from 'react'
 import api from '../../api/axios'
+import PageHeader from '../../components/ui/PageHeader'
+import Panel from '../../components/ui/Panel'
+import Button from '../../components/ui/Button'
+import FormError from '../../components/ui/FormError'
+
+const inputClass = 'w-full h-9 px-3 text-sm text-gray-900 bg-white border border-gray-300 rounded-md transition-colors ' +
+    'placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20'
 
 function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
     const [exists, setExists] = useState(null)
     const [loading, setLoading] = useState(true)
     const [message, setMessage] = useState({ type: '', text: '' })
+    const uid = useId()
     
     // Form fields
     const [username, setUsername] = useState('')
@@ -51,110 +59,113 @@ function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center p-12 bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
-            </div>
+            <Panel className="h-full">
+                <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
+                </div>
+            </Panel>
         )
     }
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full flex flex-col">
+        <Panel
+            className="h-full"
+            title={exists ? `Update Password for ${title}` : `Create ${title}`}
+            description={exists ? 'The account identity is locked. You can only reset the password.' : lockMessage}
+        >
             {message.text && (
-                <div className={`p-4 mb-6 rounded-lg text-sm border ${message.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                    {message.text}
+                <div className="mb-4">
+                    {message.type === 'error' ? (
+                        <FormError message={message.text} />
+                    ) : (
+                        <p className="text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+                            {message.text}
+                        </p>
+                    )}
                 </div>
             )}
 
             {!exists ? (
-                <form onSubmit={handleCreate} className="space-y-4 flex-1">
-                    <div className="mb-6">
-                        <h2 className="text-lg font-medium text-gray-900">Create {title}</h2>
-                        <p className="text-sm text-gray-500 mt-1">{lockMessage}</p>
-                    </div>
+                <form onSubmit={handleCreate} className="space-y-4">
                     
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                        <input 
+                        <label htmlFor={`${uid}-username`} className="block text-sm font-medium text-gray-800 mb-1">Username</label>
+                        <input id={`${uid}-username`}
                             type="text" 
                             required
                             value={username} 
                             onChange={(e) => setUsername(e.target.value)} 
                             placeholder={`Enter username`}
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none focus:border-transparent transition-all placeholder-gray-400"
+                            className={inputClass}
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input 
+                        <label htmlFor={`${uid}-email`} className="block text-sm font-medium text-gray-800 mb-1">Email</label>
+                        <input id={`${uid}-email`}
                             type="email" 
                             required
                             value={email} 
                             onChange={(e) => setEmail(e.target.value)} 
                             placeholder={`Enter email`}
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none focus:border-transparent transition-all placeholder-gray-400"
+                            className={inputClass}
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                        <input 
+                        <label htmlFor={`${uid}-password`} className="block text-sm font-medium text-gray-800 mb-1">Password</label>
+                        <input id={`${uid}-password`}
                             type="password" 
                             required
                             minLength="8"
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)} 
                             placeholder="Enter strong password (min 8 characters)"
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none focus:border-transparent transition-all placeholder-gray-400"
+                            className={inputClass}
                         />
                     </div>
                     
                     <div className="pt-2">
-                        <button type="submit" className="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:ring-4 focus:ring-primary-50 text-sm font-medium transition-all">
+                        <Button type="submit" className="w-full sm:w-auto">
                             Create Account
-                        </button>
+                        </Button>
                     </div>
                 </form>
             ) : (
-                <form onSubmit={handleUpdate} className="space-y-4 flex-1">
-                    <div className="mb-6">
-                        <h2 className="text-lg font-medium text-gray-900">Update Password for {title}</h2>
-                        <p className="text-sm text-gray-500 mt-1">The account identity is locked. You can only reset the password.</p>
-                    </div>
+                <form onSubmit={handleUpdate} className="space-y-4">
                     
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                        <input 
+                        <label htmlFor={`${uid}-new-password`} className="block text-sm font-medium text-gray-800 mb-1">New Password</label>
+                        <input id={`${uid}-new-password`}
                             type="password" 
                             required
                             minLength="8"
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)} 
                             placeholder="Enter new strong password"
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none focus:border-transparent transition-all placeholder-gray-400"
+                            className={inputClass}
                         />
                     </div>
                     
                     <div className="pt-2">
-                        <button type="submit" className="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:ring-4 focus:ring-primary-50 text-sm font-medium transition-all">
+                        <Button type="submit" className="w-full sm:w-auto">
                             Update Password
-                        </button>
+                        </Button>
                     </div>
                 </form>
             )}
-        </div>
+        </Panel>
     )
 }
 
 export default function SpecialUsers() {
     return (
-        <div className="p-6 max-w-7xl mx-auto">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Special Users</h1>
-                <p className="text-sm text-gray-500 mt-1">
-                    Manage system-level singular accounts.
-                </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <PageHeader
+                title="Special Users"
+                subtitle="Manage system-level singular accounts."
+            />
+
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SpecialUserCard 
                     title="Service Admin" 
                     description="Manage the single Service Admin account."

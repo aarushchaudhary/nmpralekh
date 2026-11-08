@@ -21,9 +21,8 @@ function RoleRedirect() {
   const { user, loading } = useAuth()
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ width: 40, height: 40, border: '3px solid #e5e7eb', borderTopColor: '#4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    <div role="status" aria-label="Loading" className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="w-8 h-8 rounded-full border-[3px] border-gray-200 border-t-primary-600 animate-spin" />
     </div>
   )
 

@@ -84,7 +84,7 @@ export default function Campuses() {
     {
       key: 'is_active', label: 'Status', sortable: false,
       render: row => <Badge label={row.is_active ? 'Active' : 'Inactive'}
-                            color={row.is_active ? 'green' : 'gray'} />
+                            color={row.is_active ? 'dark' : 'gray'} />
     },
     {
       key: 'actions', label: '', sortable: false,
@@ -99,7 +99,7 @@ export default function Campuses() {
               Deactivate
             </Button>
           ) : (
-            <Button size="sm" variant="success"
+            <Button size="sm" variant="secondary"
               onClick={() => handleReactivate(row)}>
               Reactivate
             </Button>

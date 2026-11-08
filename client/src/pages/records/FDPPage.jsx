@@ -20,8 +20,6 @@ const typeOptions = [
     { value: 'Guest_Lecture', label: 'Guest Lecture' },
 ]
 
-const typeBadgeColor = { FDP: 'blue', Workshop: 'green', Guest_Lecture: 'purple' }
-
 const empty = {
     school: '', faculty_name: '', date_start: '', date_end: '',
     name: '', details: '', type: 'FDP', organizing_body: ''
@@ -110,24 +108,19 @@ export default function FDPPage({ readOnly = false }) {
         { key: 'date_start', label: 'Date' },
         {
             key: 'type', label: 'Type', sortable: false,
-            render: row => <Badge label={row.type?.replace('_', ' ')}
-                color={typeBadgeColor[row.type]} />
+            render: row => <Badge label={row.type?.replace('_', ' ')} color="gray" />
         },
         { key: 'organizing_body', label: 'Organized By' },
         {
             key: 'status', label: 'Status', sortable: false,
-            render: row => row.pending_audit ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
-                    Pending Approval
-                </span>
-            ) : null
+            render: row => row.pending_audit ? <Badge label="Pending approval" color="outline" /> : null
         },
         {
             key: 'actions', label: '', sortable: false,
             render: row => canEdit(row) && (
                 <div className="flex gap-2">
                     {row.pending_audit ? (
-                        <span className="text-xs text-yellow-600 italic">
+                        <span className="text-xs text-gray-600">
                             Change pending...
                         </span>
                     ) : (
@@ -153,8 +146,8 @@ export default function FDPPage({ readOnly = false }) {
                 action={
                     <div className="flex gap-2">
                         {['super_admin', 'admin', 'user'].includes(user?.role) && (
-                            <Button variant="success" onClick={() => exportFile()} loading={exporting}>
-                                {exporting ? 'Exporting...' : '⬇ Export'}
+                            <Button variant="secondary" onClick={() => exportFile()} loading={exporting}>
+                                {exporting ? 'Exporting...' : 'Export'}
                             </Button>
                         )}
                         {!readOnly && <Button onClick={openCreate}>+ Add Record</Button>}

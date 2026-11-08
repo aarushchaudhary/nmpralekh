@@ -27,7 +27,7 @@ export default function Layout({ children }) {
     }, [pageTitle])
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+        <div className="flex h-screen bg-gray-50 overflow-hidden">
 
             <Sidebar
                 isOpen={sidebarOpen}
@@ -37,33 +37,31 @@ export default function Layout({ children }) {
             {/* Main content */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-                {/* Top bar — visible on all screens */}
-                <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.03)] z-10">
-                    <div className="flex items-center">
+                {/* Top bar: the page's own h1 carries the title, this just orients */}
+                <header className="h-14 flex-shrink-0 flex items-center justify-between gap-4 px-4 sm:px-6 bg-white border-b border-gray-200">
+                    <div className="flex items-center min-w-0">
                         <button
                             onClick={() => setSidebarOpen(true)}
-                            className="md:hidden p-2 -ml-2 mr-3 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            className="md:hidden p-2 -ml-2 mr-2 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
                             aria-label="Open sidebar"
                         >
-                            {/* Hamburger icon */}
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
                         </button>
-                        <h2 className="text-xl font-semibold text-gray-800 tracking-tight">
-                            {pageTitle}
-                        </h2>
+                        <p className="text-sm text-gray-500 truncate">
+                            <span className="hidden sm:inline">NMIMS University</span>
+                            <span className="hidden sm:inline mx-2 text-gray-300" aria-hidden="true">/</span>
+                            <span className="text-gray-900 font-medium">{pageTitle}</span>
+                        </p>
                     </div>
-                    {/* Optional Right Side Header Content */}
-                    <div className="flex items-center gap-4">
-                        <div className="hidden sm:block text-sm text-gray-500">
-                            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                        </div>
-                    </div>
+                    <p className="hidden sm:block text-sm text-gray-500 tabular-nums whitespace-nowrap">
+                        {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
                 </header>
 
                 {/* Page content */}
-                <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50/50">
+                <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
                     <div className="max-w-7xl mx-auto">
                         {children}
                     </div>

@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import PageHeader from '../../components/ui/PageHeader'
+import Button from '../../components/ui/Button'
+import Badge from '../../components/ui/Badge'
+import Panel from '../../components/ui/Panel'
+import EmptyState from '../../components/ui/EmptyState'
+
+const inputClass = 'h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 ' +
+    'placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20'
 
 export default function ReceivedDataPage() {
     const [reports, setReports] = useState([])
@@ -67,86 +74,80 @@ export default function ReceivedDataPage() {
 
     return (
         <div className="max-w-5xl mx-auto">
-            <PageHeader 
-                title="Received MIS Data" 
-                subtitle="Review data sent by campus coordinators" 
+            <PageHeader
+                title="Received MIS Data"
+                subtitle="Review data sent by campus coordinators"
             />
-            
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-wrap gap-4 items-end">
-                <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Search Coordinator / School</label>
-                    <input 
-                        type="text"
-                        placeholder="Search by Title, School, or Coordinator..."
-                        value={inputSchool}
-                        onChange={(e) => setInputSchool(e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm w-48"
-                    />
+
+            <Panel className="mb-6">
+                <div className="flex flex-wrap gap-3 items-end">
+                    <div className="w-full sm:w-auto">
+                        <label htmlFor="received-data-1" className="block text-xs font-medium text-gray-600 mb-1">Search Coordinator / School</label>
+                        <input id="received-data-1"
+                            type="text"
+                            placeholder="Search by Title, School, or Coordinator..."
+                            value={inputSchool}
+                            onChange={(e) => setInputSchool(e.target.value)}
+                            className={`${inputClass} sm:w-72`}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="received-data-2" className="block text-xs font-medium text-gray-600 mb-1">From Date</label>
+                        <input id="received-data-2"
+                            type="date"
+                            value={inputDateFrom}
+                            onChange={(e) => setInputDateFrom(e.target.value)}
+                            className={inputClass}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="received-data-3" className="block text-xs font-medium text-gray-600 mb-1">To Date</label>
+                        <input id="received-data-3"
+                            type="date"
+                            value={inputDateTo}
+                            onChange={(e) => setInputDateTo(e.target.value)}
+                            className={inputClass}
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        <Button onClick={handleApplyFilters}>
+                            Apply Filters
+                        </Button>
+                        <Button variant="ghost" onClick={handleClearFilters}>
+                            Clear
+                        </Button>
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
-                    <input 
-                        type="date"
-                        value={inputDateFrom}
-                        onChange={(e) => setInputDateFrom(e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
-                    <input 
-                        type="date"
-                        value={inputDateTo}
-                        onChange={(e) => setInputDateTo(e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    />
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={handleApplyFilters}
-                        className="px-4 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg font-medium transition-colors"
-                    >
-                        Apply Filters
-                    </button>
-                    <button 
-                        onClick={handleClearFilters}
-                        className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                        Clear
-                    </button>
-                </div>
-            </div>
-            
+            </Panel>
+
             {loading ? (
-                <div className="text-center py-12 text-gray-500">Loading...</div>
+                <div className="text-center py-12 text-sm text-gray-500">Loading...</div>
             ) : filteredReports.length === 0 ? (
-                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm text-center">
-                    <p className="text-gray-500">No data matches the current filters.</p>
-                </div>
+                <EmptyState message="No data matches the current filters." />
             ) : (
-                <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-4">
                     {filteredReports.map(report => (
-                        <div key={report.id} className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                                        {report.name || 'MIS Report'} <span className="text-sm font-normal text-gray-500">from {report.created_by_school_name}</span>
-                                    </h3>
-                                    <div className="text-sm text-gray-500 flex flex-wrap gap-4">
-                                        <span>From Coordinator: <strong className="text-gray-700">{report.created_by_name}</strong></span>
-                                        <span>Period: <strong className="text-gray-700">{report.date_from}</strong> to <strong className="text-gray-700">{report.date_to}</strong></span>
+                        <Panel key={report.id}>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
+                                <div className="min-w-0">
+                                    <h2 className="text-base font-semibold text-gray-900 mb-1">
+                                        {report.name || 'MIS Report'} <span className="text-sm font-normal text-gray-600">from {report.created_by_school_name}</span>
+                                    </h2>
+                                    <div className="text-sm text-gray-600 flex flex-wrap gap-x-4 gap-y-1 tabular-nums">
+                                        <span>From Coordinator: <strong className="font-medium text-gray-800">{report.created_by_name}</strong></span>
+                                        <span>Period: <strong className="font-medium text-gray-800">{report.date_from}</strong> to <strong className="font-medium text-gray-800">{report.date_to}</strong></span>
                                         <span>Sent at: {new Date(report.sent_to_accumulator_at || report.sent_to_admin_at).toLocaleString()}</span>
                                     </div>
                                 </div>
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                    ✓ Received
-                                </span>
+                                <div className="shrink-0">
+                                    <Badge label="Received" color="dark" />
+                                </div>
                             </div>
-                            
-                            <div className="bg-gray-50 rounded-lg p-5 text-sm text-gray-700 whitespace-pre-wrap border border-gray-100 mt-2">
+
+                            <div className="bg-gray-50 rounded-md p-4 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap border border-gray-200">
                                 {report.data_content}
                             </div>
-                        </div>
+                        </Panel>
                     ))}
                 </div>
             )}

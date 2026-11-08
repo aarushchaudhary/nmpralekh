@@ -9,6 +9,7 @@ import Table             from '../../components/ui/Table'
 import Modal             from '../../components/ui/Modal'
 import FormInput         from '../../components/ui/FormInput'
 import Badge             from '../../components/ui/Badge'
+import Panel             from '../../components/ui/Panel'
 import ConfirmDialog     from '../../components/ui/ConfirmDialog'
 import MultiPersonPicker from '../../components/ui/MultiPersonPicker'
 import { useAuth }       from '../../context/AuthContext'
@@ -24,7 +25,7 @@ const statusOptions = [
   { value: 'published', label: 'Published' },
   { value: 'granted',   label: 'Granted' },
 ]
-const statusColor = { filed: 'yellow', published: 'blue', granted: 'green' }
+const statusColor = { filed: 'outline', published: 'gray', granted: 'dark' }
 
 const empty = {
   school: '', applicant_name: '', applicant_type: 'faculty',
@@ -157,7 +158,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
         <div>
           <p className="max-w-xs truncate">{row.title_of_patent}</p>
           {row.applicants?.length > 0 && (
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               +{row.applicants.length} co-applicant{row.applicants.length > 1 ? 's' : ''}
             </p>
           )}
@@ -167,7 +168,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
     { key: 'date_of_publication', label: 'Date' },
     { key: 'journal_number',      label: 'Journal No.' },
     {
-      key: 'patent_status', label: 'Status', sortable: false,
+      key: 'patent_status', label: 'Patent status', sortable: false,
       render: row => <Badge label={row.patent_status}
                             color={statusColor[row.patent_status]} />
     },
@@ -179,19 +180,15 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
       ) : '—'
     },
     {
-      key: 'status', label: 'Status', sortable: false,
-      render: row => row.pending_audit ? (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
-          Pending Approval
-        </span>
-      ) : null
+      key: 'status', label: 'Approval', sortable: false,
+      render: row => row.pending_audit ? <Badge label="Pending approval" color="outline" /> : null
     },
     {
       key: 'actions', label: '', sortable: false,
       render: row => canEdit(row) && (
         <div className="flex gap-2">
           {row.pending_audit ? (
-            <span className="text-xs text-yellow-600 italic">
+            <span className="text-xs text-gray-600">
               Change pending...
             </span>
           ) : (
@@ -220,8 +217,8 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
         action={
           <div className="flex gap-2">
             {['super_admin', 'admin', 'user'].includes(user?.role) && (
-              <Button variant="success" onClick={() => exportFile()} loading={exporting}>
-                {exporting ? 'Exporting...' : '⬇ Export'}
+              <Button variant="secondary" onClick={() => exportFile()} loading={exporting}>
+                {exporting ? 'Exporting...' : 'Export'}
               </Button>
             )}
             {(selfOnly || !readOnly) && (
@@ -232,14 +229,14 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
       />
 
       {selfOnly && (
-        <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-6">
-          <p className="text-sm text-primary-700">
+        <Panel className="mb-6">
+          <p className="text-sm text-gray-700">
             You can only view and manage your own patents.
             Add co-applicants to link other inventors — if a co-applicant is a
             registered faculty member, search and select them so the patent
             also appears on their dashboard.
           </p>
-        </div>
+        </Panel>
       )}
 
       <Table columns={columns} data={data}

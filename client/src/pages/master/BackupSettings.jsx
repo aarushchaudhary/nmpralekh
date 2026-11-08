@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import PageHeader from '../../components/ui/PageHeader'
 import Button     from '../../components/ui/Button'
+import Panel      from '../../components/ui/Panel'
+import FormError  from '../../components/ui/FormError'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import api        from '../../api/axios'
 
@@ -102,42 +104,44 @@ export default function BackupSettings() {
       />
 
       {message && (
-        <div className={`mb-4 p-3 rounded-xl text-sm
-          ${message.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-700'
-            : 'bg-red-50 border border-red-200 text-red-600'
-          }`}>
-          {message.text}
+        <div className="mb-4">
+          {message.type === 'success' ? (
+            <p className="text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+              {message.text}
+            </p>
+          ) : (
+            <FormError message={message.text} />
+          )}
         </div>
       )}
 
       <form onSubmit={handleSaveSettings}>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
           {/* ── Automated Backup ── */}
-          <div className="bg-white p-6 rounded-xl border border-gray-100">
-            <h3 className="text-lg font-medium mb-4">Automated Backup</h3>
+          <Panel title="Automated Backup">
             <div className="space-y-4">
 
               <div className="flex items-center">
                 <input
                   type="checkbox"
+                  id="backup-auto-active"
                   name="is_active"
                   checked={autoConfig.is_active}
                   onChange={handleAutoChange}
-                  className="h-4 w-4 text-indigo-600"
+                  className="h-4 w-4 rounded border-gray-300 accent-primary-600"
                 />
-                <label className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="backup-auto-active" className="ml-2 block text-sm text-gray-800">
                   Enable Automated Backups
                 </label>
               </div>
 
               {/* Schedule Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label id="backup-settings-1-label" className="block text-sm font-medium text-gray-800 mb-1">
                   Schedule Type
                 </label>
-                <SearchableSelect
+                <SearchableSelect id="backup-settings-1" labelId="backup-settings-1-label"
                   options={[
                     { value: 'weekly', label: 'Weekly' },
                     { value: 'monthly', label: 'Monthly (End of Month)' },
@@ -151,16 +155,16 @@ export default function BackupSettings() {
               {/* Day of Week — only for weekly */}
               {autoConfig.schedule_type === 'weekly' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label id="backup-settings-2-label" className="block text-sm font-medium text-gray-800 mb-1">
                     Day of Week
                   </label>
-                  <SearchableSelect
+                  <SearchableSelect id="backup-settings-2" labelId="backup-settings-2-label"
                     options={DAYS_OF_WEEK}
                     value={autoConfig.schedule_day}
                     onChange={e => handleAutoChange({ target: { name: 'schedule_day', value: e.target.value } })}
                     placeholder="Select day"
                   />
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Backup will run at the end of the selected day each week.
                   </p>
                 </div>
@@ -172,17 +176,16 @@ export default function BackupSettings() {
                 </p>
               )}
             </div>
-          </div>
+          </Panel>
 
           {/* ── Manual Backup ── */}
-          <div className="bg-white p-6 rounded-xl border border-gray-100">
-            <h3 className="text-lg font-medium mb-4">Manual Backup</h3>
+          <Panel title="Manual Backup">
             <div className="space-y-4">
 
               {/* Status */}
-              <div className="pt-2 border-t border-gray-100">
-                <p className="text-sm text-gray-600">Last Backup Run:</p>
-                <p className="font-semibold">
+              <div>
+                <p className="text-xs text-gray-500">Last backup run</p>
+                <p className="text-sm font-semibold text-gray-800 tabular-nums">
                   {lastRun ? new Date(lastRun).toLocaleString() : 'Never'}
                 </p>
               </div>
@@ -199,7 +202,7 @@ export default function BackupSettings() {
                 Creates a full compressed database dump in the server's /backups directory.
               </p>
             </div>
-          </div>
+          </Panel>
         </div>
 
         {/* Save button */}

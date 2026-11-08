@@ -131,9 +131,7 @@ export default function SearchableSelect({
         'aria-describedby': ariaDescribedBy,
     }
 
-    const borderColor = error
-        ? 'border-red-300 focus-within:ring-red-300'
-        : 'border-gray-200 focus-within:ring-primary-500'
+    const borderColor = error ? 'border-primary-600' : 'border-gray-300'
 
     return (
         <div ref={wrapperRef} className="relative">
@@ -146,10 +144,10 @@ export default function SearchableSelect({
                 onClick={openList}
                 onKeyDown={open ? undefined : onTriggerKeyDown}
                 className={`
-                    w-full flex items-center gap-1 px-3 py-2 text-sm border rounded-lg
+                    w-full flex items-center gap-1 px-3 py-2 text-sm border rounded-md
                     transition-colors cursor-pointer bg-white
-                    focus:outline-none focus:ring-2 focus:ring-primary-500
-                    focus-within:outline-none focus-within:ring-2 focus-within:border-transparent
+                    focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20
+                    focus-within:border-primary-600 focus-within:ring-2 focus-within:ring-primary-600/20
                     ${disabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}
                     ${borderColor}
                 `}
@@ -169,7 +167,7 @@ export default function SearchableSelect({
                         onKeyDown={onInputKeyDown}
                     />
                 ) : (
-                    <span className={`flex-1 truncate ${!selectedLabel ? 'text-gray-400' : 'text-gray-900'}`}>
+                    <span className={`flex-1 truncate ${!selectedLabel ? 'text-gray-500' : 'text-gray-900'}`}>
                         {selectedLabel || placeholder}
                     </span>
                 )}
@@ -179,7 +177,7 @@ export default function SearchableSelect({
                     <button
                         type="button"
                         onClick={handleClear}
-                        className="text-gray-400 hover:text-gray-600 shrink-0 text-xs"
+                        className="text-gray-500 hover:text-gray-800 shrink-0 text-xs"
                         tabIndex={-1}
                         aria-label="Clear selection"
                     >
@@ -205,11 +203,11 @@ export default function SearchableSelect({
                     aria-labelledby={labelId}
                     className="
                     absolute z-50 mt-1 w-full max-h-52 overflow-auto
-                    bg-white border border-gray-200 rounded-lg shadow-lg
+                    bg-white border border-gray-200 rounded-md shadow-lg
                     py-1 text-sm
                 ">
                     {filtered.length === 0 ? (
-                        <li role="presentation" className="px-3 py-2 text-gray-400 text-center select-none">
+                        <li role="presentation" className="px-3 py-2 text-gray-500 text-center select-none">
                             No results found
                         </li>
                     ) : (
@@ -227,8 +225,8 @@ export default function SearchableSelect({
                                     onClick={() => handleSelect(opt)}
                                     className={`
                                         px-3 py-2 cursor-pointer transition-colors
-                                        ${isSelected ? 'text-primary-700 font-medium' : 'text-gray-700'}
-                                        ${isActive ? 'bg-primary-50' : ''}
+                                        ${isSelected ? 'text-primary-700 font-medium' : 'text-gray-800'}
+                                        ${isActive ? 'bg-gray-100' : ''}
                                     `}
                                 >
                                     {opt.label}

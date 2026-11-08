@@ -1,15 +1,14 @@
 const variants = {
-    primary: 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm hover:shadow active:scale-95 transition-all',
-    secondary: 'bg-white hover:bg-gray-50 text-gray-800 border border-gray-300 shadow-sm hover:shadow active:scale-95 transition-all',
-    danger: 'bg-red-500 hover:bg-red-600 text-white',
-    success: 'bg-green-600 hover:bg-green-700 text-white',
-    ghost: 'hover:bg-gray-100 text-gray-600',
+    primary: 'bg-primary-600 text-white hover:bg-primary-700 border border-primary-600 hover:border-primary-700',
+    secondary: 'bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 hover:border-gray-400',
+    danger: 'bg-white text-primary-700 border border-primary-200 hover:bg-primary-50 hover:border-primary-300',
+    ghost: 'text-gray-700 border border-transparent hover:bg-gray-100',
 }
 
 const sizes = {
-    sm: 'px-3 py-1.5 text-xs',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-5 py-2.5 text-sm',
+    sm: 'h-8 px-3 text-xs',
+    md: 'h-9 px-3.5 text-sm',
+    lg: 'h-10 px-4 text-sm',
 }
 
 export default function Button({
@@ -22,14 +21,15 @@ export default function Button({
             onClick={onClick}
             disabled={disabled || loading}
             className={`
-        inline-flex items-center justify-center gap-2
-        font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1
+        inline-flex items-center justify-center gap-2 whitespace-nowrap
+        font-medium rounded-md transition-colors
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-1
         disabled:opacity-50 disabled:cursor-not-allowed
-        ${variants[variant]} ${sizes[size]} ${className}
+        ${variants[variant] || variants.primary} ${sizes[size]} ${className}
       `}
         >
             {loading && (
-                <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10"
                         stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor"

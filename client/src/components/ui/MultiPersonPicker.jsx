@@ -84,27 +84,27 @@ function FacultySearchInput({ person, idx, updatePerson }) {
         onChange={handleChange}
         onFocus={() => results.length > 0 && setOpen(true)}
         placeholder="Search faculty by name..."
-        className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg
-                   focus:outline-none focus:ring-1 focus:ring-primary-500"
+        aria-label="Faculty name"
+        className="w-full h-9 px-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-md placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20"
       />
 
       {/* Linked badge */}
       {person.user && (
-        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs
-                         bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded-full
+        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium
+                         bg-gray-800 text-white px-1.5 py-0.5 rounded
                          whitespace-nowrap pointer-events-none">
-          ✓ linked
+          Linked
         </span>
       )}
 
       {/* Dropdown */}
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border
-                        border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                        border-gray-200 rounded-md shadow-lg overflow-hidden">
           {searching ? (
-            <div className="px-3 py-2 text-xs text-gray-400">Searching…</div>
+            <div className="px-3 py-2 text-xs text-gray-500">Searching…</div>
           ) : results.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-gray-400">No matching faculty found</div>
+            <div className="px-3 py-2 text-xs text-gray-500">No matching faculty found</div>
           ) : (
             results.map(u => (
               <button
@@ -112,20 +112,20 @@ function FacultySearchInput({ person, idx, updatePerson }) {
                 type="button"
                 onMouseDown={e => { e.preventDefault(); handleSelect(u) }}
                 className="w-full flex items-center justify-between px-3 py-2
-                           hover:bg-primary-50 text-left"
+                           hover:bg-gray-100 text-left"
               >
                 <div>
                   <p className="text-sm font-medium text-gray-800">{u.full_name}</p>
-                  <p className="text-xs text-gray-400">{u.username}</p>
+                  <p className="text-xs text-gray-500">{u.username}</p>
                 </div>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                <span className="text-xs bg-gray-100 text-gray-700 border border-gray-200 px-1.5 py-0.5 rounded">
                   {roleLabel[u.role] || u.role}
                 </span>
               </button>
             ))
           )}
-          <div className="px-3 py-1.5 border-t border-gray-100 bg-gray-50">
-            <p className="text-xs text-gray-400">
+          <div className="px-3 py-1.5 border-t border-gray-200 bg-gray-50">
+            <p className="text-xs text-gray-600">
               Or type a free-text name — it won't be linked to a registered user
             </p>
           </div>
@@ -166,22 +166,22 @@ export default function MultiPersonPicker({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <label className="text-sm font-medium text-gray-700">{label}</label>
+        <p className="text-sm font-medium text-gray-800">{label}</p>
         <button
           type="button"
           onClick={addPerson}
-          className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+          className="text-xs text-primary-700 hover:underline font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded"
         >
           + Add Person
         </button>
       </div>
 
       {people.length === 0 ? (
-        <div className="border-2 border-dashed border-gray-200 rounded-lg
-                        p-4 text-center text-sm text-gray-400">
+        <div className="border border-dashed border-gray-300 rounded-md
+                        p-4 text-center text-sm text-gray-600">
           No additional people added yet.{' '}
           <button type="button" onClick={addPerson}
-            className="text-primary-600 hover:underline">
+            className="text-primary-700 font-medium hover:underline">
             Add one
           </button>
         </div>
@@ -189,8 +189,8 @@ export default function MultiPersonPicker({
         <div className="space-y-2">
           {people.map((person, idx) => (
             <div key={idx}
-              className="flex items-start gap-2 p-3 bg-gray-50
-                         rounded-lg border border-gray-100">
+              className="flex flex-wrap sm:flex-nowrap items-start gap-2 p-3 bg-gray-50
+                         rounded-md border border-gray-200">
 
               {/* Primary checkbox */}
               <input
@@ -198,7 +198,8 @@ export default function MultiPersonPicker({
                 checked={person.is_primary}
                 onChange={e => updatePerson(idx, 'is_primary', e.target.checked)}
                 title="Primary author/applicant"
-                className="rounded shrink-0 mt-2"
+                aria-label="Primary"
+                className="h-4 w-4 shrink-0 mt-2.5"
               />
 
               {/* Name — faculty gets a searchable input, student gets plain text */}
@@ -215,9 +216,8 @@ export default function MultiPersonPicker({
                   value={person.name}
                   onChange={e => updatePerson(idx, 'name', e.target.value)}
                   placeholder="Full name"
-                  className="flex-1 px-2 py-1.5 text-sm border border-gray-200
-                             rounded-lg focus:outline-none focus:ring-1
-                             focus:ring-primary-500"
+                  aria-label="Full name"
+                  className="flex-1 h-9 px-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-md placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20"
                 />
               )}
 
@@ -232,9 +232,8 @@ export default function MultiPersonPicker({
                     updatePerson(idx, personKey, val)
                   }
                 }}
-                className="px-2 py-1.5 text-sm border border-gray-200
-                           rounded-lg focus:outline-none focus:ring-1
-                           focus:ring-primary-500 shrink-0"
+                aria-label="Type"
+                className="h-9 px-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-md placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20 shrink-0"
               >
                 {typeOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -248,9 +247,8 @@ export default function MultiPersonPicker({
                   value={person.order}
                   onChange={e => updatePerson(idx, 'order', parseInt(e.target.value))}
                   placeholder="#"
-                  className="w-14 px-2 py-1.5 text-sm border border-gray-200
-                             rounded-lg focus:outline-none focus:ring-1
-                             focus:ring-primary-500 shrink-0"
+                  aria-label="Order"
+                  className="w-14 h-9 px-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-md placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20 shrink-0"
                 />
               )}
 
@@ -258,14 +256,16 @@ export default function MultiPersonPicker({
               <button
                 type="button"
                 onClick={() => removePerson(idx)}
-                className="text-red-400 hover:text-red-600 text-xs shrink-0 mt-2"
+                aria-label={`Remove ${person.name || 'person'}`}
+                className="h-9 px-2 text-xs font-medium text-primary-700 rounded-md hover:bg-primary-50 shrink-0
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
               >
-                ✕
+                Remove
               </button>
             </div>
           ))}
-          <p className="text-xs text-gray-400 ml-1">
-            ✓ checkbox = primary · 🔗 linked faculty will see this record on their dashboard
+          <p className="text-xs text-gray-600">
+            Tick the box to mark the primary person. Linked faculty see this record on their dashboard.
           </p>
         </div>
       )}

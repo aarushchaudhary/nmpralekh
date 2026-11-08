@@ -1,20 +1,22 @@
-const colors = {
-    blue: 'bg-primary-50 text-primary-700',
-    green: 'bg-green-50 text-green-700',
-    red: 'bg-red-50 text-red-700',
-    yellow: 'bg-yellow-50 text-yellow-700',
-    gray: 'bg-gray-100 text-gray-600',
-    purple: 'bg-purple-50 text-purple-700',
-    teal: 'bg-teal-50 text-teal-700',
-    orange: 'bg-orange-50 text-orange-700',
+// Brand palette only: status is carried by the label text, the style just groups it
+// (dark = done/approved, outline = pending, red = rejected/failed, gray = neutral)
+const styles = {
+    dark: 'bg-gray-800 text-white border-gray-800',
+    outline: 'bg-white text-gray-700 border-gray-400',
+    red: 'bg-primary-50 text-primary-700 border-primary-200',
+    gray: 'bg-gray-100 text-gray-700 border-gray-200',
+}
+
+// older colour names used across pages
+const aliases = {
+    green: 'dark', blue: 'gray', purple: 'gray', teal: 'gray',
+    yellow: 'outline', orange: 'outline',
 }
 
 export default function Badge({ label, color = 'gray' }) {
+    const style = styles[color] || styles[aliases[color]] || styles.gray
     return (
-        <span className={`
-      inline-block px-2 py-0.5 rounded-full text-xs font-medium
-      ${colors[color]}
-    `}>
+        <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-xs font-medium whitespace-nowrap ${style}`}>
             {label}
         </span>
     )

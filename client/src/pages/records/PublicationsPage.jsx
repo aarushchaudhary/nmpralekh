@@ -9,6 +9,7 @@ import Table             from '../../components/ui/Table'
 import Modal             from '../../components/ui/Modal'
 import FormInput         from '../../components/ui/FormInput'
 import Badge             from '../../components/ui/Badge'
+import Panel             from '../../components/ui/Panel'
 import ConfirmDialog     from '../../components/ui/ConfirmDialog'
 import MultiPersonPicker from '../../components/ui/MultiPersonPicker'
 import { useAuth }       from '../../context/AuthContext'
@@ -158,8 +159,7 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
     { key: 'author_name',  label: 'Author' },
     {
       key: 'author_type', label: 'Type', sortable: false,
-      render: row => <Badge label={row.author_type}
-                            color={row.author_type === 'faculty' ? 'blue' : 'purple'} />
+      render: row => <Badge label={row.author_type} color="gray" />
     },
     {
       key: 'title_of_paper', label: 'Title',
@@ -167,7 +167,7 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
         <div>
           <p className="max-w-xs truncate">{row.title_of_paper}</p>
           {row.authors?.length > 0 && (
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               +{row.authors.length} co-author{row.authors.length > 1 ? 's' : ''}
             </p>
           )}
@@ -192,18 +192,14 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
     },
     {
       key: 'status', label: 'Status', sortable: false,
-      render: row => row.pending_audit ? (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
-          Pending Approval
-        </span>
-      ) : null
+      render: row => row.pending_audit ? <Badge label="Pending approval" color="outline" /> : null
     },
     {
       key: 'actions', label: '', sortable: false,
       render: row => canEdit(row) && (
         <div className="flex gap-2">
           {row.pending_audit ? (
-            <span className="text-xs text-yellow-600 italic">
+            <span className="text-xs text-gray-600">
               Change pending...
             </span>
           ) : (
@@ -232,8 +228,8 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
         action={
           <div className="flex gap-2">
             {['super_admin', 'admin', 'user'].includes(user?.role) && (
-              <Button variant="success" onClick={() => exportFile()} loading={exporting}>
-                {exporting ? 'Exporting...' : '⬇ Export'}
+              <Button variant="secondary" onClick={() => exportFile()} loading={exporting}>
+                {exporting ? 'Exporting...' : 'Export'}
               </Button>
             )}
             {(selfOnly || !readOnly) && (
@@ -244,14 +240,14 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
       />
 
       {selfOnly && (
-        <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-6">
-          <p className="text-sm text-primary-700">
+        <Panel className="mb-6">
+          <p className="text-sm text-gray-700">
             You can only view and manage your own publications.
             Add co-authors to link other contributors — if a co-author is a
             registered faculty member, search and select them so the publication
             also appears on their dashboard.
           </p>
-        </div>
+        </Panel>
       )}
 
       <Table columns={columns} data={data}

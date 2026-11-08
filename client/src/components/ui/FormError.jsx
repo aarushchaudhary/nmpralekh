@@ -2,7 +2,7 @@
 export default function FormError({ message }) {
     if (!message) return null
     return (
-        <p role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+        <p role="alert" className="text-sm text-primary-800 bg-primary-50 border border-primary-200 border-l-4 border-l-primary-600 rounded-md px-3 py-2">
             {message}
         </p>
     )

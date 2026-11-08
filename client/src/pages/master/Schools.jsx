@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import useRecords from '../../hooks/useRecords'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
+import FormError from '../../components/ui/FormError'
 import Table from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import api from '../../api/axios'
+import { apiErrors } from '../../api/errors'
 
 const empty = { campus: '', name: '', code: '' }
 
@@ -74,8 +76,7 @@ export default function Schools() {
             }
             setShowForm(false)
         } catch (err) {
-            const data = err.response?.data
-            if (data) setErrors(data)
+            setErrors(apiErrors(err))
         } finally {
             setSaving(false)
         }
@@ -110,7 +111,7 @@ export default function Schools() {
             render: row => (
                 <Badge
                     label={row.is_active ? 'Active' : 'Inactive'}
-                    color={row.is_active ? 'green' : 'gray'}
+                    color={row.is_active ? 'dark' : 'gray'}
                 />
             )
         },
@@ -127,7 +128,7 @@ export default function Schools() {
                             Deactivate
                         </Button>
                     ) : (
-                        <Button size="sm" variant="success" onClick={() => handleReactivate(row)}>
+                        <Button size="sm" variant="secondary" onClick={() => handleReactivate(row)}>
                             Reactivate
                         </Button>
                     )}
@@ -184,6 +185,7 @@ export default function Schools() {
                         required
                         error={errors.code}
                     />
+                    <FormError message={errors._form} />
                     <div className="flex justify-end gap-3 pt-2">
                         <Button variant="secondary" onClick={() => setShowForm(false)}>
                             Cancel

@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import PageHeader from '../../components/ui/PageHeader'
 import FormError from '../../components/ui/FormError'
+import Button from '../../components/ui/Button'
+import Badge from '../../components/ui/Badge'
+import Panel from '../../components/ui/Panel'
+import EmptyState from '../../components/ui/EmptyState'
+import { PlusIcon, XMarkIcon } from '@heroicons/react/20/solid'
 import { useAuth } from '../../context/AuthContext'
+
+const inputClass = 'h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 ' +
+    'placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20'
+const textareaClass = 'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 ' +
+    'placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20'
 
 export default function FinalizeMISPage() {
     const { user } = useAuth()
@@ -183,172 +193,171 @@ export default function FinalizeMISPage() {
     })
 
     return (
-        <div className="p-6 max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-semibold text-gray-800">Finalize MIS Data</h1>
-                    <p className="text-gray-500 mt-1">Create and manage your finalized MIS reports</p>
-                    <div className="mt-3"><FormError message={pageError} /></div>
-                </div>
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="bg-primary-600 hover:bg-primary-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors"
-                >
-                    + Create Final MIS
-                </button>
-            </div>
-            
-            <div className="mb-6 flex gap-4 items-end">
-                <div className="flex-grow max-w-md">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Search Finalized Reports</label>
-                    <input 
-                        type="text"
-                        placeholder="Search by Title..."
-                        value={mySearchQuery}
-                        onChange={(e) => setMySearchQuery(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
-                    <input 
-                        type="date"
-                        value={mySearchDateFrom}
-                        onChange={(e) => setMySearchDateFrom(e.target.value)}
-                        className="px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
-                    <input 
-                        type="date"
-                        value={mySearchDateTo}
-                        onChange={(e) => setMySearchDateTo(e.target.value)}
-                        className="px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                </div>
-            </div>
+        <div className="max-w-6xl mx-auto">
+            <PageHeader
+                title="Finalize MIS Data"
+                subtitle="Create and manage your finalized MIS reports"
+                action={
+                    <Button onClick={() => setIsModalOpen(true)}>
+                        <PlusIcon className="h-4 w-4" />
+                        Create Final MIS
+                    </Button>
+                }
+            />
 
-            {loading ? (
-                <div className="text-center py-12 text-gray-500">Loading...</div>
-            ) : filteredMyReports.length === 0 ? (
-                <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center text-gray-500">
-                    No reports found.
+            <div className="space-y-4">
+                <FormError message={pageError} />
+
+                <div className="flex flex-wrap gap-3 items-end">
+                    <div className="w-full sm:flex-1 sm:max-w-md">
+                        <label htmlFor="finalize-mis-1" className="block text-xs font-medium text-gray-600 mb-1">Search Finalized Reports</label>
+                        <input id="finalize-mis-1"
+                            type="text"
+                            placeholder="Search by Title..."
+                            value={mySearchQuery}
+                            onChange={(e) => setMySearchQuery(e.target.value)}
+                            className={inputClass}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="finalize-mis-2" className="block text-xs font-medium text-gray-600 mb-1">From Date</label>
+                        <input id="finalize-mis-2"
+                            type="date"
+                            value={mySearchDateFrom}
+                            onChange={(e) => setMySearchDateFrom(e.target.value)}
+                            className={inputClass}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="finalize-mis-3" className="block text-xs font-medium text-gray-600 mb-1">To Date</label>
+                        <input id="finalize-mis-3"
+                            type="date"
+                            value={mySearchDateTo}
+                            onChange={(e) => setMySearchDateTo(e.target.value)}
+                            className={inputClass}
+                        />
+                    </div>
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 gap-4">
-                    {filteredMyReports.map(report => (
-                        <div key={report.id} className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                                        {report.name || 'Finalized MIS Report'}
-                                    </h3>
-                                    <div className="text-sm text-gray-500 flex gap-4">
-                                        <span>Period: <strong className="text-gray-700">{report.date_from}</strong> to <strong className="text-gray-700">{report.date_to}</strong></span>
-                                        <span>Created: {new Date(report.created_at).toLocaleDateString()}</span>
+
+                {loading ? (
+                    <div className="text-center py-12 text-sm text-gray-500">Loading...</div>
+                ) : filteredMyReports.length === 0 ? (
+                    <EmptyState message="No reports found." />
+                ) : (
+                    <div className="space-y-4">
+                        {filteredMyReports.map(report => (
+                            <Panel key={report.id}>
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
+                                    <div className="min-w-0">
+                                        <h2 className="text-base font-semibold text-gray-900 mb-1">
+                                            {report.name || 'Finalized MIS Report'}
+                                        </h2>
+                                        <div className="text-sm text-gray-600 flex flex-wrap gap-x-4 gap-y-1 tabular-nums">
+                                            <span>Period: <strong className="font-medium text-gray-800">{report.date_from}</strong> to <strong className="font-medium text-gray-800">{report.date_to}</strong></span>
+                                            <span>Created: {new Date(report.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0">
+                                        <Badge label="Saved in System" color="dark" />
+                                        {report.sent_to_super_admin ? (
+                                            <Badge label="Sent to Super Admin" color="dark" />
+                                        ) : (
+                                            <Button variant="secondary" size="sm" onClick={() => handleSendSuperAdmin(report.id)}>
+                                                Send to Super Admin
+                                            </Button>
+                                        )}
+                                        {report.sent_to_chronicle_master ? (
+                                            <Badge label="Sent to Chronicle Master" color="dark" />
+                                        ) : (
+                                            <Button variant="secondary" size="sm" onClick={() => handleSendChronicle(report.id)}>
+                                                Send to Chronicle Master
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-end gap-2">
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                        ✓ Saved in System
-                                    </span>
-                                    <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => handleSendSuperAdmin(report.id)}
-                                            disabled={report.sent_to_super_admin}
-                                            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 disabled:opacity-50 transition-colors"
-                                        >
-                                            {report.sent_to_super_admin ? 'Sent to Super Admin' : 'Send to Super Admin'}
-                                        </button>
-                                        <button 
-                                            onClick={() => handleSendChronicle(report.id)}
-                                            disabled={report.sent_to_chronicle_master}
-                                            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-primary-200 text-primary-700 bg-primary-50 hover:bg-primary-100 disabled:opacity-50 transition-colors"
-                                        >
-                                            {report.sent_to_chronicle_master ? 'Sent to Chronicle Master' : 'Send to Chronicle Master'}
-                                        </button>
-                                    </div>
+
+                                <div className="bg-gray-50 rounded-md p-4 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap border border-gray-200" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                    {report.data_content}
                                 </div>
-                            </div>
-                            
-                            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap border border-gray-100" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                {report.data_content}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+                            </Panel>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl flex flex-col overflow-hidden" style={{ maxHeight: '95vh' }}>
-                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                            <h3 className="text-lg font-semibold text-gray-800">Create Final MIS</h3>
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="bg-white rounded-md border border-gray-200 shadow-lg w-full max-w-5xl flex flex-col overflow-hidden" style={{ maxHeight: '95vh' }}>
+                        <div className="px-5 py-3.5 border-b border-gray-200 flex justify-between items-center">
+                            <h2 className="text-base font-semibold text-gray-900">Create Final MIS</h2>
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                aria-label="Close"
+                                className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
+                            >
+                                <XMarkIcon className="h-4 w-4" />
+                            </button>
                         </div>
-                        
-                        <div className="p-6 overflow-y-auto flex-grow flex flex-col lg:flex-row gap-6 bg-white">
+
+                        <div className="px-5 py-4 overflow-y-auto flex-grow flex flex-col lg:flex-row gap-5">
                             {/* Left Side: Search & Combine */}
-                            <div className="lg:w-1/2 flex flex-col border border-gray-200 rounded-xl overflow-hidden">
+                            <div className="lg:w-1/2 flex flex-col border border-gray-200 rounded-md overflow-hidden">
                                 <div className="p-4 bg-gray-50 border-b border-gray-200">
-                                    <h4 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">1. Search & Select Reports</h4>
+                                    <h3 className="font-semibold text-gray-600 mb-3 text-xs uppercase tracking-wide">1. Search & Select Reports</h3>
                                     <div className="space-y-3">
-                                        <input 
+                                        <input
                                             type="text"
                                             placeholder="Search by Title, School, or Coordinator..."
                                             value={inputSchool}
                                             onChange={(e) => setInputSchool(e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                            className={inputClass}
                                         />
                                         <div className="flex gap-2">
-                                            <input 
+                                            <input
                                                 type="date"
                                                 value={inputDateFrom}
                                                 onChange={(e) => setInputDateFrom(e.target.value)}
-                                                className="w-1/2 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                                className={`${inputClass} !w-1/2`}
                                             />
-                                            <input 
+                                            <input
                                                 type="date"
                                                 value={inputDateTo}
                                                 onChange={(e) => setInputDateTo(e.target.value)}
-                                                className="w-1/2 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                                className={`${inputClass} !w-1/2`}
                                             />
                                         </div>
-                                        <button 
-                                            onClick={handleApplyFilters}
-                                            className="w-full py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg text-sm font-medium transition-colors"
-                                        >
+                                        <Button variant="secondary" onClick={handleApplyFilters} className="w-full">
                                             Search Received Reports
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
-                                
-                                <div className="flex-grow overflow-y-auto p-4 bg-gray-50" style={{ maxHeight: '400px' }}>
+
+                                <div className="flex-grow overflow-y-auto p-4" style={{ maxHeight: '400px' }}>
                                     {filteredReceivedReports.length === 0 ? (
-                                        <div className="text-center py-8 text-gray-400 text-sm">No reports match criteria.</div>
+                                        <div className="text-center py-8 text-gray-500 text-sm">No reports match criteria.</div>
                                     ) : (
                                         <div className="space-y-2">
                                             {filteredReceivedReports.map(report => (
-                                                <div 
-                                                    key={report.id} 
+                                                <div
+                                                    key={report.id}
                                                     onClick={() => toggleSelection(report.id)}
-                                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                                                        selectedReportIds.has(report.id) 
-                                                        ? 'border-primary-500 bg-primary-50' 
-                                                        : 'border-gray-200 bg-white hover:border-gray-300'
+                                                    className={`p-3 rounded-md border cursor-pointer transition-colors ${
+                                                        selectedReportIds.has(report.id)
+                                                        ? 'border-primary-600 bg-primary-50'
+                                                        : 'border-gray-200 bg-white hover:bg-gray-50'
                                                     }`}
                                                 >
                                                     <div className="flex items-start gap-2">
-                                                        <input 
-                                                            type="checkbox" 
+                                                        <input
+                                                            type="checkbox"
                                                             checked={selectedReportIds.has(report.id)}
                                                             onChange={() => {}}
-                                                            className="mt-1"
+                                                            className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary-600"
                                                         />
-                                                        <div>
-                                                            <div className="font-medium text-sm text-gray-800">{report.name || 'Unnamed Report'}</div>
-                                                            <div className="text-xs text-gray-500">{report.created_by_school_name} | {new Date(report.created_at).toLocaleString()} | {report.date_from} to {report.date_to}</div>
+                                                        <div className="min-w-0">
+                                                            <div className="font-medium text-sm text-gray-900">{report.name || 'Unnamed Report'}</div>
+                                                            <div className="text-xs text-gray-500 tabular-nums">{report.created_by_school_name} | {new Date(report.created_at).toLocaleString()} | {report.date_from} to {report.date_to}</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -358,20 +367,21 @@ export default function FinalizeMISPage() {
                                 </div>
 
                                 <div className="p-4 bg-white border-t border-gray-200">
-                                    <button 
+                                    <Button
+                                        variant="secondary"
                                         onClick={handleCombineIntoTextarea}
                                         disabled={selectedReportIds.size === 0}
-                                        className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                        className="w-full"
                                     >
                                         Combine Selected into Editor &rarr;
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
 
                             {/* Right Side: Editor form */}
                             <div className="lg:w-1/2 flex flex-col">
-                                <h4 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">2. Review & Save Final MIS</h4>
-                                
+                                <h3 className="font-semibold text-gray-600 mb-3 text-xs uppercase tracking-wide">2. Review & Save Final MIS</h3>
+
                                 {error && (
                                     <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
                                         {error}
@@ -380,46 +390,46 @@ export default function FinalizeMISPage() {
 
                                 <form id="create-report-form" onSubmit={handleCreateReport} className="space-y-4 flex flex-col flex-grow">
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Final Report Title</label>
-                                        <input
+                                        <label htmlFor="finalize-mis-4" className="block text-xs font-medium text-gray-600 mb-1">Final Report Title</label>
+                                        <input id="finalize-mis-4"
                                             type="text"
                                             required
                                             placeholder="e.g. Q1 Final Combined Report"
                                             value={formData.name}
                                             onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                            className={inputClass}
                                         />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Final From Date</label>
-                                            <input
+                                            <label htmlFor="finalize-mis-5" className="block text-xs font-medium text-gray-600 mb-1">Final From Date</label>
+                                            <input id="finalize-mis-5"
                                                 type="date"
                                                 required
                                                 value={formData.date_from}
                                                 onChange={(e) => setFormData({...formData, date_from: e.target.value})}
-                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                className={inputClass}
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Final To Date</label>
-                                            <input
+                                            <label htmlFor="finalize-mis-6" className="block text-xs font-medium text-gray-600 mb-1">Final To Date</label>
+                                            <input id="finalize-mis-6"
                                                 type="date"
                                                 required
                                                 value={formData.date_to}
                                                 onChange={(e) => setFormData({...formData, date_to: e.target.value})}
-                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                className={inputClass}
                                             />
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex-grow flex flex-col">
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Final Data Content</label>
-                                        <textarea
+                                        <label htmlFor="finalize-mis-7" className="block text-xs font-medium text-gray-600 mb-1">Final Data Content</label>
+                                        <textarea id="finalize-mis-7"
                                             required
                                             value={formData.data_content}
                                             onChange={(e) => setFormData({...formData, data_content: e.target.value})}
-                                            className="w-full flex-grow px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none font-mono"
+                                            className={`${textareaClass} flex-grow resize-none leading-relaxed`}
                                             style={{ minHeight: '300px' }}
                                         ></textarea>
                                     </div>
@@ -427,19 +437,15 @@ export default function FinalizeMISPage() {
                             </div>
                         </div>
 
-                        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setIsModalOpen(false)}
-                                className="px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 bg-white border border-gray-200 rounded-lg"
-                            >
+                        <div className="px-5 py-3.5 border-t border-gray-200 flex justify-end gap-3">
+                            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                                 Cancel
-                            </button>
+                            </Button>
                             <button
                                 type="submit"
                                 form="create-report-form"
                                 disabled={submitting}
-                                className="px-6 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-50"
+                                className="inline-flex items-center justify-center h-9 px-3.5 text-sm font-medium rounded-md border border-primary-600 bg-primary-600 text-white hover:bg-primary-700 hover:border-primary-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {submitting ? 'Saving...' : 'Save Final Report'}
                             </button>

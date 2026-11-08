@@ -1,5 +1,10 @@
 import { useState } from 'react'
 import api from '../../api/axios'
+import Modal from '../../components/ui/Modal'
+import Button from '../../components/ui/Button'
+
+const inputClass = 'h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 ' +
+    'focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20'
 
 export default function RequestDataModal({ isOpen, onClose, coordinator, onSuccess, isBulk }) {
     const [dateFrom, setDateFrom] = useState('')
@@ -45,73 +50,56 @@ export default function RequestDataModal({ isOpen, onClose, coordinator, onSucce
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-gray-800">
-                        {isBulk ? 'Request Data from All' : 'Request MIS Data'}
-                    </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                        &times;
-                    </button>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={isBulk ? 'Request Data from All' : 'Request MIS Data'}
+            size="sm"
+        >
+            <p className="text-sm text-gray-600 mb-4">
+                {isBulk
+                    ? "Request data from all coordinators in your campus. They will receive notifications on their dashboard."
+                    : <>Request data from <strong className="font-medium text-gray-900">{coordinator?.full_name}</strong>. They will receive a notification on their dashboard.</>
+                }
+            </p>
+
+            {error && (
+                <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+                    {error}
                 </div>
-                
-                <div className="p-6">
-                    <p className="text-sm text-gray-500 mb-4">
-                        {isBulk 
-                            ? "Request data from all coordinators in your campus. They will receive notifications on their dashboard." 
-                            : <>Request data from <strong>{coordinator?.full_name}</strong>. They will receive a notification on their dashboard.</>
-                        }
-                    </p>
+            )}
 
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                            {error}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-                            <input
-                                type="date"
-                                required
-                                value={dateFrom}
-                                onChange={(e) => setDateFrom(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-                            <input
-                                type="date"
-                                required
-                                value={dateTo}
-                                onChange={(e) => setDateTo(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                            />
-                        </div>
-
-                        <div className="pt-2 flex justify-end gap-3 border-t border-gray-100 mt-6 pt-4">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-50"
-                            >
-                                {loading ? 'Sending...' : 'Send Request'}
-                            </button>
-                        </div>
-                    </form>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label htmlFor="request-data-1" className="block text-sm font-medium text-gray-800 mb-1">From Date</label>
+                    <input id="request-data-1"
+                        type="date"
+                        required
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                        className={inputClass}
+                    />
                 </div>
-            </div>
-        </div>
+                <div>
+                    <label htmlFor="request-data-2" className="block text-sm font-medium text-gray-800 mb-1">To Date</label>
+                    <input id="request-data-2"
+                        type="date"
+                        required
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                        className={inputClass}
+                    />
+                </div>
+
+                <div className="flex justify-end gap-3 border-t border-gray-200 mt-6 pt-4">
+                    <Button variant="secondary" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" disabled={loading}>
+                        {loading ? 'Sending...' : 'Send Request'}
+                    </Button>
+                </div>
+            </form>
+        </Modal>
     )
 }
-

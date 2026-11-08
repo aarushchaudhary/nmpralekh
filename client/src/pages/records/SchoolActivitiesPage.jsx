@@ -104,22 +104,18 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
         {
             key: 'is_school_wide', label: 'School Wide', sortable: false,
             render: row => <Badge label={row.is_school_wide ? 'Yes' : 'No'}
-                color={row.is_school_wide ? 'green' : 'gray'} />
+                color={row.is_school_wide ? 'dark' : 'gray'} />
         },
         {
             key: 'status', label: 'Status', sortable: false,
-            render: row => row.pending_audit ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
-                    Pending Approval
-                </span>
-            ) : null
+            render: row => row.pending_audit ? <Badge label="Pending approval" color="outline" /> : null
         },
         {
             key: 'actions', label: '', sortable: false,
             render: row => canEdit(row) && (
                 <div className="flex gap-2">
                     {row.pending_audit ? (
-                        <span className="text-xs text-yellow-600 italic">
+                        <span className="text-xs text-gray-600">
                             Change pending...
                         </span>
                     ) : (
@@ -144,8 +140,8 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
                 action={
                     <div className="flex gap-2">
                         {['super_admin', 'admin', 'user'].includes(user?.role) && (
-                            <Button variant="success" onClick={() => exportFile()} loading={exporting}>
-                                {exporting ? 'Exporting...' : '⬇ Export'}
+                            <Button variant="secondary" onClick={() => exportFile()} loading={exporting}>
+                                {exporting ? 'Exporting...' : 'Export'}
                             </Button>
                         )}
                         {!readOnly && <Button onClick={openCreate}>+ Add Activity</Button>}
@@ -173,7 +169,7 @@ export default function SchoolActivitiesPage({ readOnly = false }) {
                     <div className="flex items-center gap-2">
                         <input type="checkbox" id="school_wide" checked={form.is_school_wide}
                             onChange={e => setForm(f => ({ ...f, is_school_wide: e.target.checked }))}
-                            className="rounded" />
+                            className="h-4 w-4 rounded border-gray-300 accent-primary-600" />
                         <label htmlFor="school_wide" className="text-sm text-gray-700">
                             Conducted for entire school
                         </label>

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
+import StatCard from '../../components/ui/StatCard'
+import Button from '../../components/ui/Button'
 import useExport from '../../hooks/useExport'
 import api from '../../api/axios'
 
 const modules = [
-    { label: 'School Activities', path: 'school-activities', endpoint: '/records/school-activities/' },
-    { label: 'Student Activities', path: 'student-activities', endpoint: '/records/student-activities/' },
+    { label: 'School activities', path: 'school-activities', endpoint: '/records/school-activities/' },
+    { label: 'Student activities', path: 'student-activities', endpoint: '/records/student-activities/' },
     { label: 'FDP / Workshop / GL', path: 'fdp', endpoint: '/records/fdp/' },
     { label: 'Publications', path: 'publications', endpoint: '/records/publications/' },
     { label: 'Patents', path: 'patents', endpoint: '/records/patents/' },
@@ -42,52 +43,37 @@ export default function DashboardHome() {
     }, [])
 
     return (
-        <div>
+        <div className="space-y-6">
             <PageHeader
                 title={`Welcome, ${user?.full_name}`}
                 subtitle={schools.map(s => s.name).join(', ') || 'Loading...'}
                 action={
-                    <button
+                    <Button
+                        variant="secondary"
                         onClick={() => exportFile()}
-                        disabled={exporting}
-                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 shadow-sm active:scale-95
-                                   text-white text-sm font-medium rounded-lg
-                                   transition-colors disabled:opacity-50
-                                   disabled:cursor-not-allowed flex items-center gap-2"
+                        loading={!!exporting}
                     >
-                        {exporting ? 'Exporting...' : '⬇ Export All'}
-                    </button>
+                        {exporting ? 'Exporting...' : 'Export all'}
+                    </Button>
                 }
             />
 
-            {/* Info banner */}
-            <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-6">
-                <p className="text-sm text-primary-700">
-                    You can <strong>create and view</strong> records for your school.
-                    Any updates or deletions require approval from the authorized reviewer.
-                </p>
-            </div>
-
-            {/* Module cards with counts */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Module counts, each linking to its module */}
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded-md overflow-hidden [&>*:last-child]:col-span-2 xl:[&>*:last-child]:col-span-1">
                 {modules.map(mod => (
-                    <Link
+                    <StatCard
                         key={mod.path}
+                        label={mod.label}
+                        value={counts[mod.path]}
                         to={`/faculty/${mod.path}`}
-                        className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm
-                       hover:border-primary-200 hover:shadow-sm
-                       transition-all group"
-                    >
-                        <p className="text-2xl font-bold text-gray-800 group-hover:text-primary-600">
-                            {counts[mod.path] ?? '—'}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">{mod.label}</p>
-                        <p className="text-xs text-primary-500 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            View all →
-                        </p>
-                    </Link>
+                    />
                 ))}
             </div>
+
+            <p className="text-sm text-gray-600">
+                You can <strong className="font-medium text-gray-800">create and view</strong> records for your school.
+                Any updates or deletions require approval from the authorized reviewer.
+            </p>
         </div>
     )
 }

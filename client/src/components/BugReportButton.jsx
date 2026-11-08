@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
+import { BugAntIcon, CheckCircleIcon, MapPinIcon } from '@heroicons/react/20/solid'
 import api from '../api/axios'
+import Button from './ui/Button'
+
+const fieldClass = 'w-full px-3 text-sm text-gray-900 bg-white border border-gray-300 rounded-md transition-colors ' +
+    'placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20'
 
 export default function BugReportButton() {
     const [open, setOpen]       = useState(false)
@@ -39,10 +44,10 @@ export default function BugReportButton() {
     }
 
     const severityOptions = [
-        { value: 'low',      label: '🟢 Low — Minor inconvenience' },
-        { value: 'medium',   label: '🟡 Medium — Feature is broken' },
-        { value: 'high',     label: '🔴 High — Cannot do my work' },
-        { value: 'critical', label: '🚨 Critical — Data loss / security' },
+        { value: 'low',      label: 'Low — Minor inconvenience' },
+        { value: 'medium',   label: 'Medium — Feature is broken' },
+        { value: 'high',     label: 'High — Cannot do my work' },
+        { value: 'critical', label: 'Critical — Data loss / security' },
     ]
 
     return (
@@ -51,17 +56,15 @@ export default function BugReportButton() {
             <button
                 onClick={() => setOpen(true)}
                 title="Report a bug"
+                aria-label="Report issue"
                 className="fixed bottom-6 right-6 z-40
-                           w-12 h-12 rounded-full shadow-lg shadow-primary-900/20
-                           bg-primary-600 hover:bg-primary-700
-                           text-white transition-all hover:scale-105 active:scale-95
-                           flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                           inline-flex items-center gap-2 h-9 px-2.5 sm:px-3
+                           rounded-md bg-gray-800 hover:bg-gray-900
+                           text-white text-sm font-medium transition-colors
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-600"
             >
-                {/* Bug icon */}
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                        d="M12 8v4m0 4h.01M9 3h6M3 8l3 2m12-2l-3 2M3 16l3-2m12 2l-3-2M6 6l-1-1m14 1l1-1M6 18l-1 1m14-1l1 1M12 21c-3.866 0-7-3.134-7-7V8a7 7 0 0114 0v6c0 3.866-3.134 7-7 7z" />
-                </svg>
+                <BugAntIcon aria-hidden="true" className="w-4 h-4" />
+                <span className="hidden sm:inline">Report issue</span>
             </button>
 
             {/* Modal */}
@@ -69,26 +72,29 @@ export default function BugReportButton() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     {/* Backdrop */}
                     <div
-                        className="absolute inset-0 bg-black bg-opacity-40"
+                        className="absolute inset-0 bg-black/40"
                         onClick={() => setOpen(false)}
                     />
 
                     {/* Panel */}
-                    <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl">
+                    <div className="relative w-full max-w-md bg-white rounded-md border border-gray-200 shadow-lg">
 
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200">
                             <div>
                                 <h2 className="text-base font-semibold text-gray-900">
                                     Report a Bug
                                 </h2>
-                                <p className="text-xs text-gray-400 mt-0.5">
+                                <p className="text-xs text-gray-500 mt-0.5">
                                     Describe the problem and we'll investigate
                                 </p>
                             </div>
                             <button
+                                type="button"
                                 onClick={() => setOpen(false)}
-                                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
+                                aria-label="Close"
+                                className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800
+                                           transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round"
@@ -98,75 +104,63 @@ export default function BugReportButton() {
                         </div>
 
                         {/* Body */}
-                        <div className="px-6 py-5 space-y-4">
+                        <div className="px-5 py-4 space-y-4">
                             {done ? (
                                 <div className="flex flex-col items-center py-6 text-center">
-                                    <div className="w-12 h-12 rounded-full bg-green-100
-                                                    flex items-center justify-center mb-3">
-                                        <svg className="w-6 h-6 text-green-500" fill="none"
-                                            stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round"
-                                                strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </div>
+                                    <CheckCircleIcon aria-hidden="true" className="w-5 h-5 text-gray-800 mb-2" />
                                     <p className="text-sm font-medium text-gray-800">
                                         Report submitted — thank you!
                                     </p>
-                                    <p className="text-xs text-gray-400 mt-1">
+                                    <p className="text-xs text-gray-500 mt-1">
                                         Our team will review it shortly.
                                     </p>
                                 </div>
                             ) : (
                                 <>
                                     {/* Current page — auto-filled */}
-                                    <div className="text-xs text-gray-400 bg-gray-50
-                                                    rounded-lg px-3 py-2 font-mono">
-                                        📍 {window.location.pathname}
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50
+                                                    border border-gray-200 rounded-md px-3 py-2 font-mono">
+                                        <MapPinIcon aria-hidden="true" className="w-4 h-4 shrink-0 text-gray-400" />
+                                        <span className="truncate">{window.location.pathname}</span>
                                     </div>
 
                                     {/* Title */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Summary <span className="text-red-400">*</span>
+                                        <label htmlFor="bug-report-1" className="block text-sm font-medium text-gray-800 mb-1">
+                                            Summary <span className="text-primary-600">*</span>
                                         </label>
-                                        <input
+                                        <input id="bug-report-1"
                                             type="text"
                                             value={form.title}
                                             onChange={set('title')}
                                             placeholder="Short description of the problem"
-                                            className="w-full px-3 py-2 text-sm border border-gray-200
-                                                       rounded-lg focus:outline-none focus:ring-2
-                                                       focus:ring-primary-500"
+                                            className={`${fieldClass} h-9`}
                                         />
                                     </div>
 
                                     {/* Description */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Details <span className="text-red-400">*</span>
+                                        <label htmlFor="bug-report-2" className="block text-sm font-medium text-gray-800 mb-1">
+                                            Details <span className="text-primary-600">*</span>
                                         </label>
-                                        <textarea
+                                        <textarea id="bug-report-2"
                                             value={form.description}
                                             onChange={set('description')}
                                             rows={4}
                                             placeholder="Steps to reproduce, what you expected vs what happened..."
-                                            className="w-full px-3 py-2 text-sm border border-gray-200
-                                                       rounded-lg focus:outline-none focus:ring-2
-                                                       focus:ring-primary-500 resize-none"
+                                            className={`${fieldClass} py-2 resize-none`}
                                         />
                                     </div>
 
                                     {/* Severity */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label htmlFor="bug-report-3" className="block text-sm font-medium text-gray-800 mb-1">
                                             Severity
                                         </label>
-                                        <select
+                                        <select id="bug-report-3"
                                             value={form.severity}
                                             onChange={set('severity')}
-                                            className="w-full px-3 py-2 text-sm border border-gray-200
-                                                       rounded-lg focus:outline-none focus:ring-2
-                                                       focus:ring-primary-500"
+                                            className={`${fieldClass} h-9`}
                                         >
                                             {severityOptions.map(opt => (
                                                 <option key={opt.value} value={opt.value}>
@@ -178,32 +172,16 @@ export default function BugReportButton() {
 
                                     {/* Actions */}
                                     <div className="flex justify-end gap-3 pt-1">
-                                        <button
-                                            onClick={() => setOpen(false)}
-                                            className="px-4 py-2 text-sm text-gray-600
-                                                       border border-gray-200 rounded-lg
-                                                       hover:bg-gray-50 transition-colors"
-                                        >
+                                        <Button variant="secondary" onClick={() => setOpen(false)}>
                                             Cancel
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             onClick={handleSubmit}
-                                            disabled={saving || !form.title.trim() || !form.description.trim()}
-                                            className="px-4 py-2 text-sm font-medium text-white
-                                                       bg-primary-600 hover:bg-primary-700 rounded-lg
-                                                       transition-colors disabled:opacity-50
-                                                       disabled:cursor-not-allowed flex items-center gap-2"
+                                            loading={saving}
+                                            disabled={!form.title.trim() || !form.description.trim()}
                                         >
-                                            {saving && (
-                                                <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10"
-                                                        stroke="currentColor" strokeWidth="4" />
-                                                    <path className="opacity-75" fill="currentColor"
-                                                        d="M4 12a8 8 0 018-8v8H4z" />
-                                                </svg>
-                                            )}
                                             Submit Report
-                                        </button>
+                                        </Button>
                                     </div>
                                 </>
                             )}

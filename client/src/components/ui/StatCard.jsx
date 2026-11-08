@@ -1,29 +1,26 @@
-export default function StatCard({ label, value, icon, accent = 'primary' }) {
-    const accentStyles = {
-        primary: 'bg-primary-50 text-primary-600',
-        gray: 'bg-gray-100 text-gray-600',
-        black: 'bg-gray-900 text-white',
-        red: 'bg-red-50 text-red-600',
-        green: 'bg-green-50 text-green-600',
-        yellow: 'bg-yellow-50 text-yellow-600',
-        blue: 'bg-blue-50 text-blue-600',
-        purple: 'bg-purple-50 text-purple-600',
-        orange: 'bg-orange-50 text-orange-600',
-    }
+import { Link } from 'react-router-dom'
 
-    const finalAccent = accentStyles[accent] || accentStyles.primary;
-
-    return (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
-            <div className="flex justify-between items-start mb-4 relative z-10">
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-                {icon && <span className={`p-2 rounded-lg ${finalAccent}`}>{icon}</span>}
-            </div>
-            <div className="relative z-10">
-                <p className="text-3xl font-bold text-gray-900">
-                    {value ?? '—'}
-                </p>
-            </div>
-        </div>
+// KPI tile. Lay several out in one ruled strip: grid gap-px bg-gray-200 border rounded-md; pass `to` to link to the module.
+export default function StatCard({ label, value, to, hint }) {
+    const body = (
+        <>
+            <p className="text-xs font-medium text-gray-600">{label}</p>
+            <p className="mt-1 text-2xl font-semibold text-gray-900 tabular-nums">
+                {value ?? '—'}
+            </p>
+            {hint && <p className="mt-0.5 text-xs text-gray-500">{hint}</p>}
+        </>
     )
+
+    if (to) {
+        return (
+            <Link to={to}
+                className="group block bg-white px-4 py-3.5 hover:bg-gray-50 transition-colors
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-600">
+                {body}
+                <span className="mt-1 block text-xs font-medium text-primary-700 group-hover:underline">View records</span>
+            </Link>
+        )
+    }
+    return <div className="bg-white px-4 py-3.5">{body}</div>
 }

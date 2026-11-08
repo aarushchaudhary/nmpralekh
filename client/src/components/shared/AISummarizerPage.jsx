@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import PageHeader from '../ui/PageHeader'
 import Button from '../ui/Button'
+import Panel from '../ui/Panel'
 
 export default function AISummarizerPage() {
     const [serverUrl, setServerUrl] = useState('')
@@ -84,40 +85,40 @@ export default function AISummarizerPage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-4 md:p-6">
+        <div className="max-w-4xl mx-auto">
             <PageHeader
                 title="AI Summarizer"
                 subtitle="Upload MIS Data (Excel/JSON) to your AI Server for summarization"
             />
-            
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-6">
-                <div className="p-6 space-y-8">
+
+            <Panel>
+                <div className="space-y-6">
                     {/* 1. Server URL */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="ai-summarizer-1" className="block text-sm font-medium text-gray-800 mb-1">
                             1. Fast API Server URL
                         </label>
-                        <input
+                        <input id="ai-summarizer-1"
                             type="url"
                             placeholder="e.g. http://192.168.1.100:8000"
                             value={serverUrl}
                             onChange={(e) => setServerUrl(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none transition-shadow"
+                            className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20"
                         />
                     </div>
-                    
+
                     {/* 2. Upload Box */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="ai-summarizer-2" className="block text-sm font-medium text-gray-800 mb-1">
                             2. Upload MIS Data
                         </label>
-                        <form onSubmit={handleUpload} className="flex gap-4 items-end">
-                            <div className="flex-grow">
-                                <input
+                        <form onSubmit={handleUpload} className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                            <div className="flex-grow min-w-0">
+                                <input id="ai-summarizer-2"
                                     type="file"
                                     accept=".json,.xlsx,.xls"
                                     onChange={(e) => setFile(e.target.files[0])}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                                    className="block w-full rounded-md border border-gray-300 bg-white text-sm text-gray-700 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20 file:mr-3 file:h-9 file:px-3 file:border-0 file:border-r file:border-solid file:border-gray-300 file:bg-gray-50 file:text-sm file:font-medium file:text-gray-800 hover:file:bg-gray-100"
                                 />
                             </div>
                             <Button type="submit" disabled={uploading || !file}>
@@ -131,28 +132,28 @@ export default function AISummarizerPage() {
                             {error}
                         </div>
                     )}
-                    
+
                     {/* 3. Result Box */}
                     <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-medium text-gray-700">
+                        <div className="flex justify-between items-center gap-3 mb-2">
+                            <p className="text-sm font-medium text-gray-800">
                                 3. Result Output
-                            </label>
-                            <button
-                                type="button"
+                            </p>
+                            <Button
+                                variant="secondary"
+                                size="sm"
                                 onClick={fetchResult}
                                 disabled={fetching}
-                                className="text-xs text-primary-600 hover:text-primary-800 font-medium"
                             >
                                 {fetching ? 'Fetching...' : 'Fetch Result Manually'}
-                            </button>
+                            </Button>
                         </div>
-                        <div className="w-full min-h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-lg whitespace-pre-wrap font-mono text-sm text-gray-800 overflow-y-auto">
-                            {result || <span className="text-gray-400 italic">No result yet. Upload a file or fetch from server.</span>}
+                        <div className="w-full min-h-[300px] p-4 bg-white border border-gray-200 rounded-md whitespace-pre-wrap text-sm text-gray-800 leading-relaxed overflow-y-auto">
+                            {result || <span className="text-gray-500">No result yet. Upload a file or fetch from server.</span>}
                         </div>
                     </div>
                 </div>
-            </div>
+            </Panel>
         </div>
     )
 }

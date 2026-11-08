@@ -3,6 +3,8 @@ import api from '../../api/axios'
 import PageHeader from '../../components/ui/PageHeader'
 import Table from '../../components/ui/Table'
 import Badge from '../../components/ui/Badge'
+import Button from '../../components/ui/Button'
+import StatCard from '../../components/ui/StatCard'
 import RequestDataModal from './RequestDataModal'
 
 export default function DashboardHome() {
@@ -69,7 +71,7 @@ export default function DashboardHome() {
             render: row => (
                 <Badge
                     label={row.is_active ? 'Active' : 'Inactive'}
-                    color={row.is_active ? 'green' : 'red'}
+                    color={row.is_active ? 'dark' : 'gray'}
                 />
             )
         },
@@ -79,71 +81,60 @@ export default function DashboardHome() {
                 const isPending = pendingRequestsMap[row.id]
                 if (isPending) {
                     return (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium bg-orange-50 text-orange-700 border border-orange-100">
-                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
-                            Pending
-                        </span>
+                        <Badge label="Pending" color="outline" />
                     )
                 }
                 return (
-                    <button
+                    <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => handleRequestData(row)}
-                        className="text-primary-600 hover:text-primary-800 text-sm font-medium bg-primary-50 px-3 py-1 rounded-md transition-colors"
                     >
-                        Request Data
-                    </button>
+                        Request data
+                    </Button>
                 )
             }
         }
     ]
 
     return (
-        <div>
-            <div className="flex justify-between items-start mb-6">
-                <PageHeader 
-                    title="Accumulator Dashboard" 
-                    subtitle="Overview of MIS Data from Coordinators" 
-                />
-                <button
-                    onClick={handleRequestAll}
-                    className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
-                >
-                    Request All
-                </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Total Coordinators</h3>
-                    <p className="text-3xl font-bold text-gray-800">{loading ? '...' : metrics.total}</p>
-                </div>
-                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Submitted</h3>
-                    <p className="text-3xl font-bold text-green-600">{loading ? '...' : metrics.submitted}</p>
-                </div>
-                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Not Submitted</h3>
-                    <p className="text-3xl font-bold text-orange-600">{loading ? '...' : metrics.pending}</p>
-                </div>
+        <>
+        <div className="space-y-6">
+            <PageHeader
+                title="Accumulator Dashboard"
+                subtitle="Overview of MIS Data from Coordinators"
+                action={
+                    <Button onClick={handleRequestAll}>
+                        Request all
+                    </Button>
+                }
+            />
+
+            <div className="grid grid-cols-3 gap-px bg-gray-200 border border-gray-200 rounded-md overflow-hidden">
+                <StatCard label="Total coordinators" value={loading ? null : metrics.total} />
+                <StatCard label="Submitted" value={loading ? null : metrics.submitted} />
+                <StatCard label="Not submitted" value={loading ? null : metrics.pending} />
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                    <h3 className="text-lg font-semibold text-gray-800">Linked MIS Coordinators</h3>
-                    <p className="text-sm text-gray-500">Coordinators belonging to your campus</p>
+            <section>
+                <div className="mb-3">
+                    <h2 className="text-sm font-semibold text-gray-900">Linked MIS coordinators</h2>
+                    <p className="mt-0.5 text-xs text-gray-500">Coordinators belonging to your campus</p>
                 </div>
                 <Table columns={columns} data={coordinators} loading={loading} />
-            </div>
-
-            <RequestDataModal 
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                coordinator={selectedCoordinator}
-                isBulk={isBulkRequest}
-                onSuccess={() => {
-                    fetchData()
-                }}
-            />
+            </section>
         </div>
+
+        {/* Kept outside the space-y stack so its margins don't offset the dialog */}
+        <RequestDataModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            coordinator={selectedCoordinator}
+            isBulk={isBulkRequest}
+            onSuccess={() => {
+                fetchData()
+            }}
+        />
+        </>
     )
 }

@@ -124,8 +124,7 @@ export default function CertificationsPage({ readOnly = false, selfOnly = false 
         { key: 'date', label: 'Date' },
         {
             key: 'person_type', label: 'Type', sortable: false,
-            render: row => <Badge label={row.person_type}
-                color={row.person_type === 'faculty' ? 'blue' : 'purple'} />
+            render: row => <Badge label={row.person_type} color="gray" />
         },
         {
             key: 'credly_or_proof_link', label: 'Link', sortable: false,
@@ -136,18 +135,14 @@ export default function CertificationsPage({ readOnly = false, selfOnly = false 
         },
         {
             key: 'status', label: 'Status', sortable: false,
-            render: row => row.pending_audit ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
-                    Pending Approval
-                </span>
-            ) : null
+            render: row => row.pending_audit ? <Badge label="Pending approval" color="outline" /> : null
         },
         {
             key: 'actions', label: '', sortable: false,
             render: row => canEdit(row) && (
                 <div className="flex gap-2">
                     {row.pending_audit ? (
-                        <span className="text-xs text-yellow-600 italic">
+                        <span className="text-xs text-gray-600">
                             Change pending...
                         </span>
                     ) : (
@@ -172,8 +167,8 @@ export default function CertificationsPage({ readOnly = false, selfOnly = false 
                 action={
                     <div className="flex gap-2">
                         {['super_admin', 'admin', 'user'].includes(user?.role) && (
-                            <Button variant="success" onClick={() => exportFile()} loading={exporting}>
-                                {exporting ? 'Exporting...' : '⬇ Export'}
+                            <Button variant="secondary" onClick={() => exportFile()} loading={exporting}>
+                                {exporting ? 'Exporting...' : 'Export'}
                             </Button>
                         )}
                         {(selfOnly || !readOnly) && <Button onClick={openCreate}>+ Add Certification</Button>}

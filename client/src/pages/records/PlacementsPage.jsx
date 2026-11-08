@@ -8,6 +8,7 @@ import FormError from '../../components/ui/FormError'
 import Table from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
+import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axios'
@@ -102,18 +103,14 @@ export default function PlacementsPage({ readOnly = false }) {
         { key: 'company_name', label: 'Company', render: row => row.company_name || '—' },
         {
             key: 'status', label: 'Status', sortable: false,
-            render: row => row.pending_audit ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
-                    Pending Approval
-                </span>
-            ) : null
+            render: row => row.pending_audit ? <Badge label="Pending approval" color="outline" /> : null
         },
         {
             key: 'actions', label: '', sortable: false,
             render: row => canEdit(row) && (
                 <div className="flex gap-2">
                     {row.pending_audit ? (
-                        <span className="text-xs text-yellow-600 italic">
+                        <span className="text-xs text-gray-600">
                             Change pending...
                         </span>
                     ) : (
@@ -139,8 +136,8 @@ export default function PlacementsPage({ readOnly = false }) {
                 action={
                     <div className="flex gap-2">
                         {['super_admin', 'admin', 'user'].includes(user?.role) && (
-                            <Button variant="success" onClick={() => exportFile()} loading={exporting}>
-                                {exporting ? 'Exporting...' : '⬇ Export'}
+                            <Button variant="secondary" onClick={() => exportFile()} loading={exporting}>
+                                {exporting ? 'Exporting...' : 'Export'}
                             </Button>
                         )}
                         {!readOnly && <Button onClick={openCreate}>+ Add Activity</Button>}

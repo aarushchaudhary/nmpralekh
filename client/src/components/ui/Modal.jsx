@@ -50,23 +50,23 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                     onClose()
                 }
             }}
-            className="p-0 bg-transparent backdrop:bg-black backdrop:bg-opacity-30 fixed m-auto inset-0 z-50 rounded-2xl shadow-xl w-full"
+            className="p-4 bg-transparent backdrop:bg-black/40 fixed m-auto inset-0 z-50 w-full"
             style={{ maxWidth: 'none', border: 'none' }}
         >
             <div className={`
-                relative w-full ${sizes[size]} bg-white rounded-2xl shadow-xl
+                relative w-full ${sizes[size]} bg-white rounded-md border border-gray-200 shadow-lg
                 max-h-[90vh] flex flex-col mx-auto
             `}>
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4
-                        border-b border-gray-100">
+                <div className="flex items-center justify-between px-5 py-3.5
+                        border-b border-gray-200">
                     <h2 id={titleId} className="text-base font-semibold text-gray-900">{title}</h2>
                     <button
                         type="button"
                         onClick={onClose}
                         aria-label="Close"
-                        className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100
-                       hover:text-gray-600 transition-colors"
+                        className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100
+                       hover:text-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
                     >
                         <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -76,7 +76,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                 </div>
 
                 {/* Body */}
-                <div className="overflow-y-auto flex-1 px-6 py-5">
+                <div className="overflow-y-auto flex-1 px-5 py-4">
                     {children}
                 </div>
             </div>

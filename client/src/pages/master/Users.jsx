@@ -20,18 +20,6 @@ const roleOptions = [
     { value: 'mis_accumulator', label: 'MIS Accumulator' },
 ]
 
-const roleBadgeColor = {
-    master: 'blue',
-    super_admin: 'purple',
-    admin: 'green',
-    user: 'gray',
-    delete_auth: 'yellow',
-    mis_coordinator: 'teal',
-    mis_accumulator: 'orange',
-    service_admin: 'blue',
-    chronicle_master: 'blue',
-}
-
 const emptyForm = {
     username: '', email: '', password: '',
     full_name: '', role: '', is_active: true, campus: ''
@@ -152,7 +140,7 @@ export default function Users() {
             render: row => (
                 <Badge
                     label={row.role?.replace('_', ' ')}
-                    color={roleBadgeColor[row.role] ?? 'gray'}
+                    color="gray"
                 />
             )
         },
@@ -161,7 +149,7 @@ export default function Users() {
             render: row => (
                 <Badge
                     label={row.is_active ? 'Active' : 'Inactive'}
-                    color={row.is_active ? 'green' : 'red'}
+                    color={row.is_active ? 'dark' : 'gray'}
                 />
             )
         },
@@ -178,7 +166,7 @@ export default function Users() {
                             Deactivate
                         </Button>
                     ) : (
-                        <Button size="sm" variant="success"
+                        <Button size="sm" variant="secondary"
                             onClick={() => handleReactivate(row)}>
                             Reactivate
                         </Button>

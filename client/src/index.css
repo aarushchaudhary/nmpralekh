@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* Native checkboxes/radios/progress pick up the brand red instead of browser blue */
+@layer base {
+  :root { accent-color: theme('colors.primary.600'); }
+}

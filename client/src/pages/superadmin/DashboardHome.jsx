@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { ArrowDownTrayIcon } from '@heroicons/react/20/solid'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
+import StatCard from '../../components/ui/StatCard'
+import Panel from '../../components/ui/Panel'
+import Badge from '../../components/ui/Badge'
+import Button from '../../components/ui/Button'
 import api from '../../api/axios'
 
 const modules = [
-    { label: 'School Activities', path: 'school-activities', endpoint: '/records/school-activities/' },
-    { label: 'Student Activities', path: 'student-activities', endpoint: '/records/student-activities/' },
+    { label: 'School activities', path: 'school-activities', endpoint: '/records/school-activities/' },
+    { label: 'Student activities', path: 'student-activities', endpoint: '/records/student-activities/' },
     { label: 'FDP / Workshop / GL', path: 'fdp', endpoint: '/records/fdp/' },
     { label: 'Publications', path: 'publications', endpoint: '/records/publications/' },
     { label: 'Patents', path: 'patents', endpoint: '/records/patents/' },
@@ -15,8 +19,8 @@ const modules = [
 ]
 
 const exportEndpoints = [
-    { label: 'School Activities', endpoint: '/export/school-activities/', file: 'school_activities.xlsx' },
-    { label: 'Student Activities', endpoint: '/export/student-activities/', file: 'student_activities.xlsx' },
+    { label: 'School activities', endpoint: '/export/school-activities/', file: 'school_activities.xlsx' },
+    { label: 'Student activities', endpoint: '/export/student-activities/', file: 'student_activities.xlsx' },
     { label: 'FDP / Workshop / GL', endpoint: '/export/fdp/', file: 'fdp.xlsx' },
     { label: 'Publications', endpoint: '/export/publications/', file: 'publications.xlsx' },
     { label: 'Patents', endpoint: '/export/patents/', file: 'patents.xlsx' },
@@ -73,119 +77,76 @@ export default function DashboardHome() {
     }
 
     return (
-        <div>
+        <div className="space-y-6">
             <PageHeader
                 title={`Welcome, ${user?.full_name}`}
                 subtitle="Read-only view across all schools"
             />
 
-            {/* Info banner */}
-            <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 mb-6">
-                <p className="text-sm text-purple-700">
-                    You have <strong>read-only access</strong> to all records across all schools.
-                    Use the export buttons to download data as Excel files.
-                </p>
-            </div>
-
-            {/* Schools overview */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
-                <h2 className="text-sm font-semibold text-gray-700 mb-3">
-                    Active Schools ({schools.filter(s => s.is_active).length})
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                    {schools.filter(s => s.is_active).map(school => (
-                        <span key={school.id}
-                            className="px-3 py-1 rounded-full bg-gray-100
-                         text-sm text-gray-600 font-medium">
-                            {school.name}
-                        </span>
-                    ))}
-                    {schools.length === 0 && (
-                        <p className="text-sm text-gray-400">No schools found</p>
-                    )}
-                </div>
-            </div>
-
-            {/* Module counts + links */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {/* Module counts, each linking to its module */}
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded-md overflow-hidden [&>*:last-child]:col-span-2 xl:[&>*:last-child]:col-span-1">
                 {modules.map(mod => (
-                    <Link
+                    <StatCard
                         key={mod.path}
+                        label={mod.label}
+                        value={counts[mod.path]}
                         to={`/superadmin/${mod.path}`}
-                        className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm
-                       hover:border-primary-200 hover:shadow-sm
-                       transition-all group"
-                    >
-                        <p className="text-2xl font-bold text-gray-800
-                          group-hover:text-primary-600">
-                            {counts[mod.path] ?? '—'}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">{mod.label}</p>
-                        <p className="text-xs text-primary-500 mt-2 opacity-0
-                          group-hover:opacity-100 transition-opacity">
-                            View all →
-                        </p>
-                    </Link>
+                    />
                 ))}
             </div>
 
+            <p className="text-sm text-gray-600">
+                You have <strong className="font-medium text-gray-800">read-only access</strong> to all records across all schools.
+                Use the export buttons to download data as Excel files.
+            </p>
+
+            {/* Schools overview */}
+            <Panel title={`Active schools (${schools.filter(s => s.is_active).length})`}>
+                <div className="flex flex-wrap gap-2">
+                    {schools.filter(s => s.is_active).map(school => (
+                        <Badge key={school.id} label={school.name} color="gray" />
+                    ))}
+                    {schools.length === 0 && (
+                        <p className="text-sm text-gray-500">No schools found</p>
+                    )}
+                </div>
+            </Panel>
+
             {/* Export section */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-gray-700">
-                        Export Data
-                    </h2>
-                    <button
+            <Panel
+                title="Export data"
+                description="Download records as Excel files"
+                action={
+                    <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={handleExportAll}
                         disabled={!!exporting}
-                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700
-                       text-white text-sm font-medium rounded-lg
-                       transition-colors disabled:opacity-50
-                       disabled:cursor-not-allowed flex items-center gap-2"
+                        loading={exporting === 'all'}
                     >
-                        {exporting === 'all' ? (
-                            <>
-                                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10"
-                                        stroke="currentColor" strokeWidth="4" />
-                                    <path className="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 018-8v8H4z" />
-                                </svg>
-                                Exporting...
-                            </>
-                        ) : '⬇ Export All Modules'}
-                    </button>
-                </div>
-
+                        {exporting === 'all' ? 'Exporting...' : 'Export all modules'}
+                    </Button>
+                }
+            >
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {exportEndpoints.map(exp => (
-                        <button
+                        <Button
                             key={exp.file}
+                            variant="secondary"
+                            size="sm"
+                            className="w-full"
                             onClick={() => handleExport(exp.endpoint, exp.file)}
                             disabled={!!exporting}
-                            className="px-3 py-2 text-sm text-left rounded-lg
-                         border border-gray-100 hover:border-primary-200
-                         hover:bg-primary-50 hover:text-primary-700
-                         text-gray-600 transition-colors
-                         disabled:opacity-50 disabled:cursor-not-allowed
-                         flex items-center justify-between gap-2"
+                            loading={exporting === exp.file}
                         >
-                            <span className="truncate">{exp.label}</span>
-                            {exporting === exp.file ? (
-                                <svg className="animate-spin w-3.5 h-3.5 shrink-0"
-                                    fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10"
-                                        stroke="currentColor" strokeWidth="4" />
-                                    <path className="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 018-8v8H4z" />
-                                </svg>
-                            ) : (
-                                <span className="text-gray-400 shrink-0">⬇</span>
+                            {exporting !== exp.file && (
+                                <ArrowDownTrayIcon aria-hidden="true" className="h-4 w-4 text-gray-500" />
                             )}
-                        </button>
+                            <span className="truncate">{exp.label}</span>
+                        </Button>
                     ))}
                 </div>
-            </div>
+            </Panel>
         </div>
     )
 }

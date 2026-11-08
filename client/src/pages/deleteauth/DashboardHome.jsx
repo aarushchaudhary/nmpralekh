@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
 import Badge from '../../components/ui/Badge'
+import StatCard from '../../components/ui/StatCard'
+import Panel from '../../components/ui/Panel'
 import api from '../../api/axios'
 
 export default function DashboardHome() {
@@ -30,72 +32,62 @@ export default function DashboardHome() {
     }, [])
 
     return (
-        <div>
+        <div className="space-y-6">
             <PageHeader
                 title={`Welcome, ${user?.full_name}`}
                 subtitle="Review and authorize pending change requests"
             />
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-8">
-                <div className="bg-yellow-50 rounded-xl border border-yellow-100 p-5">
-                    <p className="text-sm text-yellow-700 mb-1">Pending</p>
-                    <p className="text-3xl font-bold text-yellow-600">{stats.pending ?? '—'}</p>
-                </div>
-                <div className="bg-green-50 rounded-xl border border-green-100 p-5">
-                    <p className="text-sm text-green-700 mb-1">Approved</p>
-                    <p className="text-3xl font-bold text-green-600">{stats.approved ?? '—'}</p>
-                </div>
-                <div className="bg-red-50 rounded-xl border border-red-100 p-5">
-                    <p className="text-sm text-red-700 mb-1">Rejected</p>
-                    <p className="text-3xl font-bold text-red-600">{stats.rejected ?? '—'}</p>
-                </div>
+            <div className="grid grid-cols-3 gap-px bg-gray-200 border border-gray-200 rounded-md overflow-hidden">
+                <StatCard label="Pending" value={stats.pending} to="/deleteauth/pending" />
+                <StatCard label="Approved" value={stats.approved} />
+                <StatCard label="Rejected" value={stats.rejected} />
             </div>
 
             {/* Recent pending */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-gray-700">
-                        Recent Pending Requests
-                    </h2>
+            <Panel
+                title="Recent pending requests"
+                padded={false}
+                action={
                     <Link to="/deleteauth/pending"
-                        className="text-xs text-primary-600 hover:underline">
-                        View all →
+                        className="text-sm font-medium text-primary-700 hover:underline rounded
+                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600">
+                        View all
                     </Link>
-                </div>
-
+                }
+            >
                 {loading ? (
                     <div className="flex justify-center py-8">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
                     </div>
                 ) : recent.length === 0 ? (
-                    <p className="text-sm text-gray-400 py-4 text-center">
+                    <p className="text-sm text-gray-500 px-4 py-8 text-center">
                         No pending requests
                     </p>
                 ) : (
-                    <div className="space-y-2">
+                    <ul className="divide-y divide-gray-100">
                         {recent.map(req => (
-                            <div key={req.id}
-                                className="flex items-center justify-between p-3
-                           rounded-lg border border-gray-50 bg-gray-50">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-700">
+                            <li key={req.id}
+                                className="flex items-center justify-between gap-3 px-4 py-3">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-gray-800 capitalize">
                                         {req.table_name?.replace(/_/g, ' ')} — Record #{req.record_id}
                                     </p>
-                                    <p className="text-xs text-gray-400 mt-0.5">
+                                    <p className="text-xs text-gray-500 mt-0.5 tabular-nums">
                                         Requested by {req.requested_by_detail?.full_name} ·{' '}
                                         {req.requested_at?.slice(0, 10)}
                                     </p>
                                 </div>
                                 <Badge
                                     label={req.action}
-                                    color={req.action === 'DELETE' ? 'red' : 'yellow'}
+                                    color={req.action === 'DELETE' ? 'red' : 'gray'}
                                 />
-                            </div>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 )}
-            </div>
+            </Panel>
         </div>
     )
 }

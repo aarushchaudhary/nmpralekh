@@ -3,6 +3,7 @@ import api from '../../api/axios'
 import PageHeader from '../../components/ui/PageHeader'
 import Table from '../../components/ui/Table'
 import Badge from '../../components/ui/Badge'
+import StatCard from '../../components/ui/StatCard'
 
 export default function DashboardHome() {
     const [accumulators, setAccumulators] = useState([])
@@ -37,16 +38,10 @@ export default function DashboardHome() {
         {
             key: 'tracking', label: 'Coordinators Tracking', sortable: false,
             render: row => (
-                <div className="flex gap-2 items-center">
-                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-md">
-                        {row.coordinators_submitted} Submitted
-                    </span>
-                    <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-md">
-                        {row.coordinators_pending} Pending
-                    </span>
-                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-md">
-                        {row.total_coordinators} Total
-                    </span>
+                <div className="flex flex-wrap gap-1.5 items-center">
+                    <Badge label={`${row.coordinators_submitted} Submitted`} color="dark" />
+                    <Badge label={`${row.coordinators_pending} Pending`} color="outline" />
+                    <Badge label={`${row.total_coordinators} Total`} color="gray" />
                 </div>
             )
         },
@@ -55,44 +50,32 @@ export default function DashboardHome() {
             render: row => (
                 <Badge
                     label={row.has_submitted ? 'Submitted' : 'Pending'}
-                    color={row.has_submitted ? 'green' : 'gray'}
+                    color={row.has_submitted ? 'dark' : 'outline'}
                 />
             )
         }
     ]
 
     return (
-        <div>
-            <PageHeader 
-                title="Chronicle Master" 
-                subtitle="Overview and Management of Chronicles" 
+        <div className="space-y-6">
+            <PageHeader
+                title="Chronicle Master"
+                subtitle="Overview and Management of Chronicles"
             />
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Total Accumulators</h3>
-                    <p className="text-3xl font-bold text-gray-800">{loading ? '...' : accumulators.length}</p>
-                </div>
-                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Total Coordinators</h3>
-                    <p className="text-3xl font-bold text-gray-800">{loading ? '...' : totalCoordinators}</p>
-                </div>
-                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Total MIS Records</h3>
-                    <p className="text-3xl font-bold text-gray-800">{loading ? '...' : totalMisRecords}</p>
-                </div>
+
+            <div className="grid grid-cols-3 gap-px bg-gray-200 border border-gray-200 rounded-md overflow-hidden">
+                <StatCard label="Total accumulators" value={loading ? null : accumulators.length} />
+                <StatCard label="Total coordinators" value={loading ? null : totalCoordinators} />
+                <StatCard label="Total MIS records" value={loading ? null : totalMisRecords} />
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-800">MIS Accumulators</h3>
-                        <p className="text-sm text-gray-500">List of all active MIS Accumulators across campuses</p>
-                    </div>
+            <section>
+                <div className="mb-3">
+                    <h2 className="text-sm font-semibold text-gray-900">MIS accumulators</h2>
+                    <p className="mt-0.5 text-xs text-gray-500">List of all active MIS Accumulators across campuses</p>
                 </div>
                 <Table columns={columns} data={accumulators} loading={loading} />
-            </div>
-
+            </section>
         </div>
     )
 }
