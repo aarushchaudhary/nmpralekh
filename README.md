@@ -197,19 +197,19 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant R as Delete Auth reviewer
 
-    rect rgb(255, 255, 255)
-        rect rgb(227, 242, 253)
-        U->>S: Edit or delete a record
-        S->>DB: Save a snapshot of the current row
-        S->>DB: Create AuditRequest (pending) and mark the record
-        Note over S,DB: The record itself is unchanged
-        end
+    rect rgb(227, 242, 253)
+    U->>S: Edit or delete a record
+    S->>DB: Save a snapshot of the current row
+    S->>DB: Create AuditRequest (pending) and mark the record
+    Note over S,DB: The record itself is unchanged
+    end
 
-        rect rgb(255, 248, 225)
-        R->>S: Open pending requests
-        S-->>R: Field-by-field difference
-        end
+    rect rgb(255, 248, 225)
+    R->>S: Open pending requests
+    S-->>R: Field-by-field difference
+    end
 
+    rect rgb(236, 239, 241)
         alt Approved
             rect rgb(232, 245, 233)
             R->>S: Approve
@@ -261,24 +261,22 @@ sequenceDiagram
     participant Q as Redis queue
     participant W as Celery worker
 
-    rect rgb(255, 255, 255)
-        rect rgb(227, 242, 253)
-        B->>D: POST /api/export/all/
-        D->>Q: queue export job
-        D-->>B: 202 { task_id }
-        end
-        rect rgb(243, 229, 245)
-        Q->>W: job
-        W->>W: build the Excel file (kept for 1 day)
-        end
-        rect rgb(232, 245, 233)
-        loop every 1.5 s, up to 5 min
-            B->>D: GET /api/export/jobs/{task_id}/
-            D-->>B: processing / ready / failed
-        end
-        B->>D: GET /api/export/jobs/{task_id}/download/
-        D-->>B: MIS_Dashboard.xlsx (only to the user who started it)
-        end
+    rect rgb(227, 242, 253)
+    B->>D: POST /api/export/all/
+    D->>Q: queue export job
+    D-->>B: 202 { task_id }
+    end
+    rect rgb(243, 229, 245)
+    Q->>W: job
+    W->>W: build Excel file (kept 1 day)
+    end
+    rect rgb(232, 245, 233)
+    loop every 1.5 s, up to 5 min
+        B->>D: GET /api/export/jobs/{task_id}/
+        D-->>B: processing / ready / failed
+    end
+    B->>D: GET /api/export/jobs/{task_id}/download/
+    D-->>B: MIS_Dashboard.xlsx (only to the user who started it)
     end
 ```
 
@@ -292,21 +290,19 @@ sequenceDiagram
     participant C as Web or Android client
     participant A as /api/auth/
 
-    rect rgb(255, 255, 255)
-        rect rgb(232, 245, 233)
-        C->>A: POST login/ (username, password)
-        A-->>C: httpOnly cookies: access_token, refresh_token
-        end
-        rect rgb(255, 243, 224)
-        C->>A: any request after 30 min → 401
-        C->>A: POST refresh/ (once, even if many requests failed)
-        A-->>C: new access + new refresh token (old one blacklisted)
-        C->>A: retry the original request
-        end
-        rect rgb(253, 236, 236)
-        C->>A: POST logout/
-        A-->>C: refresh token blacklisted, cookies cleared
-        end
+    rect rgb(232, 245, 233)
+    C->>A: POST login/ (username, password)
+    A-->>C: httpOnly cookies: access_token, refresh_token
+    end
+    rect rgb(255, 243, 224)
+    C->>A: any request after 30 min → 401
+    C->>A: POST refresh/ (once, even if many requests failed)
+    A-->>C: new access + new refresh token (old one blacklisted)
+    C->>A: retry the original request
+    end
+    rect rgb(253, 236, 236)
+    C->>A: POST logout/
+    A-->>C: refresh token blacklisted, cookies cleared
     end
 ```
 
