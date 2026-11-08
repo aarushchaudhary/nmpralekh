@@ -52,6 +52,10 @@ class ChronicleDataRequest(models.Model):
     class Meta:
         db_table = 'chronicle_data_requests'
         ordering = ['-created_at']
+        constraints = [
+            models.CheckConstraint(condition=models.Q(date_to__gte=models.F('date_from')),
+                                   name='chronicle_request_dates_in_order'),
+        ]
 
     def __str__(self):
         return f"Chronicle Request by {self.created_by.username} ({self.date_from} to {self.date_to})"
@@ -82,6 +86,14 @@ class MISDataRequest(models.Model):
     class Meta:
         db_table = 'mis_data_requests'
         ordering = ['-created_at']
+        constraints = [
+            models.CheckConstraint(condition=models.Q(date_to__gte=models.F('date_from')),
+                                   name='mis_request_dates_in_order'),
+            # a double-clicked or retried "request data" must not ask the same coordinator twice
+            models.UniqueConstraint(fields=['accumulator', 'coordinator', 'date_from', 'date_to'],
+                                    condition=models.Q(status='pending'),
+                                    name='one_pending_mis_request'),
+        ]
 
     def __str__(self):
         return f"Request from {self.accumulator.username} to {self.coordinator.username}"
@@ -94,17 +106,11 @@ class MISReport(models.Model):
     data_content = models.TextField()
     date_from = models.DateField()
     date_to = models.DateField()
-    
-    sent_to_admin = models.BooleanField(default=False)
+
+    # "sent" is derived from the time: one source of truth per recipient
     sent_to_admin_at = models.DateTimeField(null=True, blank=True)
-    
-    sent_to_accumulator = models.BooleanField(default=False)
     sent_to_accumulator_at = models.DateTimeField(null=True, blank=True)
-    
-    sent_to_super_admin = models.BooleanField(default=False)
     sent_to_super_admin_at = models.DateTimeField(null=True, blank=True)
-    
-    sent_to_chronicle_master = models.BooleanField(default=False)
     sent_to_chronicle_master_at = models.DateTimeField(null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -112,6 +118,15 @@ class MISReport(models.Model):
     class Meta:
         db_table = 'mis_reports'
         ordering = ['-created_at']
+        constraints = [
+            models.CheckConstraint(condition=models.Q(date_to__gte=models.F('date_from')),
+                                   name='mis_report_dates_in_order'),
+        ]
+
+    sent_to_admin = property(lambda self: self.sent_to_admin_at is not None)
+    sent_to_accumulator = property(lambda self: self.sent_to_accumulator_at is not None)
+    sent_to_super_admin = property(lambda self: self.sent_to_super_admin_at is not None)
+    sent_to_chronicle_master = property(lambda self: self.sent_to_chronicle_master_at is not None)
 
     def __str__(self):
         return f"Report by {self.created_by.username} ({self.date_from} to {self.date_to})"

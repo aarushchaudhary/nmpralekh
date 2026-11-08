@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import IntegrityError, transaction
 from django.db.models import Prefetch, Count, Q
 from rest_framework import generics, status
 from rest_framework.views import APIView
@@ -15,12 +16,20 @@ from apps.accounts.serializers import (
     ChronicleAccumulatorSerializer
 )
 from apps.accounts.permissions import RolePermission
+from apps.accounts.throttles import redis_available, local_one_per_second
 from config.pagination import StandardPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from django.views.decorators.csrf import ensure_csrf_cookie
+
+def _too_fast():
+    return Response(
+        {'detail': 'Too many attempts. Please wait a second and try again.'},
+        status=status.HTTP_429_TOO_MANY_REQUESTS,
+    )
+
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class LoginView(APIView):
@@ -34,6 +43,10 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username'].strip().lower()
+        if settings.RATELIMIT_ENABLE and not redis_available() and not local_one_per_second(f'login:{username}'):
+            return _too_fast()
 
         user = authenticate(
             username=serializer.validated_data['username'],
@@ -112,6 +125,9 @@ class RefreshTokenView(APIView):
 
     @method_decorator(ratelimit(key='ip', rate='30/m', method='POST', block=True))
     def post(self, request):
+        client_ip = settings.RATELIMIT_IP_META_KEY(request)
+        if settings.RATELIMIT_ENABLE and not redis_available() and not local_one_per_second(f'refresh:{client_ip}'):
+            return _too_fast()
         refresh_token = request.COOKIES.get('refresh_token')
         if not refresh_token:
             return Response(
@@ -357,14 +373,19 @@ class ServiceUserManagementView(APIView):
         if not username or not email or not password:
             return Response({"detail": "Username, email, and password are required."}, status=status.HTTP_400_BAD_REQUEST)
         
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            full_name="Service Admin",
-            role="service_admin",
-            is_service_admin=True
-        )
+        try:
+            # the one_service_admin database rule settles two parallel creates
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    full_name="Service Admin",
+                    role="service_admin",
+                    is_service_admin=True
+                )
+        except IntegrityError:
+            return Response({"detail": "A service user already exists, or that username or email is taken."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "Service user created successfully."}, status=status.HTTP_201_CREATED)
 
     def patch(self, request):
@@ -399,14 +420,19 @@ class ChronicleMasterManagementView(APIView):
         if not username or not email or not password:
             return Response({"detail": "Username, email, and password are required."}, status=status.HTTP_400_BAD_REQUEST)
         
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            full_name="Chronicle Master",
-            role="chronicle_master",
-            is_chronicle_master=True
-        )
+        try:
+            # the one_chronicle_master database rule settles two parallel creates
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    full_name="Chronicle Master",
+                    role="chronicle_master",
+                    is_chronicle_master=True
+                )
+        except IntegrityError:
+            return Response({"detail": "A Chronicle Master already exists, or that username or email is taken."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "Chronicle Master created successfully."}, status=status.HTTP_201_CREATED)
 
     def patch(self, request):

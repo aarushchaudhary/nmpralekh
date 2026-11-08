@@ -1,5 +1,6 @@
 import time
 import logging
+import threading
 
 import redis
 from django.conf import settings
@@ -47,6 +48,33 @@ def _incr_fixed_window(key: str, window_seconds: int) -> int:
     except redis.exceptions.RedisError as exc:
         logger.warning("Rate-limit Redis error (fail-open): %s", exc)
         return 0
+
+
+def redis_available() -> bool:
+    try:
+        return bool(_get_redis().ping())
+    except redis.exceptions.RedisError:
+        return False
+
+
+# Fallback for login/refresh while Redis is down: django-ratelimit then fails open
+# (RATELIMIT_FAIL_OPEN), so this keeps brute force slowed to 1 attempt/second per key.
+# shortcut: per gunicorn process (9 workers => up to ~9/s per key in the worst case);
+# move to a shared store if Redis outages become long or frequent.
+_local_last_hit: dict = {}
+_local_lock = threading.Lock()
+
+
+def local_one_per_second(key: str) -> bool:
+    now = time.monotonic()
+    with _local_lock:
+        if len(_local_last_hit) > 10_000:  # bounded memory: forget keys idle for 1s+
+            for k in [k for k, t in _local_last_hit.items() if now - t >= 1]:
+                del _local_last_hit[k]
+        if now - _local_last_hit.get(key, float('-inf')) < 1:
+            return False
+        _local_last_hit[key] = now
+        return True
 
 
 class FixedWindowThrottle(BaseThrottle):

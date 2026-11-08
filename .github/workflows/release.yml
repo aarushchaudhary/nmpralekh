@@ -96,7 +96,7 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq redis-tools
           redis-cli CONFIG SET maxmemory 512mb
-          redis-cli CONFIG SET maxmemory-policy allkeys-lru
+          redis-cli CONFIG SET maxmemory-policy volatile-lru
 
       - name: Django system check
         run: python manage.py check

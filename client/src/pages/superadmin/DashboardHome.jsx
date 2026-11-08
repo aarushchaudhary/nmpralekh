@@ -8,7 +8,7 @@ import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import FormError from '../../components/ui/FormError'
 import api from '../../api/axios'
-import { exportErrorMessage } from '../../hooks/useExport'
+import { exportErrorMessage, runBackgroundExport } from '../../hooks/useExport'
 
 const modules = [
     { label: 'School activities', path: 'school-activities' },
@@ -50,13 +50,17 @@ export default function DashboardHome() {
         setExporting(key)
         setExportError('')
         try {
-            const res = await api.get(endpoint, { responseType: 'blob' })
-            const url = window.URL.createObjectURL(new Blob([res.data]))
-            const a = document.createElement('a')
-            a.href = url
-            a.download = filename
-            a.click()
-            window.URL.revokeObjectURL(url)
+            if (key === 'all') {
+                await runBackgroundExport(endpoint, filename)
+            } else {
+                const res = await api.get(endpoint, { responseType: 'blob' })
+                const url = window.URL.createObjectURL(new Blob([res.data]))
+                const a = document.createElement('a')
+                a.href = url
+                a.download = filename
+                a.click()
+                window.URL.revokeObjectURL(url)
+            }
         } catch (err) {
             setExportError(await exportErrorMessage(err))
         } finally {

@@ -153,7 +153,6 @@ nmpralekh/
 │   └── build.gradle                # Android build config
 │
 ├── start.sh                        # Start all services in one command (Gunicorn)
-├── server.sh                       # Start Gunicorn only
 ├── client.sh                       # Start React only
 ├── celery.sh                       # Start Celery only
 └── README.md
@@ -582,10 +581,10 @@ Search for the `# maxmemory <bytes>` section and add (or uncomment):
 
 ```conf
 maxmemory 512mb
-maxmemory-policy allkeys-lru
+maxmemory-policy volatile-lru
 ```
 
-*(This limits Redis to 512 MB of RAM. Once full, it evicts the least recently used keys.)*
+*(This limits Redis to 512 MB of RAM. Once full, it evicts the least recently used keys **that have an expiry** — cache entries and rate-limit counters. The Celery task queue never expires, so `volatile-lru` keeps queued backups and exports safe; `allkeys-lru` could delete them.)*
 
 **1b. Set Connection Limits:**
 Search for the `# maxclients 10000` section and update it to allow a safe buffer for web workers and Celery:
@@ -626,7 +625,7 @@ sudo systemctl restart redis
 
 ```bash
 redis-cli CONFIG SET maxmemory 256mb
-redis-cli CONFIG SET maxmemory-policy allkeys-lru
+redis-cli CONFIG SET maxmemory-policy volatile-lru
 # Note: maxclients and LimitNOFILE require a restart to take effect safely.
 ```
 

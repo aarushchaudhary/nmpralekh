@@ -168,6 +168,11 @@ class FacultyFDPWorkshopGL(models.Model):
             models.Index(fields=['school', 'is_deleted', 'date_start'],
                          name='fdp_school_deleted_date_idx'),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(date_end__isnull=True) | models.Q(date_end__gte=models.F('date_start')),
+                name='fdp_dates_in_order'),
+        ]
 
     def __str__(self):
         return f'{self.type} - {self.name} ({self.faculty_name})'
@@ -353,8 +358,6 @@ class PublicationAuthor(models.Model):
                       related_name='co_authored_publications',
                       help_text='Linked registered user (faculty/admin/super_admin)'
                   )
-    is_primary  = models.BooleanField(default=False,
-                      help_text='Primary/corresponding author')
     order       = models.PositiveSmallIntegerField(default=1,
                       help_text='Author order in publication')
 
@@ -396,7 +399,6 @@ class PatentApplicant(models.Model):
                           related_name='co_applied_patents',
                           help_text='Linked registered user (faculty/admin/super_admin)'
                       )
-    is_primary      = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'patent_applicants'

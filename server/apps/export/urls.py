@@ -11,6 +11,8 @@ urlpatterns = [
     path('certifications/',       views.ExportCertificationsView.as_view(),    name='export_cert'),
     path('placements/',           views.ExportPlacementsView.as_view(),        name='export_placements'),
     path('all/',                  views.ExportAllView.as_view(),               name='export_all'),
+    path('jobs/<str:task_id>/',   views.ExportJobView.as_view(),               name='export_job'),
+    path('jobs/<str:task_id>/download/', views.ExportJobDownloadView.as_view(), name='export_job_download'),
 
     # coordinator export
     path('coordinator/',          views.CoordinatorExportView.as_view(),       name='export_coordinator'),

@@ -101,10 +101,7 @@ class ErrorTicketModelTests(ServiceTestMixin, TestCase):
             t.full_clean()
 
     def test_resolved_by_set_null(self):
-        resolver = User.objects.create_user(
-            username="resolver", email="res@t.com", password="p",
-            full_name="Resolver", role="service_admin", is_service_admin=True,
-        )
+        resolver = self.service_admin  # only one service admin may exist (one_service_admin rule)
         ticket = ErrorTicket.objects.create(
             fingerprint="res123", title="Resolved", error_message="m",
             resolved_by=resolver, status="closed",

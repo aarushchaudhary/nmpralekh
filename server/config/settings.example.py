@@ -51,6 +51,9 @@ INSTALLED_APPS = [
 # Rate limit settings
 RATELIMIT_USE_CACHE = 'default'
 RATELIMIT_ENABLE    = True
+# If Redis is down, let login/refresh through instead of locking everyone out;
+# LoginView/RefreshTokenView then fall back to 1 attempt/second per user (throttles.py).
+RATELIMIT_FAIL_OPEN = True
 # Behind nginx REMOTE_ADDR is always 127.0.0.1, so every user would share one bucket.
 # X-Real-IP is set by nginx and can't be spoofed because gunicorn binds to 127.0.0.1.
 RATELIMIT_IP_META_KEY = lambda r: r.META.get('HTTP_X_REAL_IP') or r.META['REMOTE_ADDR']
@@ -112,6 +115,10 @@ DATABASES = {
         'PORT':     config('DB_PORT', default='6432'),   # 6432 = pgBouncer; use 5432 for direct Postgres
         # Set CONN_MAX_AGE=0 when using pgBouncer in transaction pooling mode.
         'CONN_MAX_AGE': 0,
+        # pgBouncer transaction pooling can send each FETCH of a server-side cursor
+        # (used by .iterator() in exports) to a different Postgres connection, which
+        # fails with "cursor does not exist". Django's docs require this with pgBouncer.
+        'DISABLE_SERVER_SIDE_CURSORS': True,
         'OPTIONS': {
             'connect_timeout': 10,
         }

@@ -72,6 +72,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
         db_table = 'users'
         ordering = ['id']
+        constraints = [
+            # exactly one of each special account; enforced here so parallel creates can't make two
+            models.UniqueConstraint(fields=['is_service_admin'], condition=models.Q(is_service_admin=True),
+                                    name='one_service_admin'),
+            models.UniqueConstraint(fields=['is_chronicle_master'], condition=models.Q(is_chronicle_master=True),
+                                    name='one_chronicle_master'),
+        ]
 
     def __str__(self):
         return f'{self.username} ({self.role})'

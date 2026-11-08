@@ -1,5 +1,7 @@
 import logging
 import os
+import time
+import uuid
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.cell import WriteOnlyCell
@@ -12,6 +14,10 @@ from apps.schools.utils import scope_to_faculty
 logger = logging.getLogger(__name__)
 
 EXPORT_DIR = os.path.join(settings.BASE_DIR, 'exports')
+
+
+# Per-user "Export all" files: one-off downloads, so they are kept for a day only
+USER_EXPORT_DIR = os.path.join(EXPORT_DIR, 'users')
 
 
 def ensure_export_dir():
@@ -230,7 +236,8 @@ def export_single_campus(self, campus_id):
 
     wb, total_records = build_campus_workbook(school_ids)
 
-    filename = f'{campus.code}_MIS_Export_{today}.xlsx'
+    # unique per run: a second run the same day must not overwrite a file another record points to
+    filename = f'{campus.code}_MIS_Export_{today}_{uuid.uuid4().hex[:8]}.xlsx'
     filepath = os.path.join(EXPORT_DIR, filename)
     wb.save(filepath)
 
@@ -298,7 +305,7 @@ def generate_manual_export(campus_id, school_ids,
         date_to=filters.get('date_to')   or None,
     )
 
-    filename = f'{campus.code}_Manual_Export_{today}_{now}.xlsx'
+    filename = f'{campus.code}_Manual_Export_{today}_{now}_{uuid.uuid4().hex[:8]}.xlsx'
     filepath = os.path.join(EXPORT_DIR, filename)
     wb.save(filepath)
 
@@ -330,3 +337,27 @@ def generate_manual_export(campus_id, school_ids,
         'campus':    campus.name,
         'records':   total_records,
     }
+
+
+@shared_task(name='apps.export.tasks.export_all_for_user')
+def export_all_for_user(user_id):
+    """Background "Export all" for one user; the web app polls ExportJobView, then downloads.
+    Building it inside the web request tied up every worker when many users exported at once."""
+    from apps.accounts.models import User
+    from apps.schools.utils import get_user_school_ids
+
+    user = User.objects.get(pk=user_id)
+    os.makedirs(USER_EXPORT_DIR, exist_ok=True)
+    cutoff = time.time() - 24 * 3600
+    for name in os.listdir(USER_EXPORT_DIR):
+        old = os.path.join(USER_EXPORT_DIR, name)
+        try:
+            if os.path.getmtime(old) < cutoff:
+                os.remove(old)
+        except FileNotFoundError:  # another job removed it first
+            pass
+
+    wb, total_records = build_campus_workbook(list(get_user_school_ids(user)), user=user)
+    path = os.path.join(USER_EXPORT_DIR, f'{uuid.uuid4().hex}.xlsx')
+    wb.save(path)
+    return {'user_id': user_id, 'path': path, 'records': total_records}

@@ -34,9 +34,9 @@ public class LoginActivity extends AppCompatActivity {
 
         prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
 
-        // Check if already logged in AND we have cookies (session survived)
+        // Skip login while the saved login token is still valid (up to 6 h since its last refresh)
         SessionManager session = new SessionManager(this);
-        if (session.isLoggedIn() && ApiClient.hasCookies()) {
+        if (session.isLoggedIn() && ApiClient.hasSession(this)) {
             navigateBasedOnRole();
             return;
         }

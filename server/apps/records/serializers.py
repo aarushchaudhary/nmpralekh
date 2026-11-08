@@ -104,6 +104,13 @@ class StudentActivitySerializer(serializers.ModelSerializer):
 
 
 class FacultyFDPWorkshopGLSerializer(serializers.ModelSerializer):
+    def validate(self, data):
+        start = data.get('date_start', getattr(self.instance, 'date_start', None))
+        end = data.get('date_end', getattr(self.instance, 'date_end', None))
+        if start and end and end < start:
+            raise serializers.ValidationError({'date_end': 'End date cannot be before the start date.'})
+        return data
+
     school_name = serializers.CharField(source='school.name', read_only=True)
     created_by_is_active = serializers.BooleanField(source='created_by.is_active', read_only=True)
 
@@ -127,7 +134,7 @@ class PublicationAuthorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = PublicationAuthor
-        fields = ['id', 'name', 'author_type', 'user', 'user_full_name', 'is_primary', 'order']
+        fields = ['id', 'name', 'author_type', 'user', 'user_full_name', 'order']
 
 
 class FacultyPublicationSerializer(serializers.ModelSerializer):
@@ -161,7 +168,7 @@ class PatentApplicantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = PatentApplicant
-        fields = ['id', 'name', 'applicant_type', 'user', 'user_full_name', 'is_primary']
+        fields = ['id', 'name', 'applicant_type', 'user', 'user_full_name']
 
 
 class PatentSerializer(serializers.ModelSerializer):

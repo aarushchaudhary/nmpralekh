@@ -21,7 +21,7 @@ export default function DashboardHome() {
     const { user } = useAuth()
     const [counts, setCounts] = useState({})
     const [schools, setSchools] = useState([])
-    const { exportFile, exporting, exportError } = useExport('/export/all/', { filename: 'MIS_Dashboard.xlsx' })
+    const { exportFile, exporting, exportError } = useExport('/export/all/', { filename: 'MIS_Dashboard.xlsx', background: true })
 
     useEffect(() => {
         api.get('/records/dashboard-counts/').then(res => {

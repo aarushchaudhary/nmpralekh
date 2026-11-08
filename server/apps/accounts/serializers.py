@@ -78,6 +78,17 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         model  = User
         fields = ['full_name', 'role', 'is_active', 'email', 'campus']
 
+    def validate_campus(self, campus):
+        # school assignments must stay in the user's campus (same rule as UserSchoolMappingCreateSerializer)
+        user = self.instance
+        if user and campus and user.campus_id != campus.id \
+                and user.school_mappings.exclude(school__campus=campus).exists():
+            raise serializers.ValidationError(
+                "This user is still assigned to schools in their current campus. "
+                "Remove those school assignments before moving them to another campus."
+            )
+        return campus
+
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()

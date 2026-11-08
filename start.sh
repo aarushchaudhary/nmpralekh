@@ -20,6 +20,10 @@ echo "Starting Celery..."
 celery -A config worker --loglevel=info --concurrency=4 &
 CELERY_PID=$!
 
+echo "Starting Celery beat (runs nightly exports and scheduled backups)..."
+celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler &
+BEAT_PID=$!
+
 echo "Starting React..."
 cd "$PROJECT_ROOT/client"
 npm run dev &
@@ -33,6 +37,6 @@ echo "Database  → PostgreSQL via pgBouncer :6432"
 echo ""
 
 # Updated trap to kill GUNICORN_PID
-trap "echo 'Stopping...'; kill $GUNICORN_PID $CELERY_PID $REACT_PID; sudo systemctl stop pgbouncer; sudo systemctl stop redis; exit 0" SIGINT SIGTERM
+trap "echo 'Stopping...'; kill $GUNICORN_PID $CELERY_PID $BEAT_PID $REACT_PID; sudo systemctl stop pgbouncer; sudo systemctl stop redis; exit 0" SIGINT SIGTERM
 
 wait

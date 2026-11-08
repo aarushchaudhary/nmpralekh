@@ -494,3 +494,139 @@ class NewExportEndpointsTests(ExportTestMixin, APITestCase):
         pairs = list(MISDataRequest.objects.values_list('accumulator', 'coordinator'))
         # the other campus has no accumulator, so its coordinator gets nothing
         self.assertEqual(pairs, [(self.accumulator.pk, self.coordinator.pk)])
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class IntegrityRuleTests(ExportTestMixin, APITestCase):
+    """Fixes 5, 6 and 9: valid date ranges, no duplicate pending requests, all-or-nothing send."""
+    def setUp(self):
+        self._setup_base()
+
+    def test_report_with_backwards_dates_is_rejected(self):
+        self.client.force_authenticate(user=self.coordinator)
+        resp = self.client.post('/api/export/reports/', {
+            'name': 'R', 'data_content': 'x', 'date_from': '2025-06-30', 'date_to': '2025-06-01'})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('date_to', resp.data)
+
+    def test_database_refuses_backwards_dates_even_without_the_api(self):
+        from django.db import IntegrityError, transaction
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            MISReport.objects.create(created_by=self.coordinator, data_content='x',
+                                     date_from=date(2025, 6, 30), date_to=date(2025, 6, 1))
+
+    def test_double_clicked_request_all_creates_one_request(self):
+        self.client.force_authenticate(user=self.accumulator)
+        body = {'date_from': '2025-01-01', 'date_to': '2025-03-31'}
+        first = self.client.post('/api/export/accumulator/request-all/', body, format='json')
+        second = self.client.post('/api/export/accumulator/request-all/', body, format='json')
+        self.assertEqual((first.data['created'], second.data['created'], second.data['skipped']), (1, 0, 1))
+        self.assertEqual(MISDataRequest.objects.count(), 1)
+
+    def test_database_refuses_a_second_identical_pending_request(self):
+        # the race the view can't see: two parallel inserts both past the "already pending?" check
+        from django.db import IntegrityError, transaction
+        kw = dict(accumulator=self.accumulator, coordinator=self.coordinator,
+                  date_from=date(2025, 1, 1), date_to=date(2025, 3, 31))
+        MISDataRequest.objects.create(**kw)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            MISDataRequest.objects.create(**kw)
+        MISDataRequest.objects.create(**kw, status='completed')  # completed history is fine
+
+    def test_chronicle_fan_out_skips_identical_pending_requests(self):
+        MISDataRequest.objects.create(accumulator=self.accumulator, coordinator=self.coordinator,
+                                      date_from=date(2025, 1, 1), date_to=date(2025, 6, 30))
+        self.client.force_authenticate(user=self.chronicle_master)
+        resp = self.client.post('/api/export/chronicle/data-requests/',
+                                {'date_from': '2025-01-01', 'date_to': '2025-06-30'})
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(MISDataRequest.objects.count(), 1)
+
+    def test_send_to_accumulator_is_all_or_nothing(self):
+        from unittest.mock import patch
+        from django.db import DatabaseError
+        req = MISDataRequest.objects.create(accumulator=self.accumulator, coordinator=self.coordinator,
+                                            date_from=date(2025, 1, 1), date_to=date(2025, 3, 31))
+        report = MISReport.objects.create(created_by=self.coordinator, data_content='x',
+                                          date_from=date(2025, 1, 1), date_to=date(2025, 3, 31))
+        self.client.force_authenticate(user=self.coordinator)
+        url = f'/api/export/reports/{report.pk}/send-accumulator/'
+        with patch('django.db.models.query.QuerySet.update', side_effect=DatabaseError('boom')):
+            with self.assertRaises(DatabaseError):
+                self.client.post(url)
+        report.refresh_from_db(); req.refresh_from_db()
+        self.assertFalse(report.sent_to_accumulator)   # rolled back with the failed request update
+        self.assertEqual(req.status, 'pending')
+
+        self.assertEqual(self.client.post(url).status_code, status.HTTP_200_OK)
+        report.refresh_from_db(); req.refresh_from_db()
+        self.assertTrue(report.sent_to_accumulator)
+        self.assertEqual(req.status, 'completed')
+
+
+class BackgroundExportAllTests(ExportTestMixin, APITestCase):
+    """"Export all" runs in Celery: start → poll → download, only by the user who started it."""
+
+    def setUp(self):
+        import tempfile
+        from unittest import mock
+        self._setup_base()
+        self.tmp = tempfile.mkdtemp()
+        for target in ('apps.export.tasks.USER_EXPORT_DIR', 'apps.export.views.USER_EXPORT_DIR'):
+            patcher = mock.patch(target, self.tmp)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.mock = mock
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _finished(self, result):
+        job = self.mock.Mock(result=result)
+        job.successful.return_value = True
+        job.failed.return_value = False
+        return self.mock.patch('apps.export.views.AsyncResult', return_value=job)
+
+    def test_start_queues_job(self):
+        self.client.force_authenticate(user=self.faculty)
+        with self.mock.patch('apps.export.views.export_all_for_user.delay') as delay:
+            delay.return_value.id = 'abc'
+            res = self.client.post('/api/export/all/')
+        self.assertEqual(res.status_code, 202)
+        self.assertEqual(res.data, {'task_id': 'abc'})
+        delay.assert_called_once_with(self.faculty.id)
+
+    def test_job_builds_file_and_owner_downloads_it(self):
+        from apps.export.tasks import export_all_for_user
+        result = export_all_for_user(self.faculty.id)
+        self.assertTrue(result['path'].startswith(self.tmp))
+
+        self.client.force_authenticate(user=self.faculty)
+        with self._finished(result):
+            self.assertEqual(self.client.get('/api/export/jobs/abc/').data, {'status': 'ready'})
+            res = self.client.get('/api/export/jobs/abc/download/')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('MIS_Dashboard.xlsx', res['Content-Disposition'])
+        self.assertTrue(b''.join(res.streaming_content).startswith(b'PK'))  # a real .xlsx (zip)
+
+    def test_other_user_cannot_see_or_download(self):
+        from apps.export.tasks import export_all_for_user
+        result = export_all_for_user(self.faculty.id)
+        self.client.force_authenticate(user=self.admin_user)
+        with self._finished(result):
+            self.assertEqual(self.client.get('/api/export/jobs/abc/').status_code, 404)
+            self.assertEqual(self.client.get('/api/export/jobs/abc/download/').status_code, 404)
+
+    def test_path_outside_export_dir_is_refused(self):
+        self.client.force_authenticate(user=self.faculty)
+        with self._finished({'user_id': self.faculty.id, 'path': '/etc/passwd'}):
+            self.assertEqual(self.client.get('/api/export/jobs/abc/download/').status_code, 404)
+
+    def test_unfinished_job_reports_processing(self):
+        job = self.mock.Mock()
+        job.successful.return_value = False
+        job.failed.return_value = False
+        self.client.force_authenticate(user=self.faculty)
+        with self.mock.patch('apps.export.views.AsyncResult', return_value=job):
+            self.assertEqual(self.client.get('/api/export/jobs/abc/').data, {'status': 'processing'})

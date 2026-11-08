@@ -74,6 +74,10 @@ class ReportErrorView(APIView):
                 }
             )
 
+            # one report at a time per ticket, so "has this user been counted?" and the
+            # count update can't both pass for the same user (affected_users_count)
+            ErrorTicket.objects.select_for_update().get(pk=ticket.pk)
+
             if not created:
                 # Bump counters on existing ticket
                 ErrorTicket.objects.filter(pk=ticket.pk).update(

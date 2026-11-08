@@ -6,7 +6,7 @@ const typeOptions = [
   { value: 'student', label: 'Student' },
 ]
 
-const emptyPerson = { name: '', author_type: 'faculty', user: null, is_primary: false, order: 1 }
+const emptyPerson = { name: '', author_type: 'faculty', user: null, order: 1 }
 
 // Debounce helper
 function useDebounce(value, delay) {
@@ -192,16 +192,6 @@ export default function MultiPersonPicker({
               className="flex flex-wrap sm:flex-nowrap items-start gap-2 p-3 bg-gray-50
                          rounded-md border border-gray-200">
 
-              {/* Primary checkbox */}
-              <input
-                type="checkbox"
-                checked={person.is_primary}
-                onChange={e => updatePerson(idx, 'is_primary', e.target.checked)}
-                title="Primary author/applicant"
-                aria-label="Primary"
-                className="h-4 w-4 shrink-0 mt-2.5"
-              />
-
               {/* Name — faculty gets a searchable input, student gets plain text */}
               {person[personKey] === 'faculty' ? (
                 <FacultySearchInput
@@ -265,7 +255,7 @@ export default function MultiPersonPicker({
             </div>
           ))}
           <p className="text-xs text-gray-600">
-            Tick the box to mark the primary person. Linked faculty see this record on their dashboard.
+            Linked faculty see this record on their dashboard.
           </p>
         </div>
       )}

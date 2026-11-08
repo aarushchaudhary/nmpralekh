@@ -328,9 +328,8 @@ class PublicationAuthorTests(RecordTestMixin, TestCase):
     def test_create_author(self):
         author = PublicationAuthor.objects.create(
             publication=self.pub, name="Dr. Co-Author",
-            author_type="faculty", is_primary=True, order=1,
+            author_type="faculty", order=1,
         )
-        self.assertTrue(author.is_primary)
         self.assertEqual(author.order, 1)
 
     def test_author_linked_to_user(self):
@@ -427,9 +426,9 @@ class PatentApplicantTests(RecordTestMixin, TestCase):
 
     def test_create(self):
         app = PatentApplicant.objects.create(
-            patent=self.patent, name="Co-Applicant", is_primary=False,
+            patent=self.patent, name="Co-Applicant",
         )
-        self.assertFalse(app.is_primary)
+        self.assertEqual(app.name, "Co-Applicant")
 
     def test_str(self):
         app = PatentApplicant.objects.create(
@@ -1371,3 +1370,17 @@ class DashboardCountsCacheTests(RecordTestMixin, APITestCase):
         # 1 school-id lookup + 7 grouped counts; was 7 per school (84 here)
         with self.assertNumQueries(8):
             self.client.get('/api/records/dashboard-counts/')
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class FDPDateRangeTests(RecordTestMixin, APITestCase):
+    def setUp(self):
+        self._setup_base()
+
+    def test_fdp_end_before_start_is_rejected(self):
+        self.client.force_authenticate(user=self.faculty)
+        resp = self.client.post('/api/records/fdp/', {
+            'school': self.school.pk, 'faculty_name': 'F', 'date_start': '2025-06-10',
+            'date_end': '2025-06-01', 'name': 'N', 'details': 'd', 'type': 'FDP'})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('date_end', resp.data)

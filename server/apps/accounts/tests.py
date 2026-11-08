@@ -763,3 +763,74 @@ class CampusUsersViewTests(APITestCase):
         self.client.force_authenticate(user=self.admin)
         resp = self.client.get('/api/users/campus-users/')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+
+DEAD_REDIS_CACHE = {'default': {
+    'BACKEND': 'django_redis.cache.RedisCache',
+    'LOCATION': 'redis://127.0.0.1:1/0',  # nothing listens here: simulates Redis being down
+    'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient', 'IGNORE_EXCEPTIONS': True,
+                'SOCKET_CONNECT_TIMEOUT': 0.2, 'SOCKET_TIMEOUT': 0.2},
+}}
+
+
+@override_settings(RATELIMIT_ENABLE=True, CACHES=DEAD_REDIS_CACHE)
+class LoginDuringRedisOutageTests(APITestCase):
+    def setUp(self):
+        from apps.accounts import throttles
+        throttles._local_last_hit.clear()
+        for name in ('outage1', 'outage2'):
+            User.objects.create_user(username=name, email=f'{name}@t.com', password='testpass123',
+                                     full_name=name, role='user')
+
+    def login(self, username):
+        return self.client.post('/api/auth/login/', {'username': username, 'password': 'testpass123'}, format='json')
+
+    def test_login_still_works_but_each_user_gets_one_attempt_per_second(self):
+        from unittest.mock import patch
+        with patch('apps.accounts.views.redis_available', return_value=False):
+            self.assertEqual(self.login('outage1').status_code, status.HTTP_200_OK)   # not locked out
+            self.assertEqual(self.login('Outage1').status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+            self.assertEqual(self.login('outage2').status_code, status.HTTP_200_OK)   # per user, not global
+
+    def test_fallback_is_off_while_redis_is_up(self):
+        from unittest.mock import patch
+        with patch('apps.accounts.views.redis_available', return_value=True):
+            self.assertEqual(self.login('outage1').status_code, status.HTTP_200_OK)
+            self.assertEqual(self.login('outage1').status_code, status.HTTP_200_OK)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class AccountIntegrityTests(APITestCase):
+    """Fix 8 (campus moves) and the one-service-admin / one-chronicle-master rules."""
+    def setUp(self):
+        self.master = User.objects.create_user(username='m', email='m@t.com', password='p',
+                                               full_name='M', role='master')
+        self.campus_a = Campus.objects.create(name='A', code='A', city='X')
+        self.campus_b = Campus.objects.create(name='B', code='B', city='Y')
+        self.school_a = School.objects.create(campus=self.campus_a, name='SA', code='SA')
+        self.coord = User.objects.create_user(username='c', email='c@t.com', password='p',
+                                              full_name='C', role='mis_coordinator', campus=self.campus_a)
+        self.client.force_authenticate(user=self.master)
+
+    def move(self):
+        return self.client.patch(f'/api/users/{self.coord.pk}/', {'campus': self.campus_b.pk}, format='json')
+
+    def test_cannot_move_user_while_assigned_to_schools_in_old_campus(self):
+        UserSchoolMapping.objects.create(user=self.coord, school=self.school_a, assigned_by=self.master)
+        resp = self.move()
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('campus', resp.data)
+        self.coord.refresh_from_db()
+        self.assertEqual(self.coord.campus_id, self.campus_a.pk)
+
+    def test_can_move_user_without_school_assignments(self):
+        self.assertEqual(self.move().status_code, status.HTTP_200_OK)
+
+    def test_database_allows_only_one_service_admin_and_one_chronicle_master(self):
+        from django.db import IntegrityError, transaction
+        for flag in ('is_service_admin', 'is_chronicle_master'):
+            User.objects.create_user(username=f'{flag}1', email=f'{flag}1@t.com', password='p',
+                                     full_name='x', role='user', **{flag: True})
+            with self.assertRaises(IntegrityError), transaction.atomic():
+                User.objects.create_user(username=f'{flag}2', email=f'{flag}2@t.com', password='p',
+                                         full_name='x', role='user', **{flag: True})

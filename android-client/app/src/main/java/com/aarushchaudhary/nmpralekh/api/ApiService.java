@@ -4,7 +4,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.List;
 import java.util.Map;
-import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.*;
 
@@ -144,11 +143,6 @@ public interface ApiService {
     // Faculty User Search
     @GET("api/records/faculty-users/")
     Call<com.google.gson.JsonArray> searchFaculty(@Query("search") String query);
-
-    // Export
-    @GET("api/export/all/")
-    @Streaming
-    Call<ResponseBody> exportAll();
 
     // Clubs (Admin)
     @POST("api/records/clubs/")

@@ -5,14 +5,14 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.cell import WriteOnlyCell
 from celery.result import AsyncResult
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.core.cache import cache
 from django.http import HttpResponse, FileResponse
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework import serializers
@@ -356,29 +356,63 @@ class ExportPlacementsView(APIView):
 from .tasks import build_campus_workbook
 
 class ExportAllView(APIView):
+    """POST starts "Export all" in Celery and returns {task_id}; poll ExportJobView, then
+    download from ExportJobDownloadView. (Run in the request, 18 parallel exports on a
+    4-core server held every worker and others waited ~11s for normal pages.)"""
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
     serializer_class = serializers.Serializer
 
-    # Heaviest endpoint — cap at 5 exports per minute per user
-    @method_decorator(ratelimit(key='user', rate='5/m', method='GET', block=True))
-    def get(self, request):
-        school_ids = list(get_user_school_ids(request.user))
+    # Heaviest export — cap at 5 per minute per user
+    @method_decorator(ratelimit(key='user', rate='5/m', method='POST', block=True))
+    def post(self, request):
+        task = export_all_for_user.delay(request.user.id)
+        return Response({'task_id': task.id}, status=202)
 
-        wb, total_records = build_campus_workbook(school_ids, user=request.user)
 
-        response = HttpResponse(
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = 'attachment; filename=MIS_Dashboard.xlsx'
-        wb.save(response)
-        return response
+def _job_file_for(request, result):
+    """The finished job's result if it belongs to this user; 404 otherwise."""
+    data = result.result
+    if not isinstance(data, dict) or data.get('user_id') != request.user.id:
+        raise NotFound('Export not found.')
+    return data
+
+
+class ExportJobView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = serializers.Serializer
+
+    def get(self, request, task_id):
+        result = AsyncResult(task_id)
+        if result.failed():
+            return Response({'status': 'failed'})
+        if not result.successful():
+            return Response({'status': 'processing'})
+        _job_file_for(request, result)
+        return Response({'status': 'ready'})
+
+
+class ExportJobDownloadView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = serializers.Serializer
+
+    def get(self, request, task_id):
+        result = AsyncResult(task_id)
+        if not result.successful():
+            raise NotFound('Export is not ready.')
+        path = os.path.realpath(_job_file_for(request, result)['path'])
+        if not path.startswith(os.path.realpath(USER_EXPORT_DIR) + os.sep) or not os.path.exists(path):
+            raise NotFound('This export has expired. Please export again.')
+        return FileResponse(open(path, 'rb'), as_attachment=True, filename='MIS_Dashboard.xlsx',
+                            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 
 from apps.export.models import GeneratedExport
 from apps.export.tasks import (
     generate_nightly_exports,
-    generate_manual_export
+    generate_manual_export,
+    export_all_for_user,
+    USER_EXPORT_DIR,
 )
 
 
@@ -778,6 +812,13 @@ class MISDataRequestListCreateView(generics.ListCreateAPIView):
             return [RolePermission(['mis_accumulator'])()]
         return [RolePermission(['mis_coordinator'])()]
 
+    def perform_create(self, serializer):
+        try:
+            with transaction.atomic():
+                serializer.save()
+        except IntegrityError:
+            raise ValidationError('A pending request for this coordinator and period already exists.')
+
     def get_queryset(self):
         user = self.request.user
         if not user.is_authenticated:
@@ -827,7 +868,6 @@ class MISReportSendAdminView(APIView):
         except MISReport.DoesNotExist:
             return Response({'detail': 'Report not found'}, status=404)
         
-        report.sent_to_admin = True
         report.sent_to_admin_at = timezone.now()
         report.save()
         return Response({'detail': 'Sent to Admin successfully.'})
@@ -842,22 +882,19 @@ class MISReportSendAccumulatorView(APIView):
         except MISReport.DoesNotExist:
             return Response({'detail': 'Report not found'}, status=404)
         
-        report.sent_to_accumulator = True
-        report.sent_to_accumulator_at = timezone.now()
-        report.save()
+        now = timezone.now()
+        # all-or-nothing: the report must not show "sent" while its requests stay pending
+        with transaction.atomic():
+            report.sent_to_accumulator_at = now
+            report.save()
 
-        # Fulfill any pending requests from accumulators that overlap
-        pending_requests = MISDataRequest.objects.filter(
-            coordinator=request.user,
-            status='pending',
-            date_from__lte=report.date_to,
-            date_to__gte=report.date_from
-        )
-        
-        for req in pending_requests:
-            req.status = 'completed'
-            req.completed_at = timezone.now()
-            req.save()
+            # Fulfill any pending requests from accumulators that overlap
+            MISDataRequest.objects.filter(
+                coordinator=request.user,
+                status='pending',
+                date_from__lte=report.date_to,
+                date_to__gte=report.date_from
+            ).update(status='completed', completed_at=now)
 
         return Response({'detail': 'Sent to Accumulator successfully and requests fulfilled.'})
 
@@ -871,7 +908,6 @@ class MISReportSendSuperAdminView(APIView):
         except MISReport.DoesNotExist:
             return Response({'detail': 'Report not found'}, status=404)
         
-        report.sent_to_super_admin = True
         report.sent_to_super_admin_at = timezone.now()
         report.save()
         return Response({'detail': 'Sent to Super Admin successfully.'})
@@ -886,7 +922,6 @@ class MISReportSendChronicleMasterView(APIView):
         except MISReport.DoesNotExist:
             return Response({'detail': 'Report not found'}, status=404)
         
-        report.sent_to_chronicle_master = True
         report.sent_to_chronicle_master_at = timezone.now()
         report.save()
         return Response({'detail': 'Sent to Chronicle Master successfully.'})
@@ -906,16 +941,16 @@ class ReceivedMISReportsView(generics.ListAPIView):
             return MISReport.objects.none()
         
         if user.role == 'mis_accumulator':
-            # Accumulators see reports from coordinators in their campus where sent_to_accumulator=True
+            # Accumulators see reports from coordinators in their campus where sent_to_accumulator_at__isnull=False
             return MISReport.objects.filter(
-                sent_to_accumulator=True,
+                sent_to_accumulator_at__isnull=False,
                 created_by__campus=user.campus
             )
         elif user.role == 'admin':
             # Admins see reports from coordinators who share any of the admin's schools
             admin_schools = user.school_mappings.values_list('school_id', flat=True)
             return MISReport.objects.filter(
-                sent_to_admin=True,
+                sent_to_admin_at__isnull=False,
                 created_by__school_mappings__school_id__in=admin_schools
             ).distinct()
         elif user.role == 'super_admin':
@@ -923,13 +958,13 @@ class ReceivedMISReportsView(generics.ListAPIView):
                 return MISReport.objects.none()
             # Super Admins see reports from accumulators in their campus
             return MISReport.objects.filter(
-                sent_to_super_admin=True,
+                sent_to_super_admin_at__isnull=False,
                 created_by__campus_id=user.campus_id
             )
         elif user.role == 'chronicle_master':
             # Chronicle Master sees all reports sent to them
             return MISReport.objects.filter(
-                sent_to_chronicle_master=True
+                sent_to_chronicle_master_at__isnull=False
             )
         return MISReport.objects.none()
 
@@ -976,7 +1011,7 @@ class ChronicleDataRequestListCreateView(generics.ListCreateAPIView):
                 )
                 for acc in accumulators
                 for coord in coordinators.filter(campus_id=acc.campus_id)
-            ])
+            ], ignore_conflicts=True)  # already-pending identical requests stay as they are
 
 
 class ChronicleDashboardView(APIView):
@@ -1022,7 +1057,7 @@ class ChronicleDashboardView(APIView):
             coordinators_pending = total_coordinators - coordinators_submitted
 
             # Check if accumulator has sent any reports to chronicle master
-            report_filter = {'sent_to_chronicle_master': True, 'created_by': acc}
+            report_filter = {'sent_to_chronicle_master_at__isnull': False, 'created_by': acc}
             if chronicle_request_id:
                 try:
                     cr = ChronicleDataRequest.objects.get(id=chronicle_request_id)
@@ -1103,12 +1138,18 @@ class AccumulatorBulkRequestView(APIView):
                 skipped_count += 1
                 continue
 
-            MISDataRequest.objects.create(
-                accumulator=user,
-                coordinator=coord,
-                date_from=date_from,
-                date_to=date_to,
-            )
+            try:
+                with transaction.atomic():  # savepoint: one duplicate must not abort the loop
+                    MISDataRequest.objects.create(
+                        accumulator=user,
+                        coordinator=coord,
+                        date_from=date_from,
+                        date_to=date_to,
+                    )
+            except IntegrityError:
+                # a parallel click created the same pending request first (one_pending_mis_request)
+                skipped_count += 1
+                continue
             created_count += 1
 
         return Response({
@@ -1145,7 +1186,7 @@ class AccumulatorDashboardView(APIView):
             # Check if this coordinator has sent any report to accumulator
             reports = MISReport.objects.filter(
                 created_by=coord,
-                sent_to_accumulator=True,
+                sent_to_accumulator_at__isnull=False,
             )
 
             # Check pending requests from this accumulator to this coordinator
@@ -1211,7 +1252,7 @@ class AccumulatorExportView(APIView):
             ).order_by('date_from')
         else:
             reports = MISReport.objects.filter(
-                sent_to_accumulator=True,
+                sent_to_accumulator_at__isnull=False,
                 created_by__campus=user.campus
             ).order_by('date_from')
 
@@ -1294,7 +1335,7 @@ class ChronicleExportView(APIView):
             return Response({'detail': 'format must be "excel" or "json"'}, status=400)
 
         reports = MISReport.objects.filter(
-            sent_to_chronicle_master=True
+            sent_to_chronicle_master_at__isnull=False
         ).order_by('date_from')
 
         if date_from:
