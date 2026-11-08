@@ -324,3 +324,9 @@ import sys
 # transaction pooling breaks test-database setup.
 if 'test' in sys.argv:
     DATABASES['default']['PORT'] = '5432'
+    # Tests get their own Redis database (15), like Postgres' test_ database: tests call
+    # cache.clear(), which would otherwise wipe the app's cache and Celery queue on db 0.
+    from urllib.parse import urlsplit, urlunsplit
+    REDIS_URL = urlunsplit(urlsplit(REDIS_URL)._replace(path='/15'))
+    CACHES['default']['LOCATION'] = REDIS_URL
+    CELERY_BROKER_URL = CELERY_RESULT_BACKEND = REDIS_URL
