@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0cb4f276`
+- Built from commit: `7a6b4a0c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -40,13 +40,13 @@
 - DeleteAuthActivity.java
 - ._setup_base
 - SchoolModelTests
-- ErrorOccurrence
+- Patent
 - ._setup_base
 - Django Audit Views
 - BackgroundExportAllTests
 - SessionManager
 - Override
-- Patent
+- DeleteAuthDashboardFragment.java
 - service/views.py
 - .jsonStr
 - Override
@@ -59,10 +59,10 @@
 - .getSelectedSchoolId
 - ClubListPaginationTests
 - package.json
-- DeleteAuthDashboardFragment.java
+- ErrorOccurrence
 - PublicationAuthorTests
 - records/tests.py
-- ErrorOccurrenceModelTests
+- Override
 - AuditRequestIndexTests
 - Override
 - CertificationListPaginationTests
@@ -70,7 +70,7 @@
 - CoApplicantVisibilityTests
 - Django Service Tests
 - AccountIntegrityTests
-- Override
+- UserSchoolMappingViewTests
 - CoAuthorVisibilityTests
 - SchoolActivityAPITests
 - accounts/tests.py
@@ -85,12 +85,13 @@
 - Django Error Fingerprint
 - Override
 - TrustBoundaryTests
-- .onResponse
+- ErrorOccurrenceModelTests
 - ExportTestMixin
-- Django User-School Mapping Tests
+- .onResponse
 - StudentActivityModelTests
 - Django Settings Configuration
 - FDPListPaginationTests
+- PublicationAuthorIndexTests
 - DashboardCountsCacheTests
 - AuditListPaginationTests
 - PatentApplicantTests
@@ -98,9 +99,8 @@
 - PlacementListPaginationTests
 - PublicationListPaginationTests
 - Module Cluster 83
-- ClubModelTests
-- PublicationAuthorIndexTests
 - SchoolActivityModelTests
+- ClubModelTests
 - GeneratedExport
 - Module Cluster 132
 
@@ -226,9 +226,9 @@ Nodes (11): BackupConfigAPITests, CertificationAPITests, DashboardCountsAPITests
 Cohesion: 0.07
 Nodes (3): CampusModelTests, SchoolModelTests, UserSchoolMappingModelTests
 
-### Community 24 - "ErrorOccurrence"
-Cohesion: 0.21
-Nodes (5): ErrorOccurrence, Meta, ErrorOccurrenceSerializer, Meta, ErrorOccurrenceSerializerTests
+### Community 24 - "Patent"
+Cohesion: 0.12
+Nodes (15): _counts_key(), get_dashboard_counts(), invalidate_dashboard_cache(), _stamp_key(), Certification, Meta, Patent, Meta (+7 more)
 
 ### Community 25 - "._setup_base"
 Cohesion: 0.11
@@ -245,10 +245,6 @@ Nodes (3): SessionManager, BaseAuthActivity, LoginActivity
 ### Community 29 - "Override"
 Cohesion: 0.20
 Nodes (5): Callback<JsonObject>, Callback<JsonObject>, AuditAdapter.OnAuditActionListener, Callback<JsonObject>, Callback<JsonObject>
-
-### Community 30 - "Patent"
-Cohesion: 0.12
-Nodes (15): _counts_key(), get_dashboard_counts(), invalidate_dashboard_cache(), _stamp_key(), Certification, Meta, Patent, Meta (+7 more)
 
 ### Community 31 - "service/views.py"
 Cohesion: 0.07
@@ -289,6 +285,10 @@ Nodes (7): BaseRecordFragment, Callback<JsonObject>, Callback<JsonObject>, Callb
 ### Community 42 - "package.json"
 Cohesion: 0.05
 Nodes (44): author, dependencies, axios, @heroicons/react, react, react-dom, react-router-dom, devDependencies (+36 more)
+
+### Community 43 - "ErrorOccurrence"
+Cohesion: 0.21
+Nodes (5): ErrorOccurrence, Meta, ErrorOccurrenceSerializer, Meta, ErrorOccurrenceSerializerTests
 
 ### Community 45 - "records/tests.py"
 Cohesion: 0.04
@@ -338,17 +338,17 @@ Nodes (5): CertificationModelTests, FDPWorkshopGLModelTests, PatentApplicantInde
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Campus` connect `Django School Models` to `export/views.py`, `APITestCase`, `Django User Model Tests`, `export/tasks.py`, `ExportTestMixin`, `APITestCase`, `Django User-School Mapping Tests`, `export/serializers.py`, `Django Audit Models`, `School`, `AuditListPaginationTests`, `records/tests.py`, `get_user_school_ids`, `RolePermission`, `SchoolModelTests`, `AccountIntegrityTests`, `._setup_base`, `accounts/tests.py`?**
-  _High betweenness centrality (0.048) - this node is a cross-community bridge._
+- **Why does `Campus` connect `Django School Models` to `export/views.py`, `APITestCase`, `Django User Model Tests`, `export/tasks.py`, `ExportTestMixin`, `APITestCase`, `export/serializers.py`, `Django Audit Models`, `School`, `AuditListPaginationTests`, `records/tests.py`, `get_user_school_ids`, `RolePermission`, `SchoolModelTests`, `UserSchoolMappingViewTests`, `AccountIntegrityTests`, `._setup_base`, `accounts/tests.py`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
 - **What connects `DARK`, `OUTLINE`, `RED` to the rest of the system?**
   _22 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Android API Service Layer` be split into smaller, more focused modules?**
   _Cohesion score 0.05304982817869416 - nodes in this community are weakly interconnected._
-- **Why does `User` connect `records/tests.py` to `records/views.py`, `export/views.py`, `export/tasks.py`, `Django School Models`, `School`, `get_user_school_ids`, `ErrorTicket`, `accounts/views.py`, `._setup_base`, `ErrorOccurrence`, `Patent`, `service/views.py`, `Django User Model Tests`, `PublicationAuthorTests`, `CoApplicantVisibilityTests`, `CoAuthorVisibilityTests`, `SchoolActivityAPITests`, `accounts/tests.py`, `BackupConfiguration`, `AuditListPaginationTests`?**
+- **Why does `User` connect `records/tests.py` to `records/views.py`, `export/views.py`, `export/tasks.py`, `Django School Models`, `School`, `get_user_school_ids`, `ErrorTicket`, `accounts/views.py`, `._setup_base`, `Patent`, `service/views.py`, `Django User Model Tests`, `ErrorOccurrence`, `PublicationAuthorTests`, `CoApplicantVisibilityTests`, `CoAuthorVisibilityTests`, `SchoolActivityAPITests`, `accounts/tests.py`, `BackupConfiguration`, `AuditListPaginationTests`?**
   _High betweenness centrality (0.042) - this node is a cross-community bridge._
 - **Should `records/views.py` be split into smaller, more focused modules?**
   _Cohesion score 0.06174863387978142 - nodes in this community are weakly interconnected._
-- **Why does `School` connect `School` to `export/views.py`, `APITestCase`, `export/tasks.py`, `ExportTestMixin`, `APITestCase`, `Django School Models`, `Django User-School Mapping Tests`, `records/tests.py`, `AuditListPaginationTests`, `DashboardCountsCacheTests`, `get_user_school_ids`, `SchoolModelTests`, `AccountIntegrityTests`, `._setup_base`, `accounts/tests.py`, `Patent`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `School` connect `School` to `export/views.py`, `APITestCase`, `export/tasks.py`, `ExportTestMixin`, `APITestCase`, `Django School Models`, `records/tests.py`, `AuditListPaginationTests`, `DashboardCountsCacheTests`, `get_user_school_ids`, `SchoolModelTests`, `UserSchoolMappingViewTests`, `AccountIntegrityTests`, `._setup_base`, `Patent`, `accounts/tests.py`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
 - **Should `export/views.py` be split into smaller, more focused modules?**
   _Cohesion score 0.04603580562659847 - nodes in this community are weakly interconnected._
