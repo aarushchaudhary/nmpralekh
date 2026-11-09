@@ -1018,7 +1018,22 @@ Healthy targets: median under 150 ms, 95th percentile under 500 ms, failures und
 
 ### Code knowledge graph
 
-`graphify-out/` holds a code map built with [graphify](https://github.com/Graphify-Labs/graphify). After cloning, run `graphify update .` once (code only, no API cost) and `graphify hook install` to rebuild it after every commit. Then `graphify query "how does export work"` answers code questions without reading every file.
+`graphify-out/` holds a code map built with [graphify](https://github.com/Graphify-Labs/graphify), committed so every developer (and AI assistant) starts with it. `graphify query "how does export work"` then answers code questions without reading every file.
+
+After cloning, once:
+
+```bash
+graphify update .        # builds the local-only files (code only, no API cost)
+graphify hook install    # keeps the graph current after pulls, merges and branch switches
+```
+
+**Committing:** the graph records the commit it was built at, so it is committed separately, right after your change. Use this one command; it commits your change, rebuilds the graph, commits the graph only if it changed, and pushes both:
+
+```bash
+git add . && GRAPHIFY_SKIP_HOOK=1 git commit -m "<message>" && graphify update . && git add graphify-out && (git diff --cached --quiet || GRAPHIFY_SKIP_HOOK=1 git commit -m "Update knowledge graph") && git push
+```
+
+`GRAPHIFY_SKIP_HOOK=1` stops the hook's own background rebuild, which would otherwise leave changed graph files behind after every commit.
 
 ---
 

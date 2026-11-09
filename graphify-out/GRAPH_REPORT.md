@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `361f7b70`
+- Built from commit: `13c173c7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -35,9 +35,9 @@
 - BaseRecordFragment.java
 - append_safe_row
 - RolePermission
-- accounts/views.py
-- RecordAdapter
-- accounts/tests.py
+- UserSerializer
+- AuditAdapter
+- Override
 - ._setup_base
 - SchoolModelTests
 - PatentApplicantListCreateView
@@ -54,15 +54,15 @@
 - Override
 - Django User Model Tests
 - Django App Config Registry
-- Override
+- accounts/tests.py
 - BaseRecordFragment
 - .getSelectedSchoolId
 - ClubListPaginationTests
 - package.json
 - ErrorOccurrence
-- PublicationAuthorTests
-- records/tests.py
 - Override
+- records/tests.py
+- PublicationAuthorTests
 - AuditRequestIndexTests
 - Override
 - CertificationListPaginationTests
@@ -81,7 +81,7 @@
 - ReceivedMISDataFragment
 - CoPeopleReplaceTests
 - SchoolActivityListPaginationTests
-- APITestCase
+- Campus
 - Django Error Fingerprint
 - Override
 - TrustBoundaryTests
@@ -212,17 +212,13 @@ Nodes (12): append_safe_row(), ExportHelperFunctionTests, AccumulatorExportView,
 Cohesion: 0.09
 Nodes (15): RolePermission(), IsAdminOrUserOrSuperAdminOrCoordinatorTests, IsAdminOrUserPermissionTests, IsAdminPermissionTests, IsChronicleMasterPermissionTests, IsDeleteAuthPermissionTests, IsMasterOrSuperAdminPermissionTests, IsMasterPermissionTests (+7 more)
 
-### Community 19 - "accounts/views.py"
+### Community 19 - "UserSerializer"
 Cohesion: 0.06
 Nodes (18): LoginSerializer, UserSerializer, Meta, LoginSerializerTests, UserSerializerTests, FixedWindowThrottle, _get_redis(), _incr_fixed_window() (+10 more)
 
-### Community 20 - "RecordAdapter"
+### Community 20 - "AuditAdapter"
 Cohesion: 0.11
 Nodes (7): AuditAdapter, AuditViewHolder, OnAuditActionListener, DeleteAuthActivity, OnViewAllClickListener, DeleteAuthHistoryFragment, DeleteAuthPendingFragment
-
-### Community 21 - "accounts/tests.py"
-Cohesion: 0.21
-Nodes (4): UserManager, UserCreateSerializer, Meta, UserCreateSerializerTests
 
 ### Community 22 - "._setup_base"
 Cohesion: 0.06
@@ -268,6 +264,10 @@ Nodes (6): Filter, Callback<JsonObject>, RecordAdapter.RecordBinder, Callback<Js
 Cohesion: 0.11
 Nodes (6): AccountsConfig, AuditConfig, ExportConfig, RecordsConfig, SchoolsConfig, ServiceConfig
 
+### Community 38 - "accounts/tests.py"
+Cohesion: 0.21
+Nodes (4): UserManager, UserCreateSerializer, Meta, UserCreateSerializerTests
+
 ### Community 39 - "BaseRecordFragment"
 Cohesion: 0.08
 Nodes (7): BaseRecordFragment, Callback<JsonObject>, Callback<JsonObject>, Callback<JsonObject>, Callback<List<JsonObject>>, RecordAdapter.OnRecordActionListener, Callback<JsonObject>
@@ -312,7 +312,7 @@ Nodes (4): OnRecordActionListener, RecordBinder, CampusUsersFragment, RecordAdap
 Cohesion: 0.12
 Nodes (7): BadgeStyle, DARK, GRAY, OUTLINE, RED, FacultiesFragment, RecordAdapter.RecordBinder
 
-### Community 66 - "APITestCase"
+### Community 66 - "Campus"
 Cohesion: 0.05
 Nodes (12): Campus, Meta, CampusDetailViewTests, CampusListCreateViewTests, CampusReactivateViewTests, CampusSchoolsViewTests, CampusUsersSchoolViewTests, MySchoolsViewTests (+4 more)
 
@@ -348,17 +348,17 @@ Nodes (4): GeneratedExportModelTests, MISDataRequestModelTests, MISReportModelTe
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Campus` connect `APITestCase` to `export/views.py`, `Django User Model Tests`, `FanOutWriteTests`, `export/tasks.py`, `ExportTestMixin`, `APITestCase`, `Django School Models`, `Django Audit Models`, `records/tests.py`, `AuditListPaginationTests`, `get_user_school_ids`, `RolePermission`, `accounts/views.py`, `accounts/tests.py`, `AccountIntegrityTests`, `SchoolModelTests`, `UserSchoolMappingViewTests`, `User`?**
+- **Why does `Campus` connect `Campus` to `export/views.py`, `Django User Model Tests`, `FanOutWriteTests`, `accounts/tests.py`, `export/tasks.py`, `APITestCase`, `ExportTestMixin`, `Django School Models`, `Django Audit Models`, `records/tests.py`, `AuditListPaginationTests`, `get_user_school_ids`, `RolePermission`, `UserSerializer`, `UserSchoolMappingViewTests`, `AccountIntegrityTests`, `SchoolModelTests`, `User`?**
   _High betweenness centrality (0.043) - this node is a cross-community bridge._
 - **What connects `DARK`, `OUTLINE`, `RED` to the rest of the system?**
   _22 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Android API Service Layer` be split into smaller, more focused modules?**
   _Cohesion score 0.05304982817869416 - nodes in this community are weakly interconnected._
-- **Why does `User` connect `User` to `records/views.py`, `export/views.py`, `export/tasks.py`, `Django School Models`, `ErrorTicket`, `django_db`, `get_user_school_ids`, `accounts/views.py`, `accounts/tests.py`, `BugReport`, `ErrorOccurrence`, `PublicationAuthorTests`, `records/tests.py`, `CoApplicantVisibilityTests`, `CoAuthorVisibilityTests`, `SchoolActivityAPITests`, `BackupConfiguration`, `CoPeopleReplaceTests`, `APITestCase`?**
+- **Why does `User` connect `User` to `records/views.py`, `export/views.py`, `export/tasks.py`, `Django School Models`, `ErrorTicket`, `django_db`, `get_user_school_ids`, `UserSerializer`, `BugReport`, `accounts/tests.py`, `ErrorOccurrence`, `records/tests.py`, `PublicationAuthorTests`, `CoApplicantVisibilityTests`, `CoAuthorVisibilityTests`, `SchoolActivityAPITests`, `BackupConfiguration`, `CoPeopleReplaceTests`, `Campus`?**
   _High betweenness centrality (0.040) - this node is a cross-community bridge._
 - **Should `records/views.py` be split into smaller, more focused modules?**
   _Cohesion score 0.042643560992184845 - nodes in this community are weakly interconnected._
-- **Why does `School` connect `Django School Models` to `records/views.py`, `APITestCase`, `export/views.py`, `export/tasks.py`, `ExportTestMixin`, `APITestCase`, `AuditRequestModelTests`, `get_user_school_ids`, `AuditListPaginationTests`, `records/tests.py`, `DashboardCountsCacheTests`, `accounts/tests.py`, `AccountIntegrityTests`, `SchoolModelTests`, `UserSchoolMappingViewTests`, `User`?**
+- **Why does `School` connect `Django School Models` to `records/views.py`, `Campus`, `export/views.py`, `accounts/tests.py`, `export/tasks.py`, `APITestCase`, `ExportTestMixin`, `AuditRequestModelTests`, `get_user_school_ids`, `AuditListPaginationTests`, `records/tests.py`, `DashboardCountsCacheTests`, `UserSchoolMappingViewTests`, `AccountIntegrityTests`, `SchoolModelTests`, `User`?**
   _High betweenness centrality (0.032) - this node is a cross-community bridge._
 - **Should `export/views.py` be split into smaller, more focused modules?**
   _Cohesion score 0.03464912280701754 - nodes in this community are weakly interconnected._
