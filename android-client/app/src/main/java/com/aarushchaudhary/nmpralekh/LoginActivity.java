@@ -125,7 +125,7 @@ public class LoginActivity extends AppCompatActivity {
             intent = new Intent(this, SuperAdminActivity.class);
         } else if (role.equals("delete_auth")) {
             intent = new Intent(this, DeleteAuthActivity.class);
-        } else if (role.equals("admin") || role.equals("coordinator")) {
+        } else if (role.equals("admin") || role.equals("mis_coordinator")) {
             intent = new Intent(this, AdminActivity.class);
         } else {
             intent = new Intent(this, FacultyActivity.class);

@@ -294,38 +294,32 @@ public class PatentsFragment extends BaseRecordFragment {
         });
     }
 
+    /** Sends the full coApplicants list in one request; the server saves it all or nothing. */
     private void saveApplicants(int patentId, Runnable onComplete) {
-        List<JsonObject> applicantsToAdd = new ArrayList<>();
-        for (JsonObject applicant : pendingApplicants) {
-            if (!applicant.has("id")) { // Only add new ones
-                applicantsToAdd.add(applicant);
-            }
-        }
-        if (applicantsToAdd.isEmpty()) {
-            onComplete.run();
-            return;
-        }
-        saveApplicantRecursive(patentId, applicantsToAdd, 0, onComplete);
-    }
-    
-    private void saveApplicantRecursive(int patentId, List<JsonObject> applicantsToAdd, int index, Runnable onComplete) {
-        if (index >= applicantsToAdd.size()) {
-            if (isAdded() && getActivity() != null) {
-                getActivity().runOnUiThread(onComplete);
-            }
-            return;
-        }
-        apiService.addPatentApplicant(patentId, applicantsToAdd.get(index)).enqueue(new Callback<JsonObject>() {
+        JsonArray body = new JsonArray();
+        for (JsonObject person : pendingApplicants) body.add(person);
+        apiService.replacePatentApplicants(patentId, body).enqueue(new Callback<JsonElement>() {
             @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                saveApplicantRecursive(patentId, applicantsToAdd, index + 1, onComplete);
+            public void onResponse(Call<JsonElement> call, Response<JsonElement> response) {
+                if (!isAdded()) return;
+                if (response.isSuccessful()) {
+                    onComplete.run();
+                } else {
+                    coApplicantsFailed();
+                }
             }
             @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
-                // Continue even if one fails
-                saveApplicantRecursive(patentId, applicantsToAdd, index + 1, onComplete);
+            public void onFailure(Call<JsonElement> call, Throwable t) {
+                if (!isAdded()) return;
+                coApplicantsFailed();
             }
         });
+    }
+
+    private void coApplicantsFailed() {
+        Toast.makeText(requireContext(), "Patent saved, but its co-applicants were not. Edit it to try again.",
+                Toast.LENGTH_LONG).show();
+        loadData();
     }
 
     private class FacultyAutoCompleteAdapter extends ArrayAdapter<JsonObject> implements Filterable {

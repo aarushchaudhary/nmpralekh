@@ -63,7 +63,7 @@ public class HomeDashboardFragment extends Fragment {
         apiService = ApiClient.getApiService(requireContext());
 
         String role = sessionManager.getRole();
-        if (role.equals("admin") || role.equals("super_admin") || role.equals("coordinator")) {
+        if (role.equals("admin") || role.equals("super_admin") || role.equals("mis_coordinator")) {
             modules = new String[][]{
                 {"school_activities", "School Activities"},
                 {"student_activities", "Student Activities"},

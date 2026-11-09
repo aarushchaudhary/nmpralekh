@@ -308,38 +308,32 @@ public class PublicationsFragment extends BaseRecordFragment {
         });
     }
 
+    /** Sends the full coAuthors list in one request; the server saves it all or nothing. */
     private void saveAuthors(int pubId, Runnable onComplete) {
-        List<JsonObject> authorsToAdd = new ArrayList<>();
-        for (JsonObject author : pendingAuthors) {
-            if (!author.has("id")) { // Only add new ones
-                authorsToAdd.add(author);
-            }
-        }
-        if (authorsToAdd.isEmpty()) {
-            onComplete.run();
-            return;
-        }
-        saveAuthorRecursive(pubId, authorsToAdd, 0, onComplete);
-    }
-    
-    private void saveAuthorRecursive(int pubId, List<JsonObject> authorsToAdd, int index, Runnable onComplete) {
-        if (index >= authorsToAdd.size()) {
-            if (isAdded() && getActivity() != null) {
-                getActivity().runOnUiThread(onComplete);
-            }
-            return;
-        }
-        apiService.addPublicationAuthor(pubId, authorsToAdd.get(index)).enqueue(new Callback<JsonObject>() {
+        JsonArray body = new JsonArray();
+        for (JsonObject person : pendingAuthors) body.add(person);
+        apiService.replacePublicationAuthors(pubId, body).enqueue(new Callback<JsonElement>() {
             @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                saveAuthorRecursive(pubId, authorsToAdd, index + 1, onComplete);
+            public void onResponse(Call<JsonElement> call, Response<JsonElement> response) {
+                if (!isAdded()) return;
+                if (response.isSuccessful()) {
+                    onComplete.run();
+                } else {
+                    coAuthorsFailed();
+                }
             }
             @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
-                // Continue even if one fails
-                saveAuthorRecursive(pubId, authorsToAdd, index + 1, onComplete);
+            public void onFailure(Call<JsonElement> call, Throwable t) {
+                if (!isAdded()) return;
+                coAuthorsFailed();
             }
         });
+    }
+
+    private void coAuthorsFailed() {
+        Toast.makeText(requireContext(), "Publication saved, but its co-authors were not. Edit it to try again.",
+                Toast.LENGTH_LONG).show();
+        loadData();
     }
 
     private class FacultyAutoCompleteAdapter extends ArrayAdapter<JsonObject> implements Filterable {

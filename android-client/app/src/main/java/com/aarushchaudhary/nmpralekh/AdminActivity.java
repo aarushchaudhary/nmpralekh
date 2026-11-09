@@ -56,6 +56,14 @@ public class AdminActivity extends BaseAuthActivity
         // Setup Navigation View
         binding.navView.setNavigationItemSelectedListener(this);
 
+        // MIS coordinators share this screen read-only; clubs, faculties and received MIS data are admin-only
+        boolean coordinator = "mis_coordinator".equals(new SessionManager(this).getRole());
+        if (coordinator) {
+            binding.navView.getMenu().findItem(R.id.nav_group_manage).setVisible(false);
+            binding.navView.getMenu().findItem(R.id.nav_group_export).setVisible(false);
+            if (getSupportActionBar() != null) getSupportActionBar().setTitle("Coordinator Dashboard");
+        }
+
         // Set nav header user info
         View headerView = binding.navView.getHeaderView(0);
         if (headerView != null) {
@@ -67,7 +75,7 @@ public class AdminActivity extends BaseAuthActivity
                 tvName.setText(session.getFullName());
             }
             if (tvSubtitle != null) {
-                tvSubtitle.setText("Admin");
+                tvSubtitle.setText(coordinator ? "MIS Coordinator" : "Admin");
             }
         }
 

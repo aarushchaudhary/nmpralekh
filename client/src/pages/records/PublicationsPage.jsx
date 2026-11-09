@@ -39,7 +39,6 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selected,          setSelected]          = useState(null)
   const [form,              setForm]              = useState(empty)
-  const [loadedIds, setLoadedIds] = useState([])
   const [pageError, setPageError] = useState('')
   const [coAuthors,         setCoAuthors]         = useState([])
   const [saving,            setSaving]            = useState(false)
@@ -58,7 +57,6 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
   const openCreate = () => {
     setSelected(null)
     setCoAuthors([])
-    setLoadedIds([])
     setForm({
       ...empty,
       author_name: selfOnly ? (user?.full_name || '') : '',
@@ -84,7 +82,6 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
     const res  = await api.get(`/records/publications/${row.id}/authors/`)
     const data = res.data?.results ?? res.data
     setCoAuthors(data)
-    setLoadedIds(data.map(p => p.id))
     setErrors({}); setShowForm(true)
   }
 
@@ -99,27 +96,9 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
     setErrors(e); return !Object.keys(e).length
   }
 
-  const saveCoAuthors = async (publicationId) => {
-    for (const author of coAuthors) {
-      if (!author.name) continue
-      if (author.id) {
-        await api.put(
-          `/records/publications/${publicationId}/authors/${author.id}/`,
-          author
-        )
-      } else {
-        await api.post(
-          `/records/publications/${publicationId}/authors/`,
-          author
-        )
-      }
-    }
-    // people removed in the picker since the form opened
-    const keptIds = new Set(coAuthors.filter(p => p.id && p.name).map(p => p.id))
-    for (const id of loadedIds.filter(id => !keptIds.has(id))) {
-      await api.delete(`/records/publications/${publicationId}/authors/${id}/`)
-    }
-  }
+  // one request replaces the whole list on the server, all or nothing
+  const saveCoAuthors = publicationId =>
+    api.put(`/records/publications/${publicationId}/authors/`, coAuthors.filter(a => a.name))
 
   const handleSubmit = async () => {
     if (!validate()) return

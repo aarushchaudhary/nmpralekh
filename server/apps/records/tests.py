@@ -1436,3 +1436,140 @@ class ListQueryCountTests(RecordTestMixin, APITestCase):
         for url in urls:
             with self.subTest(url=url):
                 self.assertEqual(self._queries(url), few[url])
+
+
+def count_queries(client, method, url, data=None):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    with CaptureQueriesContext(connection) as ctx:
+        resp = getattr(client, method)(url, data, format='json')
+    return resp, len(ctx)
+
+
+class DetailQueryCountTests(RecordTestMixin, APITestCase):
+    """A single record with many co-authors / collaborations must not cost a query per child."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self._setup_base()
+        today = date(2026, 1, 1)
+        self.pub = FacultyPublication.objects.create(school=self.school, author_name='a', title_of_paper='t',
+                                                     journal_or_conference_name='j', date=today,
+                                                     doi_or_link='x', created_by=self.faculty)
+        self.pat = Patent.objects.create(school=self.school, applicant_name='a', title_of_patent='t',
+                                         date_of_publication=today, journal_number='1', doi_or_link='x',
+                                         created_by=self.faculty)
+        self.sa = SchoolActivity.objects.create(school=self.school, name='a', date=today, details='d',
+                                                created_by=self.faculty)
+        self.st = StudentActivity.objects.create(school=self.school, name='a', date=today, details='d',
+                                                 created_by=self.faculty)
+        self.n = 0
+
+    def _add_children(self, k):
+        for _ in range(k):
+            self.n += 1
+            u = User.objects.create_user(username=f'kid{self.n}', email=f'kid{self.n}@t.com', password='p',
+                                         full_name=f'Kid {self.n}', role='user', campus=self.campus)
+            s = School.objects.create(campus=self.campus, name=f'Collab {self.n}', code=f'CB{self.n}')
+            PublicationAuthor.objects.create(publication=self.pub, name='c', author_type='faculty', user=u, order=1)
+            PatentApplicant.objects.create(patent=self.pat, name='c', applicant_type='faculty', user=u)
+            SchoolActivityCollaboration.objects.create(activity=self.sa, collaborating_school=s)
+            StudentActivityCollaboration.objects.create(activity=self.st, collaborating_school=s)
+
+    def test_query_count_does_not_grow_with_children(self):
+        self.client.force_authenticate(user=self.faculty)
+        urls = [f'/api/records/publications/{self.pub.id}/', f'/api/records/patents/{self.pat.id}/',
+                f'/api/records/school-activities/{self.sa.id}/', f'/api/records/student-activities/{self.st.id}/',
+                f'/api/records/publications/{self.pub.id}/authors/',
+                f'/api/records/patents/{self.pat.id}/applicants/']
+        for url in urls:
+            self.client.get(url)  # warm the school-id cache
+        self._add_children(1)
+        few = {url: count_queries(self.client, 'get', url)[1] for url in urls}
+        self._add_children(8)
+        for url in urls:
+            with self.subTest(url=url):
+                resp, queries = count_queries(self.client, 'get', url)
+                self.assertEqual(resp.status_code, 200)
+                self.assertEqual(queries, few[url])
+
+
+class CoPeopleReplaceTests(RecordTestMixin, APITestCase):
+    """PUT on .../authors/ and .../applicants/ replaces the whole list in one transaction."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self._setup_base()
+        today = date(2026, 1, 1)
+        self.pub = FacultyPublication.objects.create(school=self.school, author_name='a', title_of_paper='t',
+                                                     journal_or_conference_name='j', date=today,
+                                                     doi_or_link='x', created_by=self.faculty)
+        self.pat = Patent.objects.create(school=self.school, applicant_name='a', title_of_patent='t',
+                                         date_of_publication=today, journal_number='1', doi_or_link='x',
+                                         created_by=self.faculty)
+        PublicationAuthor.objects.create(publication=self.pub, name='Keep', author_type='faculty', order=1)
+        PublicationAuthor.objects.create(publication=self.pub, name='Drop', author_type='faculty', order=2)
+        self.url = f'/api/records/publications/{self.pub.id}/authors/'
+        self.client.force_authenticate(user=self.faculty)
+
+    def names(self):
+        return sorted(PublicationAuthor.objects.filter(publication=self.pub).values_list('name', flat=True))
+
+    def test_replace_adds_and_removes_in_one_request(self):
+        resp = self.client.put(self.url, [
+            {'name': 'Keep', 'author_type': 'faculty', 'order': 1},
+            {'name': 'New', 'author_type': 'student', 'order': 2, 'user': self.admin_user.id},
+        ], format='json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(self.names(), ['Keep', 'New'])
+        self.assertEqual({p['name']: p['user_full_name'] for p in resp.data if p['user']}, {'New': 'Admin'})
+
+    def test_clients_can_send_back_what_they_loaded(self):
+        # web and Android PUT the loaded objects (with id, user_full_name) plus new ones
+        loaded = self.client.get(self.url).data
+        loaded = loaded.get('results', loaded) if isinstance(loaded, dict) else loaded
+        resp = self.client.put(self.url, list(loaded) + [{'name': 'Added', 'author_type': 'faculty',
+                                                          'user': None}], format='json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(self.names(), ['Added', 'Drop', 'Keep'])
+
+    def test_one_bad_row_changes_nothing(self):
+        resp = self.client.put(self.url, [
+            {'name': 'Fine', 'author_type': 'faculty'},
+            {'author_type': 'faculty'},  # no name
+        ], format='json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(self.names(), ['Drop', 'Keep'])
+
+    def test_empty_list_removes_everyone(self):
+        resp = self.client.put(self.url, [], format='json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(self.names(), [])
+
+    def test_faculty_cannot_replace_on_someone_elses_publication(self):
+        other = User.objects.create_user(username='other', email='o@t.com', password='p', full_name='O',
+                                         role='user', campus=self.campus)
+        UserSchoolMapping.objects.create(user=other, school=self.school, assigned_by=self.master)
+        self.client.force_authenticate(user=other)
+        resp = self.client.put(self.url, [], format='json')
+        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(self.names(), ['Drop', 'Keep'])
+
+    def test_patent_applicants_replace(self):
+        PatentApplicant.objects.create(patent=self.pat, name='Old', applicant_type='faculty')
+        resp = self.client.put(f'/api/records/patents/{self.pat.id}/applicants/', [
+            {'name': 'A', 'applicant_type': 'faculty'}, {'name': 'B', 'applicant_type': 'student'},
+        ], format='json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(sorted(PatentApplicant.objects.filter(patent=self.pat).values_list('name', flat=True)),
+                         ['A', 'B'])
+
+    def test_replace_cost_does_not_grow_with_people(self):
+        few = [{'name': f'P{i}', 'author_type': 'faculty'} for i in range(2)]
+        many = [{'name': f'P{i}', 'author_type': 'faculty'} for i in range(10)]
+        self.client.put(self.url, few, format='json')  # warm caches
+        _, q_few = count_queries(self.client, 'put', self.url, few)
+        _, q_many = count_queries(self.client, 'put', self.url, many)
+        self.assertEqual(q_many, q_few)

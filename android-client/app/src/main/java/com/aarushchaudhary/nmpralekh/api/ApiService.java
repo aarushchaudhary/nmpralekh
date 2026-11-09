@@ -104,8 +104,9 @@ public interface ApiService {
     @GET("api/records/publications/{id}/authors/")
     Call<JsonObject> getPublicationAuthors(@Path("id") int id);
 
-    @POST("api/records/publications/{id}/authors/")
-    Call<JsonObject> addPublicationAuthor(@Path("id") int id, @Body JsonObject body);
+    // replaces the whole co-author list in one transaction
+    @PUT("api/records/publications/{id}/authors/")
+    Call<JsonElement> replacePublicationAuthors(@Path("id") int id, @Body com.google.gson.JsonArray body);
 
     // Patents
     @GET("api/records/patents/")
@@ -124,8 +125,9 @@ public interface ApiService {
     @GET("api/records/patents/{id}/applicants/")
     Call<JsonObject> getPatentApplicants(@Path("id") int id);
 
-    @POST("api/records/patents/{id}/applicants/")
-    Call<JsonObject> addPatentApplicant(@Path("id") int id, @Body JsonObject body);
+    // replaces the whole co-applicant list in one transaction
+    @PUT("api/records/patents/{id}/applicants/")
+    Call<JsonElement> replacePatentApplicants(@Path("id") int id, @Body com.google.gson.JsonArray body);
 
     // Certifications
     @GET("api/records/certifications/")

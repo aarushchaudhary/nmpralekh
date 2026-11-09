@@ -91,10 +91,9 @@ public abstract class BaseRecordFragment extends Fragment {
     }
 
     protected boolean isReadOnly() {
-        if (sessionManager != null && "super_admin".equals(sessionManager.getRole())) {
-            return true;
-        }
-        return false;
+        // super admins and MIS coordinators can view school records but never change them
+        String role = sessionManager != null ? sessionManager.getRole() : "";
+        return "super_admin".equals(role) || "mis_coordinator".equals(role);
     }
 
     @Override

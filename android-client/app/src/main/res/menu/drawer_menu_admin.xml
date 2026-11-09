@@ -6,7 +6,7 @@
             android:title="Dashboard" />
     </group>
 
-    <item android:title="Manage">
+    <item android:id="@+id/nav_group_manage" android:title="Manage">
         <menu>
             <group android:checkableBehavior="single">
                 <item
@@ -47,7 +47,7 @@
         </menu>
     </item>
 
-    <item android:title="Export">
+    <item android:id="@+id/nav_group_export" android:title="Export">
         <menu>
             <group android:checkableBehavior="single">
                 <item

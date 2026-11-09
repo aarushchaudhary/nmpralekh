@@ -684,3 +684,127 @@ class AccumulatorDashboardTests(ExportTestMixin, APITestCase):
             self._add_coordinator(i, submitted=1, pending=1)
         _, many = self._get()
         self.assertEqual(many, few)
+
+
+def _queries(client, method, url, data=None):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    with CaptureQueriesContext(connection) as ctx:
+        resp = getattr(client, method)(url, data, format='json')
+    return resp, len(ctx)
+
+
+class ChronicleDashboardTests(ExportTestMixin, APITestCase):
+    """Per-accumulator status, computed with a fixed number of queries."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self._setup_base()
+        self.client.force_authenticate(user=self.chronicle_master)
+        self.k = 0
+
+    def _add_campus(self, coordinators=2, completed=1, reports=1):
+        from django.utils import timezone
+        from datetime import timedelta
+        self.k += 1
+        c = Campus.objects.create(name=f'Campus {self.k}', code=f'CP{self.k}', city='X')
+        acc = User.objects.create_user(username=f'acc{self.k}', email=f'acc{self.k}@t.com', password='p',
+                                       full_name=f'Acc {self.k}', role='mis_accumulator', campus=c)
+        coords = [User.objects.create_user(username=f'co{self.k}_{i}', email=f'co{self.k}_{i}@t.com',
+                                           password='p', full_name='C', role='mis_coordinator', campus=c)
+                  for i in range(coordinators)]
+        for coord in coords[:completed]:
+            MISDataRequest.objects.create(accumulator=acc, coordinator=coord, date_from=date(2026, 1, 1),
+                                          date_to=date(2026, 1, 31), status='completed')
+        for d in range(reports):
+            MISReport.objects.create(created_by=acc, name=f'r{d}', data_content='x', date_from=date(2026, 1, 1),
+                                     date_to=date(2026, 1, 31),
+                                     sent_to_chronicle_master_at=timezone.now() + timedelta(hours=d))
+        return acc
+
+    def test_status_per_accumulator(self):
+        done = self._add_campus(coordinators=3, completed=2, reports=2)
+        idle = self._add_campus(coordinators=1, completed=0, reports=0)
+        resp = self.client.get('/api/export/chronicle/dashboard/')
+        rows = {r['id']: r for r in resp.data}
+        self.assertEqual((rows[done.id]['total_coordinators'], rows[done.id]['coordinators_submitted'],
+                          rows[done.id]['coordinators_pending']), (3, 2, 1))
+        self.assertTrue(rows[done.id]['has_submitted'])
+        latest = MISReport.objects.filter(created_by=done).order_by('-sent_to_chronicle_master_at').first()
+        self.assertEqual(rows[done.id]['submitted_at'], latest.sent_to_chronicle_master_at)
+        self.assertFalse(rows[idle.id]['has_submitted'])
+        self.assertIsNone(rows[idle.id]['submitted_at'])
+        self.assertEqual(rows[idle.id]['coordinators_pending'], 1)
+
+    def test_query_count_does_not_grow_with_accumulators(self):
+        for _ in range(2):
+            self._add_campus()
+        _, few = _queries(self.client, 'get', '/api/export/chronicle/dashboard/')
+        for _ in range(6):
+            self._add_campus()
+        _, many = _queries(self.client, 'get', '/api/export/chronicle/dashboard/')
+        self.assertEqual(many, few)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class FanOutWriteTests(ExportTestMixin, APITestCase):
+    """Request-all and the chronicle fan-out insert in bulk, with exact created / skipped counts."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self._setup_base()
+        self.k = 0
+
+    def _coordinators(self, n, campus=None):
+        out = []
+        for _ in range(n):
+            self.k += 1
+            out.append(User.objects.create_user(username=f'fc{self.k}', email=f'fc{self.k}@t.com', password='p',
+                                                full_name='C', role='mis_coordinator',
+                                                campus=campus or self.campus))
+        return out
+
+    def test_request_all_skips_coordinators_already_pending(self):
+        extra = self._coordinators(2)
+        MISDataRequest.objects.create(accumulator=self.accumulator, coordinator=extra[0],
+                                      date_from=date(2026, 1, 10), date_to=date(2026, 1, 20))
+        self.client.force_authenticate(user=self.accumulator)
+        resp = self.client.post('/api/export/accumulator/request-all/',
+                                {'date_from': '2026-01-01', 'date_to': '2026-01-31'}, format='json')
+        self.assertEqual((resp.data['created'], resp.data['skipped']), (2, 1))  # self.coordinator + extra[1]
+        self.assertEqual(MISDataRequest.objects.filter(coordinator=extra[0]).count(), 1)
+
+    def test_request_all_cost_does_not_grow_with_coordinators(self):
+        self.client.force_authenticate(user=self.accumulator)
+        self._coordinators(1)
+        _, few = _queries(self.client, 'post', '/api/export/accumulator/request-all/',
+                          {'date_from': '2026-01-01', 'date_to': '2026-01-31'})
+        self._coordinators(8)
+        resp, many = _queries(self.client, 'post', '/api/export/accumulator/request-all/',
+                              {'date_from': '2026-02-01', 'date_to': '2026-02-28'})
+        self.assertEqual(resp.data['created'], 10)
+        self.assertEqual(many, few)
+
+    def test_chronicle_fan_out_cost_does_not_grow_with_campuses(self):
+        def add_campuses(n):
+            for _ in range(n):
+                self.k += 1
+                c = Campus.objects.create(name=f'F{self.k}', code=f'F{self.k}', city='X')
+                User.objects.create_user(username=f'fa{self.k}', email=f'fa{self.k}@t.com', password='p',
+                                         full_name='A', role='mis_accumulator', campus=c)
+                self._coordinators(2, campus=c)
+        self.client.force_authenticate(user=self.chronicle_master)
+        add_campuses(1)
+        _, few = _queries(self.client, 'post', '/api/export/chronicle/data-requests/',
+                          {'date_from': '2026-01-01', 'date_to': '2026-01-31'})
+        add_campuses(6)
+        resp, many = _queries(self.client, 'post', '/api/export/chronicle/data-requests/',
+                              {'date_from': '2026-02-01', 'date_to': '2026-02-28'})
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(many, few)
+        # every accumulator asked exactly its own campus's coordinators
+        for req in MISDataRequest.objects.filter(date_from=date(2026, 2, 1)).select_related('accumulator',
+                                                                                            'coordinator'):
+            self.assertEqual(req.accumulator.campus_id, req.coordinator.campus_id)

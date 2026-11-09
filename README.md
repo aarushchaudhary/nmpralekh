@@ -609,6 +609,7 @@ Tap the ⚙️ settings button on the login screen and enter the server address:
 | Admin | School records, clubs, faculty list, received MIS data |
 | Super Admin | Read-only records across the campus, campus users |
 | Delete Auth | Pending requests with field differences, approve / reject, history |
+| MIS Coordinator | School records, read-only |
 
 Other roles use the web portal.
 
@@ -844,9 +845,9 @@ GET    POST             /api/records/<module>/
 GET    PUT PATCH DELETE /api/records/<module>/<id>/      update / delete → 202, goes to audit
        <module> = school-activities | student-activities | fdp | publications
                   | patents | certifications | placements | clubs
-GET    POST             /api/records/publications/<id>/authors/
+GET    POST PUT         /api/records/publications/<id>/authors/          PUT = replace the whole list (one transaction)
 GET    PUT PATCH DELETE /api/records/publications/<id>/authors/<id>/
-GET    POST             /api/records/patents/<id>/applicants/
+GET    POST PUT         /api/records/patents/<id>/applicants/            PUT = replace the whole list (one transaction)
 GET    PUT PATCH DELETE /api/records/patents/<id>/applicants/<id>/
 GET    /api/records/dashboard-counts/                    cached 60 s
 GET    /api/records/faculty-users/
@@ -950,7 +951,7 @@ Rules the database enforces itself:
 
 ## Testing and CI
 
-### Server: 423 tests
+### Server: 436 tests
 
 ```bash
 cd server && source venv/bin/activate
@@ -989,7 +990,7 @@ cd android-client && ./gradlew assembleDebug
 ```mermaid
 flowchart LR
     push["push / PR to main"] --> c["Client<br/>npm ci · lint · test · build<br/>Node 24"]
-    push --> s["Server<br/>check · 423 tests<br/>Python 3.12, Postgres 16, Redis 7"]
+    push --> s["Server<br/>check · 436 tests<br/>Python 3.12, Postgres 16, Redis 7"]
     push --> a["Android<br/>assembleDebug<br/>JDK 21"]
 
     classDef p fill:#2A2A2A,stroke:#000,color:#fff,stroke-width:2px

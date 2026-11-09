@@ -44,7 +44,6 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selected,          setSelected]          = useState(null)
   const [form,              setForm]              = useState(empty)
-  const [loadedIds, setLoadedIds] = useState([])
   const [pageError, setPageError] = useState('')
   const [coApplicants,      setCoApplicants]      = useState([])
   const [saving,            setSaving]            = useState(false)
@@ -54,7 +53,7 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
   const isEdit = !!selected
 
   const openCreate = () => {
-    setSelected(null); setCoApplicants([]); setLoadedIds([])
+    setSelected(null); setCoApplicants([])
     setForm({
       ...empty,
       applicant_name: selfOnly ? (user?.full_name || '') : '',
@@ -79,7 +78,6 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
     const res  = await api.get(`/records/patents/${row.id}/applicants/`)
     const data = res.data?.results ?? res.data
     setCoApplicants(data)
-    setLoadedIds(data.map(p => p.id))
     setErrors({}); setShowForm(true)
   }
 
@@ -94,27 +92,9 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
     setErrors(e); return !Object.keys(e).length
   }
 
-  const saveCoApplicants = async (patentId) => {
-    for (const applicant of coApplicants) {
-      if (!applicant.name) continue
-      if (applicant.id) {
-        await api.put(
-          `/records/patents/${patentId}/applicants/${applicant.id}/`,
-          applicant
-        )
-      } else {
-        await api.post(
-          `/records/patents/${patentId}/applicants/`,
-          applicant
-        )
-      }
-    }
-    // people removed in the picker since the form opened
-    const keptIds = new Set(coApplicants.filter(p => p.id && p.name).map(p => p.id))
-    for (const id of loadedIds.filter(id => !keptIds.has(id))) {
-      await api.delete(`/records/patents/${patentId}/applicants/${id}/`)
-    }
-  }
+  // one request replaces the whole list on the server, all or nothing
+  const saveCoApplicants = patentId =>
+    api.put(`/records/patents/${patentId}/applicants/`, coApplicants.filter(a => a.name))
 
   const handleSubmit = async () => {
     if (!validate()) return

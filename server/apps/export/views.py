@@ -6,7 +6,8 @@ from openpyxl.cell import WriteOnlyCell
 from celery.result import AsyncResult
 from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import Count
+from collections import defaultdict
+from django.db.models import Count, Max
 from django.core.cache import cache
 from django.http import HttpResponse, FileResponse
 from django.utils.decorators import method_decorator
@@ -1001,7 +1002,9 @@ class ChronicleDataRequestListCreateView(generics.ListCreateAPIView):
             accumulators = User.objects.filter(
                 role='mis_accumulator', is_active=True, campus__isnull=False
             )
-            coordinators = User.objects.filter(role='mis_coordinator', is_active=True)
+            coordinators_by_campus = defaultdict(list)
+            for coord in User.objects.filter(role='mis_coordinator', is_active=True, campus__isnull=False):
+                coordinators_by_campus[coord.campus_id].append(coord)
             MISDataRequest.objects.bulk_create([
                 MISDataRequest(
                     accumulator=acc,
@@ -1011,7 +1014,7 @@ class ChronicleDataRequestListCreateView(generics.ListCreateAPIView):
                     chronicle_request=chronicle_request,
                 )
                 for acc in accumulators
-                for coord in coordinators.filter(campus_id=acc.campus_id)
+                for coord in coordinators_by_campus[acc.campus_id]
             ], ignore_conflicts=True)  # already-pending identical requests stay as they are
 
 
@@ -1026,52 +1029,48 @@ class ChronicleDashboardView(APIView):
     def get(self, request):
         chronicle_request_id = request.query_params.get('chronicle_request_id')
 
-        accumulators = User.objects.filter(
+        accumulators = list(User.objects.filter(
             role='mis_accumulator', is_active=True
-        ).select_related('campus')
+        ).select_related('campus'))
+        acc_ids = [acc.id for acc in accumulators]
+
+        # Active coordinators per campus
+        coordinators_per_campus = dict(
+            User.objects.filter(role='mis_coordinator', is_active=True, campus__isnull=False)
+            .values('campus_id').annotate(n=Count('id')).values_list('campus_id', 'n')
+        )
+
+        # Coordinators who completed a request, per accumulator (optionally for one chronicle request)
+        data_requests = MISDataRequest.objects.filter(accumulator_id__in=acc_ids, status='completed')
+        if chronicle_request_id:
+            data_requests = data_requests.filter(chronicle_request_id=chronicle_request_id)
+        submitted_per_acc = dict(
+            data_requests.values('accumulator_id')
+            .annotate(n=Count('coordinator', distinct=True)).values_list('accumulator_id', 'n')
+        )
+
+        # Latest report each accumulator sent to the chronicle master (overlapping the request's dates)
+        report_filter = {'sent_to_chronicle_master_at__isnull': False, 'created_by_id__in': acc_ids}
+        if chronicle_request_id:
+            try:
+                cr = ChronicleDataRequest.objects.get(id=chronicle_request_id)
+                report_filter['date_from__lte'] = cr.date_to
+                report_filter['date_to__gte'] = cr.date_from
+            except ChronicleDataRequest.DoesNotExist:
+                pass
+        latest_sent = dict(
+            MISReport.objects.filter(**report_filter).values('created_by_id')
+            .annotate(latest=Max('sent_to_chronicle_master_at')).values_list('created_by_id', 'latest')
+        )
 
         result = []
         for acc in accumulators:
             campus_name = acc.campus.name if acc.campus else 'No Campus'
-
-            # Coordinators under this accumulator's campus
-            coordinators = User.objects.filter(
-                role='mis_coordinator',
-                is_active=True,
-                campus=acc.campus
-            ) if acc.campus else User.objects.none()
-
-            total_coordinators = coordinators.count()
-
-            # If filtering by a specific chronicle request
-            if chronicle_request_id:
-                data_requests = MISDataRequest.objects.filter(
-                    accumulator=acc,
-                    chronicle_request_id=chronicle_request_id,
-                )
-            else:
-                data_requests = MISDataRequest.objects.filter(
-                    accumulator=acc,
-                )
-
-            coordinators_submitted = data_requests.filter(status='completed').values('coordinator').distinct().count()
+            total_coordinators = coordinators_per_campus.get(acc.campus_id, 0) if acc.campus_id else 0
+            coordinators_submitted = submitted_per_acc.get(acc.id, 0)
             coordinators_pending = total_coordinators - coordinators_submitted
-
-            # Check if accumulator has sent any reports to chronicle master
-            report_filter = {'sent_to_chronicle_master_at__isnull': False, 'created_by': acc}
-            if chronicle_request_id:
-                try:
-                    cr = ChronicleDataRequest.objects.get(id=chronicle_request_id)
-                    report_filter['date_from__lte'] = cr.date_to
-                    report_filter['date_to__gte'] = cr.date_from
-                except ChronicleDataRequest.DoesNotExist:
-                    pass
-
-            acc_reports = MISReport.objects.filter(**report_filter)
-            has_submitted = acc_reports.exists()
-            submitted_at = acc_reports.order_by('-sent_to_chronicle_master_at').values_list(
-                'sent_to_chronicle_master_at', flat=True
-            ).first() if has_submitted else None
+            submitted_at = latest_sent.get(acc.id)
+            has_submitted = submitted_at is not None
 
             result.append({
                 'id': acc.id,
@@ -1115,43 +1114,37 @@ class AccumulatorBulkRequestView(APIView):
         if not user.campus:
             return Response({'detail': 'No campus assigned to your account.'}, status=400)
 
-        coordinators = User.objects.filter(
+        coordinator_ids = list(User.objects.filter(
             role='mis_coordinator',
             is_active=True,
             campus=user.campus
-        )
+        ).values_list('id', flat=True))
 
-        if not coordinators.exists():
+        if not coordinator_ids:
             return Response({'detail': 'No coordinators found in your campus.'}, status=400)
 
-        created_count = 0
-        skipped_count = 0
-        for coord in coordinators:
-            # Skip if there's already a pending request for this coordinator with overlapping dates
-            existing = MISDataRequest.objects.filter(
-                accumulator=user,
-                coordinator=coord,
-                status='pending',
-                date_from__lte=date_to,
-                date_to__gte=date_from,
-            ).exists()
-            if existing:
-                skipped_count += 1
-                continue
+        # Skip coordinators that already have a pending request with overlapping dates
+        already_pending = set(MISDataRequest.objects.filter(
+            accumulator=user,
+            coordinator_id__in=coordinator_ids,
+            status='pending',
+            date_from__lte=date_to,
+            date_to__gte=date_from,
+        ).values_list('coordinator_id', flat=True))
+        to_request = [c for c in coordinator_ids if c not in already_pending]
 
-            try:
-                with transaction.atomic():  # savepoint: one duplicate must not abort the loop
-                    MISDataRequest.objects.create(
-                        accumulator=user,
-                        coordinator=coord,
-                        date_from=date_from,
-                        date_to=date_to,
-                    )
-            except IntegrityError:
-                # a parallel click created the same pending request first (one_pending_mis_request)
-                skipped_count += 1
-                continue
-            created_count += 1
+        # ignore_conflicts: a parallel click may insert the same pending request first
+        # (one_pending_mis_request); counting before and after keeps "created" exact
+        exact = MISDataRequest.objects.filter(accumulator=user, coordinator_id__in=to_request,
+                                              date_from=date_from, date_to=date_to, status='pending')
+        with transaction.atomic():
+            before = exact.count()
+            MISDataRequest.objects.bulk_create([
+                MISDataRequest(accumulator=user, coordinator_id=c, date_from=date_from, date_to=date_to)
+                for c in to_request
+            ], ignore_conflicts=True)
+            created_count = exact.count() - before
+        skipped_count = len(coordinator_ids) - created_count
 
         return Response({
             'detail': f'Requests sent to {created_count} coordinators. {skipped_count} skipped (already pending).',

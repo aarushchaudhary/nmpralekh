@@ -234,7 +234,7 @@ class SchoolActivityDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestro
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
-        return self.get_base_queryset(SchoolActivity)
+        return self.get_base_queryset(SchoolActivity).prefetch_related('collaborations__collaborating_school')
 
 
 # ─────────────────────────────────────────────
@@ -262,7 +262,7 @@ class StudentActivityDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestr
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
-        return self.get_base_queryset(StudentActivity)
+        return self.get_base_queryset(StudentActivity).prefetch_related('collaborations__collaborating_school')
 
 
 # ─────────────────────────────────────────────
@@ -294,6 +294,20 @@ class FDPDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
 # ─────────────────────────────────────────────
 # FACULTY PUBLICATIONS
 # ─────────────────────────────────────────────
+def replace_people(request, serializer_class, parent, model, parent_field):
+    """PUT the full co-author / co-applicant list. All rows are validated first, then swapped
+    in one transaction, so a failure never leaves half the list saved (clients used to send
+    one request per person)."""
+    rows = serializer_class(data=request.data, many=True)
+    rows.is_valid(raise_exception=True)
+    with transaction.atomic():
+        type(parent).objects.select_for_update().get(pk=parent.pk)  # one replace at a time per record
+        model.objects.filter(**{parent_field: parent}).delete()
+        model.objects.bulk_create([model(**row, **{parent_field: parent}) for row in rows.validated_data])
+    people = model.objects.filter(**{parent_field: parent}).select_related('user')
+    return Response(serializer_class(people, many=True).data)
+
+
 class PublicationAuthorListCreateView(generics.ListCreateAPIView):
     serializer_class   = PublicationAuthorSerializer
     permission_classes = [RolePermission(['admin', 'user'])]
@@ -317,11 +331,15 @@ class PublicationAuthorListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         pub = self.get_publication()
-        return PublicationAuthor.objects.filter(publication=pub)
+        return PublicationAuthor.objects.filter(publication=pub).select_related('user')
 
     def perform_create(self, serializer):
         pub = self.get_publication()
         serializer.save(publication=pub)
+
+    def put(self, request, *args, **kwargs):
+        return replace_people(request, self.get_serializer_class(), self.get_publication(),
+                              PublicationAuthor, 'publication')
 
 
 class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -342,7 +360,7 @@ class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
         return PublicationAuthor.objects.filter(
             publication_id__in=valid_pub_ids,
             publication_id=publication_id
-        )
+        ).select_related('user')
 
 
 class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
@@ -372,7 +390,7 @@ class PublicationDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAP
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
-        qs = self.get_base_queryset(FacultyPublication)
+        qs = self.get_base_queryset(FacultyPublication).prefetch_related('authors__user')
         if self.request.user.role == 'user':
             qs = qs.filter(created_by=self.request.user)
         return qs
@@ -404,11 +422,15 @@ class PatentApplicantListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         patent = self.get_patent()
-        return PatentApplicant.objects.filter(patent=patent)
+        return PatentApplicant.objects.filter(patent=patent).select_related('user')
 
     def perform_create(self, serializer):
         patent = self.get_patent()
         serializer.save(patent=patent)
+
+    def put(self, request, *args, **kwargs):
+        return replace_people(request, self.get_serializer_class(), self.get_patent(),
+                              PatentApplicant, 'patent')
 
 
 class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -429,7 +451,7 @@ class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
         return PatentApplicant.objects.filter(
             patent_id__in=valid_patent_ids,
             patent_id=patent_id
-        )
+        ).select_related('user')
 
 
 class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
@@ -459,7 +481,7 @@ class PatentDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
-        qs = self.get_base_queryset(Patent)
+        qs = self.get_base_queryset(Patent).prefetch_related('applicants__user')
         if self.request.user.role == 'user':
             qs = qs.filter(created_by=self.request.user)
         return qs
