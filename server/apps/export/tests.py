@@ -630,3 +630,57 @@ class BackgroundExportAllTests(ExportTestMixin, APITestCase):
         self.client.force_authenticate(user=self.faculty)
         with self.mock.patch('apps.export.views.AsyncResult', return_value=job):
             self.assertEqual(self.client.get('/api/export/jobs/abc/').data, {'status': 'processing'})
+
+
+class AccumulatorDashboardTests(ExportTestMixin, APITestCase):
+    """The dashboard reports each coordinator's status with a fixed number of queries."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self._setup_base()
+        self.client.force_authenticate(user=self.accumulator)
+
+    def _add_coordinator(self, i, submitted, pending):
+        from django.utils import timezone
+        from datetime import timedelta
+        coord = User.objects.create_user(username=f'dc{i}', email=f'dc{i}@t.com', password='p',
+                                         full_name=f'Coord {i}', role='mis_coordinator', campus=self.campus)
+        UserSchoolMapping.objects.create(user=coord, school=self.school, assigned_by=self.master)
+        for d in range(submitted):  # the later one must be reported as latest
+            MISReport.objects.create(created_by=coord, name=f'r{i}-{d}', data_content='x',
+                                     date_from=date(2026, 1, 1), date_to=date(2026, 1, 1),
+                                     sent_to_accumulator_at=timezone.now() + timedelta(minutes=d))
+        for d in range(pending):
+            MISDataRequest.objects.create(accumulator=self.accumulator, coordinator=coord,
+                                          date_from=date(2026, 1, 1), date_to=date(2026, 1, 1 + d))
+        return coord
+
+    def _get(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        with CaptureQueriesContext(connection) as ctx:
+            resp = self.client.get('/api/export/accumulator/dashboard/')
+        self.assertEqual(resp.status_code, 200)
+        return resp.data, len(ctx)
+
+    def test_status_per_coordinator(self):
+        done = self._add_coordinator(1, submitted=2, pending=0)
+        waiting = self._add_coordinator(2, submitted=0, pending=3)
+        data, _ = self._get()
+        rows = {c['id']: c for c in data['coordinators']}
+        self.assertTrue(rows[done.id]['has_submitted'])
+        self.assertEqual(rows[done.id]['latest_report_name'], 'r1-1')
+        self.assertEqual(rows[done.id]['pending_requests'], 0)
+        self.assertFalse(rows[waiting.id]['has_submitted'])
+        self.assertIsNone(rows[waiting.id]['latest_report_date'])
+        self.assertEqual(rows[waiting.id]['pending_requests'], 3)
+
+    def test_query_count_does_not_grow_with_coordinators(self):
+        for i in range(2):
+            self._add_coordinator(i, submitted=1, pending=1)
+        _, few = self._get()
+        for i in range(2, 10):
+            self._add_coordinator(i, submitted=1, pending=1)
+        _, many = self._get()
+        self.assertEqual(many, few)

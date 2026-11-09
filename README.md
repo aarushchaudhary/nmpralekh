@@ -950,7 +950,7 @@ Rules the database enforces itself:
 
 ## Testing and CI
 
-### Server: 420 tests
+### Server: 423 tests
 
 ```bash
 cd server && source venv/bin/activate
@@ -989,7 +989,7 @@ cd android-client && ./gradlew assembleDebug
 ```mermaid
 flowchart LR
     push["push / PR to main"] --> c["Client<br/>npm ci · lint · test · build<br/>Node 24"]
-    push --> s["Server<br/>check · 420 tests<br/>Python 3.12, Postgres 16, Redis 7"]
+    push --> s["Server<br/>check · 423 tests<br/>Python 3.12, Postgres 16, Redis 7"]
     push --> a["Android<br/>assembleDebug<br/>JDK 21"]
 
     classDef p fill:#2A2A2A,stroke:#000,color:#fff,stroke-width:2px

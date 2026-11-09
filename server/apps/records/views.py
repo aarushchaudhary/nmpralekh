@@ -221,7 +221,7 @@ class SchoolActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMi
         qs = self.get_base_queryset(SchoolActivity)
         return qs.select_related(
             'school', 'created_by'
-        ).prefetch_related('collaborations')
+        ).prefetch_related('collaborations__collaborating_school')
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -249,7 +249,7 @@ class StudentActivityListCreateView(InvalidateDashboardCacheMixin, SchoolScopedM
         qs = self.get_base_queryset(StudentActivity)
         return qs.select_related(
             'school', 'created_by'
-        ).prefetch_related('collaborations')
+        ).prefetch_related('collaborations__collaborating_school')
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -358,7 +358,7 @@ class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin
                          is_deleted=False
                      ).select_related(
                          'school', 'created_by'
-                     ).prefetch_related('authors')
+                     ).prefetch_related('authors__user')
         return scope_to_faculty(qs, user)
 
     def get_permissions(self):
@@ -445,7 +445,7 @@ class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, gen
                          is_deleted=False
                      ).select_related(
                          'school', 'created_by'
-                     ).prefetch_related('applicants')
+                     ).prefetch_related('applicants__user')
         return scope_to_faculty(qs, user)
 
     def get_permissions(self):

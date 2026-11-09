@@ -6,6 +6,7 @@ from openpyxl.cell import WriteOnlyCell
 from celery.result import AsyncResult
 from django.conf import settings
 from django.db import IntegrityError, transaction
+from django.db.models import Count
 from django.core.cache import cache
 from django.http import HttpResponse, FileResponse
 from django.utils.decorators import method_decorator
@@ -1177,28 +1178,29 @@ class AccumulatorDashboardView(APIView):
             is_active=True,
             campus=user.campus
         ).prefetch_related('school_mappings__school')
+        coordinators = list(coordinators)
+        coord_ids = [c.id for c in coordinators]
+
+        # Latest report each coordinator sent to an accumulator (PostgreSQL DISTINCT ON)
+        latest_reports = {
+            r.created_by_id: r for r in MISReport.objects.filter(
+                created_by_id__in=coord_ids, sent_to_accumulator_at__isnull=False,
+            ).order_by('created_by_id', '-sent_to_accumulator_at').distinct('created_by_id')
+        }
+        # Pending requests from this accumulator, per coordinator
+        pending_counts = dict(
+            MISDataRequest.objects.filter(accumulator=user, coordinator_id__in=coord_ids, status='pending')
+            .values('coordinator_id').annotate(n=Count('id')).values_list('coordinator_id', 'n')
+        )
 
         result = []
         for coord in coordinators:
             school_names = [m.school.name for m in coord.school_mappings.all() if m.school]
             school_name = ', '.join(school_names) if school_names else 'Unknown School'
 
-            # Check if this coordinator has sent any report to accumulator
-            reports = MISReport.objects.filter(
-                created_by=coord,
-                sent_to_accumulator_at__isnull=False,
-            )
-
-            # Check pending requests from this accumulator to this coordinator
-            pending_requests = MISDataRequest.objects.filter(
-                accumulator=user,
-                coordinator=coord,
-                status='pending',
-            )
-
-            has_submitted = reports.exists()
-            latest_report = reports.order_by('-sent_to_accumulator_at').first()
-            pending_count = pending_requests.count()
+            latest_report = latest_reports.get(coord.id)
+            has_submitted = latest_report is not None
+            pending_count = pending_counts.get(coord.id, 0)
 
             result.append({
                 'id': coord.id,

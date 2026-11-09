@@ -1384,3 +1384,55 @@ class FDPDateRangeTests(RecordTestMixin, APITestCase):
             'date_end': '2025-06-01', 'name': 'N', 'details': 'd', 'type': 'FDP'})
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('date_end', resp.data)
+
+
+class ListQueryCountTests(RecordTestMixin, APITestCase):
+    """List pages must run the same number of queries for 2 rows or 10 (no N+1).
+    Collaborations, co-authors and co-applicants show a school or user name per row."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self._setup_base()
+        self.client.force_authenticate(user=self.admin_user)
+        self.n = 0
+
+    def _add(self, k):
+        today = date(2026, 1, 1)
+        for _ in range(k):
+            self.n += 1
+            u = User.objects.create_user(username=f'co{self.n}', email=f'co{self.n}@t.com', password='p',
+                                         full_name=f'Co {self.n}', role='user', campus=self.campus)
+            sa = SchoolActivity.objects.create(school=self.school, name='a', date=today, details='d',
+                                               created_by=self.faculty)
+            SchoolActivityCollaboration.objects.create(activity=sa, collaborating_school=self.school2)
+            st = StudentActivity.objects.create(school=self.school, name='a', date=today, details='d',
+                                                created_by=self.faculty)
+            StudentActivityCollaboration.objects.create(activity=st, collaborating_school=self.school2)
+            pub = FacultyPublication.objects.create(school=self.school, author_name='a', title_of_paper='t',
+                                                    journal_or_conference_name='j', date=today,
+                                                    doi_or_link='x', created_by=self.faculty)
+            PublicationAuthor.objects.create(publication=pub, name='co', author_type='faculty', user=u, order=1)
+            pat = Patent.objects.create(school=self.school, applicant_name='a', title_of_patent='t',
+                                        date_of_publication=today, journal_number='1', doi_or_link='x',
+                                        created_by=self.faculty)
+            PatentApplicant.objects.create(patent=pat, name='co', applicant_type='faculty', user=u)
+
+    def _queries(self, url):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        self.client.get(url)  # warm caches (school ids) so both runs do the same work
+        with CaptureQueriesContext(connection) as ctx:
+            resp = self.client.get(url, {'page_size': 50})
+        self.assertEqual(resp.status_code, 200)
+        return len(ctx)
+
+    def test_list_query_count_does_not_grow_with_rows(self):
+        urls = ['/api/records/school-activities/', '/api/records/student-activities/',
+                '/api/records/publications/', '/api/records/patents/']
+        self._add(2)
+        few = {url: self._queries(url) for url in urls}
+        self._add(8)
+        for url in urls:
+            with self.subTest(url=url):
+                self.assertEqual(self._queries(url), few[url])
