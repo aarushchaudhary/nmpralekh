@@ -1,6 +1,6 @@
 # NMPralekh — MIS Dashboard Portal
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-CC2626.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-CC2626.svg)](LICENSE)
 ![Django](https://img.shields.io/badge/Django-6.0-0C4B33?logo=django&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-API%2024%2B-3DDC84?logo=android&logoColor=white)
@@ -392,7 +392,7 @@ nmpralekh/
 ├── start.sh                        start every service with one command
 ├── locust.sh                       start the load test UI
 ├── .gitattributes                  merge rule for graph.json
-├── LICENSE                         GNU GPL v3
+├── LICENSE                         GNU AGPL v3
 └── README.md
 ```
 
@@ -1091,14 +1091,14 @@ Designed and developed by **Aarush Chaudhary**.
 Copyright © 2026 Aarush Chaudhary
 
 This program is free software: you can redistribute it and/or modify it under the terms of the
-**GNU General Public License** as published by the Free Software Foundation, either **version 3** of the
+**GNU Affero General Public License** as published by the Free Software Foundation, either **version 3** of the
 License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful, but **without any warranty**; without even
 the implied warranty of merchantability or fitness for a particular purpose. See the
-[GNU General Public License](LICENSE) for more details.
+[GNU Affero General Public License](LICENSE) for more details.
 
-You should have received a copy of the GNU General Public License along with this program.
+You should have received a copy of the GNU Affero General Public License along with this program.
 If not, see <https://www.gnu.org/licenses/>.
 
-SPDX-License-Identifier: `GPL-3.0-or-later`
+SPDX-License-Identifier: `AGPL-3.0-or-later`
