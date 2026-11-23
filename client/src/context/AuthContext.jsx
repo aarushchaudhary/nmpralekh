@@ -38,6 +38,9 @@ export function AuthProvider({ children }) {
     return res.data.user
   }
 
+  // the server cleared must_change_password when the new password was saved
+  const passwordChanged = () => setUser(u => ({ ...u, must_change_password: false }))
+
   const logout = async () => {
     try {
       await authApi.post('/auth/logout/', {})
@@ -47,7 +50,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, passwordChanged }}>
       {children}
     </AuthContext.Provider>
   )

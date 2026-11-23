@@ -5,7 +5,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
-from apps.accounts.permissions import RolePermission
+from apps.accounts.permissions import RolePermission, confirm_own_password
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 
 from apps.schools.models import Campus, School, UserSchoolMapping
 from apps.schools.serializers import (
@@ -74,7 +76,9 @@ class CampusReactivateView(APIView):
     permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='POST', block=True))
     def post(self, request, pk):
+        confirm_own_password(request)
         try:
             campus = Campus.objects.get(pk=pk)
         except Campus.DoesNotExist:
@@ -154,7 +158,9 @@ class SchoolReactivateView(APIView):
     permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='POST', block=True))
     def post(self, request, pk):
+        confirm_own_password(request)
         try:
             school = School.objects.get(pk=pk)
         except School.DoesNotExist:

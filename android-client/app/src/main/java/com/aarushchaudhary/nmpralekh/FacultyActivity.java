@@ -105,6 +105,10 @@ public class FacultyActivity extends BaseAuthActivity
         } else if (id == R.id.nav_certifications) {
             fragment = new CertificationsFragment();
             title = "My Certifications";
+        } else if (id == R.id.nav_change_password) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START);
+            showChangePasswordDialog();
+            return true;
         } else if (id == R.id.nav_logout) {
             performLogout();
             binding.drawerLayout.closeDrawer(GravityCompat.START);

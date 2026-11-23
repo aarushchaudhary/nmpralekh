@@ -5,6 +5,8 @@ import Badge from '../../components/ui/Badge'
 import Panel from '../../components/ui/Panel'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import api from '../../api/axios'
+import Button from '../../components/ui/Button'
+import ResetPasswordDialog from '../../components/shared/ResetPasswordDialog'
 
 const PAGE_SIZE = 25
 
@@ -14,6 +16,9 @@ const roleBadgeColor = {
     super_admin: 'dark',
     delete_auth: 'gray',
 }
+
+// roles a super admin resets (mirrors can_reset_password on the server)
+const resettable = ['admin', 'delete_auth', 'mis_accumulator', 'mis_coordinator', 'user']
 
 const roleLabel = {
     admin: 'Admin',
@@ -35,6 +40,7 @@ export default function CampusUsersPage() {
     const [loading, setLoading] = useState(true)
     const [totalPages, setTotalPages] = useState(1)
     const [currentPage, setCurrentPage] = useState(1)
+    const [resetting, setResetting] = useState(null)
 
     // Filters
     const [search, setSearch] = useState('')
@@ -98,6 +104,14 @@ export default function CampusUsersPage() {
                 />
             )
         },
+        {
+            key: 'actions', label: '', sortable: false,
+            render: row => resettable.includes(row.role) && (
+                <Button size="sm" variant="secondary" onClick={() => setResetting(row)}>
+                    Reset password
+                </Button>
+            )
+        },
     ]
 
     return (
@@ -110,7 +124,7 @@ export default function CampusUsersPage() {
             <Panel className="mb-6">
                 <p className="text-sm text-gray-700">
                     Showing all active users assigned to your campus.
-                    This is a <strong>read-only</strong> view.
+                    Reset password sets a one-time password they must change at next sign-in.
                 </p>
             </Panel>
 
@@ -155,6 +169,8 @@ export default function CampusUsersPage() {
                 currentPage={currentPage}
                 onPageChange={setCurrentPage}
             />
+
+            <ResetPasswordDialog user={resetting} onClose={() => setResetting(null)} />
         </div>
     )
 }

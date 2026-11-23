@@ -364,6 +364,69 @@ public abstract class BaseRecordFragment extends Fragment {
         });
     }
 
+    /** The person one level above types a one-time password for a user they look after;
+     *  the server checks who may, signs the user out everywhere and makes them choose their own. */
+    protected void showResetPasswordDialog(JsonObject user) {
+        int pad = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 20, getResources().getDisplayMetrics());
+        LinearLayout form = new LinearLayout(requireContext());
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(pad, pad / 2, pad, 0);
+        TextView intro = new TextView(requireContext());
+        intro.setText("They will be signed out everywhere and must choose their own password at next sign-in.");
+        intro.setPadding(0, 0, 0, pad / 2);
+        form.addView(intro);
+        TextInputEditText password = com.aarushchaudhary.nmpralekh.BaseAuthActivity.addPasswordField(
+                requireContext(), form, "One-time password");
+        TextInputEditText confirm = com.aarushchaudhary.nmpralekh.BaseAuthActivity.addPasswordField(
+                requireContext(), form, "Confirm one-time password");
+        TextView error = new TextView(requireContext());
+        error.setTextColor(requireContext().getColor(R.color.red_700));
+        error.setPadding(0, pad / 2, 0, 0);
+        error.setVisibility(View.GONE);
+        form.addView(error);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Reset password: " + jsonStr(user, "full_name"))
+                .setView(form)
+                .setPositiveButton("Reset password", null)  // set below, so a failure keeps the dialog open
+                .setNegativeButton("Cancel", null)
+                .create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String temporary = String.valueOf(password.getText());
+            if (!temporary.equals(String.valueOf(confirm.getText()))) {
+                error.setText("The passwords do not match.");
+                error.setVisibility(View.VISIBLE);
+                return;
+            }
+            JsonObject body = new JsonObject();
+            body.addProperty("temporary_password", temporary);
+            v.setEnabled(false);
+            apiService.resetPassword(jsonInt(user, "id"), body).enqueue(new Callback<JsonObject>() {
+                @Override
+                public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
+                    if (!isAdded()) return;
+                    v.setEnabled(true);
+                    if (response.isSuccessful() && response.body() != null) {
+                        dialog.dismiss();
+                        Toast.makeText(requireContext(), jsonStr(response.body(), "detail"), Toast.LENGTH_LONG).show();
+                    } else {
+                        error.setText(com.aarushchaudhary.nmpralekh.BaseAuthActivity.errorMessage(response));
+                        error.setVisibility(View.VISIBLE);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<JsonObject> call, Throwable t) {
+                    if (!isAdded()) return;
+                    v.setEnabled(true);
+                    error.setText("Could not reach the server. Check your connection and try again.");
+                    error.setVisibility(View.VISIBLE);
+                }
+            });
+        }));
+        dialog.show();
+    }
+
     // Helper methods for building forms
     protected TextInputEditText addTextField(LinearLayout container, String label, String hint, String value, boolean required) {
         TextInputLayout layout = new TextInputLayout(requireContext(), null, com.google.android.material.R.attr.textInputOutlinedStyle);

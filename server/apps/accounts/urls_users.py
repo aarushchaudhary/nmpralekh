@@ -8,6 +8,8 @@ urlpatterns = [
     path('chronicle/accumulators/', views.ChronicleAccumulatorsView.as_view(), name='chronicle_accumulators'),
     path('',                  views.UserListCreateView.as_view(),  name='user_list_create'),
     path('<int:pk>/',         views.UserDetailView.as_view(),      name='user_detail'),
+    path('<int:pk>/reactivate/', views.UserReactivateView.as_view(), name='user_reactivate'),
+    path('<int:pk>/reset-password/', views.ResetPasswordView.as_view(), name='user_reset_password'),
     path('master/service-user/', views.ServiceUserManagementView.as_view(), name='service_user_management'),
     path('master/chronicle-master/', views.ChronicleMasterManagementView.as_view(), name='chronicle_master_management'),
 ]

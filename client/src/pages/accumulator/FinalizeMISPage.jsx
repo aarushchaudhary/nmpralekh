@@ -48,13 +48,13 @@ export default function FinalizeMISPage() {
     const [inputSchool, setInputSchool] = useState('')
     const [inputDateFrom, setInputDateFrom] = useState('')
     const [inputDateTo, setInputDateTo] = useState('')
-    const [activeSchool, setActiveSchool] = useState('')
-    const [activeDateFrom, setActiveDateFrom] = useState('')
-    const [activeDateTo, setActiveDateTo] = useState('')
-    const [selectedReportIds, setSelectedReportIds] = useState(new Set())
+    // id -> report: ticked reports survive a new search that no longer lists them
+    const [selectedReportIds, setSelectedReportIds] = useState(new Map())
 
-    const fetchReceivedReports = () => {
-        api.get('/export/reports/received/')
+    // the server filters (same params as the report tables), so older reports are reachable too
+    // shortcut: newest 100 matches per search; narrow the dates or add paging if a campus exceeds that
+    const fetchReceivedReports = (filters = {}) => {
+        api.get('/export/reports/received/', { params: { ...filters, page_size: 100 } })
             .then(res => setReceivedReports(res.data?.results ?? res.data))
             .catch(err => console.error(err))
     }
@@ -107,42 +107,17 @@ export default function FinalizeMISPage() {
     }
     // Filter logic for received reports
     const handleApplyFilters = () => {
-        setActiveSchool(inputSchool)
-        setActiveDateFrom(inputDateFrom)
-        setActiveDateTo(inputDateTo)
+        fetchReceivedReports({ search: inputSchool, date_from: inputDateFrom, date_to: inputDateTo })
     }
 
-    const filteredReceivedReports = receivedReports.filter(report => {
-        let match = true
-        if (activeSchool) {
-            const searchTerm = activeSchool.toLowerCase()
-            const matchesName = report.title?.toLowerCase().includes(searchTerm)
-            const matchesSchool = report.created_by_school_name?.toLowerCase().includes(searchTerm)
-            const matchesCoordinator = report.created_by_name?.toLowerCase().includes(searchTerm)
-            if (!matchesName && !matchesSchool && !matchesCoordinator) {
-                match = false
-            }
-        }
-        if (activeDateFrom && activeDateTo) {
-            if (activeDateFrom > report.date_to || report.date_from > activeDateTo) {
-                match = false
-            }
-        } else if (activeDateFrom) {
-            if (report.date_to < activeDateFrom) match = false
-        } else if (activeDateTo) {
-            if (report.date_from > activeDateTo) match = false
-        }
-        return match
-    })
-
-    const toggleSelection = (id) => {
-        const newSet = new Set(selectedReportIds)
-        if (newSet.has(id)) {
-            newSet.delete(id)
+    const toggleSelection = (report) => {
+        const next = new Map(selectedReportIds)
+        if (next.has(report.id)) {
+            next.delete(report.id)
         } else {
-            newSet.add(id)
+            next.set(report.id, report)
         }
-        setSelectedReportIds(newSet)
+        setSelectedReportIds(next)
     }
 
     const handleCombineIntoTextarea = () => {
@@ -150,7 +125,7 @@ export default function FinalizeMISPage() {
             setError("Please select at least one report to combine.")
             return
         }
-        const selected = receivedReports.filter(r => selectedReportIds.has(r.id))
+        const selected = [...selectedReportIds.values()]
         selected.sort((a, b) => new Date(a.date_from) - new Date(b.date_from))
 
         let combined = formData.data_content ? formData.data_content + "\n\n" : ""
@@ -170,7 +145,7 @@ export default function FinalizeMISPage() {
 
         setFormData(prev => ({ ...prev, data_content: combined.trim() }))
         // clear selections after combining so they can select others if needed
-        setSelectedReportIds(new Set())
+        setSelectedReportIds(new Map())
     }
 
     const columns = [
@@ -274,11 +249,11 @@ export default function FinalizeMISPage() {
                                 </div>
 
                                 <div className="flex-grow overflow-y-auto p-4" style={{ maxHeight: '400px' }}>
-                                    {filteredReceivedReports.length === 0 ? (
+                                    {receivedReports.length === 0 ? (
                                         <div className="text-center py-8 text-gray-500 text-sm">No reports match criteria.</div>
                                     ) : (
                                         <div className="space-y-2">
-                                            {filteredReceivedReports.map(report => (
+                                            {receivedReports.map(report => (
                                                 <label
                                                     key={report.id}
                                                     className={`block p-3 rounded-md border cursor-pointer transition-colors ${
@@ -291,7 +266,7 @@ export default function FinalizeMISPage() {
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedReportIds.has(report.id)}
-                                                            onChange={() => toggleSelection(report.id)}
+                                                            onChange={() => toggleSelection(report)}
                                                             className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary-600"
                                                         />
                                                         <div className="min-w-0">
@@ -312,7 +287,7 @@ export default function FinalizeMISPage() {
                                         disabled={selectedReportIds.size === 0}
                                         className="w-full"
                                     >
-                                        Combine Selected into Editor &rarr;
+                                        Combine {selectedReportIds.size || ''} Selected into Editor &rarr;
                                     </Button>
                                 </div>
                             </div>

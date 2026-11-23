@@ -14,6 +14,10 @@ from apps.records.cache_utils import invalidate_dashboard_cache
 from apps.records.models import (
     Club, SchoolActivity, StudentActivity, FacultyFDPWorkshopGL,
     FacultyPublication, Patent, Certification, PlacementActivity,
+    PublicationAuthor, PatentApplicant,
+)
+from apps.records.serializers import (
+    PublicationAuthorSerializer, PatentApplicantSerializer, replace_people,
 )
 from config.pagination import StandardPagination
 
@@ -73,6 +77,21 @@ ALLOWED_FIELDS = {
     'placement_activities': ['name', 'date', 'details', 'company_name',
                              'placecom_name'],
 }
+
+# table -> (new_data key, people model, FK to the record, row serializer)
+AUDITED_PEOPLE = {
+    'faculty_publications': ('authors', PublicationAuthor, 'publication', PublicationAuthorSerializer),
+    'patents': ('applicants', PatentApplicant, 'patent', PatentApplicantSerializer),
+}
+
+
+def _apply_people(audit, record, new_data):
+    key, model, parent_field, row_serializer = AUDITED_PEOPLE.get(audit.table_name, (None,) * 4)
+    if key not in new_data:
+        return
+    rows = row_serializer(data=new_data[key], many=True)
+    rows.is_valid(raise_exception=True)  # re-checked: a linked user may be gone since the request
+    replace_people(record, model, parent_field, rows.validated_data)
 
 
 def _lock_pending_audit(request, pk):
@@ -138,6 +157,8 @@ class AuditApproveView(APIView):
                             record.club_name = record.club.name
                         else:
                             record.club_name = None
+
+                    _apply_people(audit, record, new_data)
 
                     record.pending_audit = None
                     record.save()

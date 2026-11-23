@@ -28,7 +28,6 @@ import java.util.List;
 
 
 
-import retrofit2.Callback;
 import retrofit2.Response;
 
 public class PublicationsFragment extends BaseRecordFragment {
@@ -246,6 +245,10 @@ public class PublicationsFragment extends BaseRecordFragment {
         data.addProperty("venue", getTextValue(formFields.get("venue")));
         data.addProperty("publication", getTextValue(formFields.get("publication")));
         data.addProperty("doi_or_link", getTextValue(formFields.get("doi_link")));
+        // co-authors travel with the record: saved on create, approved with an edit
+        JsonArray people = new JsonArray();
+        for (JsonObject person : pendingAuthors) people.add(person);
+        data.add("authors", people);
         return data;
     }
 
@@ -257,83 +260,6 @@ public class PublicationsFragment extends BaseRecordFragment {
                !getTextValue(formFields.get("journal_or_conference_name")).isEmpty() &&
                !getTextValue(formFields.get("date")).isEmpty() &&
                !getTextValue(formFields.get("doi_link")).isEmpty();
-    }
-
-    @Override
-    protected void createRecord(JsonObject data) {
-        apiService.createPublication(data).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                if (!isAdded()) return;
-                if (response.isSuccessful() && response.body() != null) {
-                    int pubId = response.body().get("id").getAsInt();
-                    saveAuthors(pubId, () -> {
-                        Toast.makeText(requireContext(), "Publication created successfully", Toast.LENGTH_SHORT).show();
-                        currentPage = 1;
-                        loadData();
-                    });
-                } else {
-                    Toast.makeText(requireContext(), "Failed to create record", Toast.LENGTH_SHORT).show();
-                }
-            }
-            @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
-                if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    @Override
-    protected void updateRecord(JsonObject original, JsonObject updated) {
-        int id = original.get("id").getAsInt();
-        apiService.updatePublication(id, updated).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                if (!isAdded()) return;
-                if (response.isSuccessful()) {
-                    saveAuthors(id, () -> {
-                        Toast.makeText(requireContext(), "Publication updated", Toast.LENGTH_SHORT).show();
-                        loadData();
-                    });
-                } else {
-                    Toast.makeText(requireContext(), "Failed to update record", Toast.LENGTH_SHORT).show();
-                }
-            }
-            @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
-                if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    /** Sends the full coAuthors list in one request; the server saves it all or nothing. */
-    private void saveAuthors(int pubId, Runnable onComplete) {
-        JsonArray body = new JsonArray();
-        for (JsonObject person : pendingAuthors) body.add(person);
-        apiService.replacePublicationAuthors(pubId, body).enqueue(new Callback<JsonElement>() {
-            @Override
-            public void onResponse(Call<JsonElement> call, Response<JsonElement> response) {
-                if (!isAdded()) return;
-                if (response.isSuccessful()) {
-                    onComplete.run();
-                } else {
-                    coAuthorsFailed();
-                }
-            }
-            @Override
-            public void onFailure(Call<JsonElement> call, Throwable t) {
-                if (!isAdded()) return;
-                coAuthorsFailed();
-            }
-        });
-    }
-
-    private void coAuthorsFailed() {
-        Toast.makeText(requireContext(), "Publication saved, but its co-authors were not. Edit it to try again.",
-                Toast.LENGTH_LONG).show();
-        loadData();
     }
 
     private class FacultyAutoCompleteAdapter extends ArrayAdapter<JsonObject> implements Filterable {

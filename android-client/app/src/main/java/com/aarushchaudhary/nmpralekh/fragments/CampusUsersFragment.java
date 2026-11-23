@@ -2,7 +2,16 @@ package com.aarushchaudhary.nmpralekh.fragments;
 import java.util.Map;
 import retrofit2.Call;
 
+import android.os.Bundle;
+import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.util.Arrays;
+import java.util.List;
 import com.aarushchaudhary.nmpralekh.adapters.RecordAdapter;
 import com.google.gson.JsonObject;
 
@@ -10,6 +19,22 @@ public class CampusUsersFragment extends BaseRecordFragment {
 
     public static CampusUsersFragment newInstance() {
         return new CampusUsersFragment();
+    }
+
+    // roles a super admin resets (mirrors can_reset_password on the server)
+    private static final List<String> RESETTABLE =
+            Arrays.asList("admin", "delete_auth", "mis_accumulator", "mis_coordinator", "user");
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        adapter.setOnItemClick(user -> {
+            if (RESETTABLE.contains(jsonStr(user, "role"))) {
+                showResetPasswordDialog(user);
+            } else {
+                Toast.makeText(requireContext(), "The master resets super admin passwords.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
@@ -24,7 +49,7 @@ public class CampusUsersFragment extends BaseRecordFragment {
 
     @Override
     protected String getPageSubtitle() {
-        return "Manage all users across the campus";
+        return "Everyone in your campus. Tap someone to reset their password.";
     }
 
     @Override

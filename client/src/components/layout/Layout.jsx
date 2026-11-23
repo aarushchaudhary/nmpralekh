@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import Sidebar, { roleNavLinks } from './Sidebar'
+import ChangePasswordDialog from '../shared/ChangePasswordDialog'
 
 export default function Layout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const { pathname } = useLocation()
-    const { user } = useAuth()
+    const { user, passwordChanged } = useAuth()
 
     const pageTitle = useMemo(() => {
         let roleKey = user?.role
@@ -63,7 +64,10 @@ export default function Layout({ children }) {
                 {/* Page content */}
                 <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
                     <div className="max-w-7xl mx-auto">
-                        {children}
+                        {/* after a reset the server refuses everything else until a new password is saved */}
+                        {user?.must_change_password
+                            ? <ChangePasswordDialog isOpen forced onClose={() => {}} onChanged={passwordChanged} />
+                            : children}
                     </div>
                 </main>
 

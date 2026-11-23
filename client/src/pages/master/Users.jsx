@@ -8,6 +8,8 @@ import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import ConfirmPasswordDialog from '../../components/shared/ConfirmPasswordDialog'
+import ResetPasswordDialog from '../../components/shared/ResetPasswordDialog'
 import api from '../../api/axios'
 import { apiErrors } from '../../api/errors'
 
@@ -118,14 +120,12 @@ export default function Users() {
         }
     }
 
-    const handleReactivate = async (row) => {
-        setSaving(true)
-        try {
-            await api.patch(`/users/${row.id}/`, { is_active: true })
-            fetch()
-        } finally {
-            setSaving(false)
-        }
+    // reactivating needs the master's own password (server-checked)
+    const [reactivating, setReactivating] = useState(null)
+    const [resetting, setResetting] = useState(null)
+    const reactivate = async password => {
+      await api.post(`/users/${reactivating.id}/reactivate/`, { password })
+      fetch()
     }
 
     const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
@@ -160,6 +160,12 @@ export default function Users() {
                     <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
                         Edit
                     </Button>
+                    {/* the master resets super admins; everyone else is reset by the person above them */}
+                    {row.role === 'super_admin' && (
+                        <Button size="sm" variant="secondary" onClick={() => setResetting(row)}>
+                            Reset password
+                        </Button>
+                    )}
                     {row.is_active ? (
                         <Button size="sm" variant="danger"
                             onClick={() => { setSelected(row); setShowConfirm(true) }}>
@@ -167,7 +173,7 @@ export default function Users() {
                         </Button>
                     ) : (
                         <Button size="sm" variant="secondary"
-                            onClick={() => handleReactivate(row)}>
+                            onClick={() => setReactivating(row)}>
                             Reactivate
                         </Button>
                     )}
@@ -257,6 +263,10 @@ export default function Users() {
                 confirmLabel="Deactivate"
                 loading={saving}
             />
+            <ResetPasswordDialog user={resetting} onClose={() => setResetting(null)} />
+            <ConfirmPasswordDialog isOpen={!!reactivating} onClose={() => setReactivating(null)}
+                onConfirm={reactivate} title="Reactivate user" confirmLabel="Reactivate"
+                message={`Enter your password to reactivate ${reactivating?.full_name ?? ''}.`} />
         </div>
     )
 }

@@ -5,18 +5,22 @@ import Button from '../../components/ui/Button'
 import EmptyState from '../../components/ui/EmptyState'
 import api from '../../api/axios'
 
+// co-author / co-applicant lists arrive as arrays of people: show their names
+const show = v => v === null || v === undefined ? '—'
+    : Array.isArray(v) ? (v.map(p => p.name).join(', ') || 'none') : String(v)
+
 function DiffRow({ field, oldVal, newVal }) {
-    const changed = String(oldVal) !== String(newVal)
+    const changed = show(oldVal) !== show(newVal)
     return (
         <tr className={changed ? 'bg-gray-50' : ''}>
             <td className="px-3 py-2 text-xs font-medium text-gray-600 capitalize w-1/4">
                 {field.replace(/_/g, ' ')}
             </td>
             <td className={`px-3 py-2 text-xs w-3/8 ${changed ? 'text-gray-500 line-through' : 'text-gray-700'}`}>
-                {oldVal !== null && oldVal !== undefined ? String(oldVal) : '—'}
+                {show(oldVal)}
             </td>
             <td className={`px-3 py-2 text-xs w-3/8 ${changed ? 'text-gray-900 font-semibold' : 'text-gray-700'}`}>
-                {newVal !== null && newVal !== undefined ? String(newVal) : '—'}
+                {show(newVal)}
             </td>
         </tr>
     )
@@ -100,8 +104,7 @@ function AuditCard({ request, onApprove, onReject, loading }) {
                                         {field.replace(/_/g, ' ')}
                                     </p>
                                     <p className="text-sm text-gray-900 font-medium break-words">
-                                        {oldData[field] !== null && oldData[field] !== undefined
-                                            ? String(oldData[field]) : '—'}
+                                        {show(oldData[field])}
                                     </p>
                                 </div>
                             ))}

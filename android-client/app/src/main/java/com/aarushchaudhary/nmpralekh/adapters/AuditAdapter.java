@@ -100,6 +100,7 @@ public class AuditAdapter extends RecyclerView.Adapter<AuditAdapter.AuditViewHol
             
             for (String key : oldData.keySet()) {
                 if (key.equals("id") || key.equals("created_at") || key.equals("updated_at") || key.equals("created_by") || key.equals("is_deleted") || key.equals("pending_audit")) continue;
+                if (!newData.has(key)) continue;  // the edit left this field alone
                 String oldVal = getString(oldData, key);
                 String newVal = getString(newData, key);
                 if (!oldVal.equals(newVal)) {
@@ -116,10 +117,18 @@ public class AuditAdapter extends RecyclerView.Adapter<AuditAdapter.AuditViewHol
     }
 
     private String getString(JsonObject obj, String key) {
-        if (obj != null && obj.has(key) && !obj.get(key).isJsonNull()) {
-            return obj.get(key).getAsString();
+        if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) return "";
+        JsonElement value = obj.get(key);
+        if (value.isJsonArray()) {  // co-author / co-applicant list: show the names
+            StringBuilder names = new StringBuilder();
+            for (JsonElement person : value.getAsJsonArray()) {
+                if (names.length() > 0) names.append(", ");
+                names.append(person.isJsonObject() && person.getAsJsonObject().has("name")
+                        ? person.getAsJsonObject().get("name").getAsString() : person.toString());
+            }
+            return names.length() > 0 ? names.toString() : "none";
         }
-        return "";
+        return value.isJsonPrimitive() ? value.getAsString() : value.toString();
     }
 
     @Override

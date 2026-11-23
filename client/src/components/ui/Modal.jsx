@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md' }) {
+// dismissible=false: no close button, Escape or backdrop click (a step the user must finish)
+export default function Modal({ isOpen, onClose, title, children, size = 'md', dismissible = true }) {
     const sizes = {
         sm: 'max-w-md',
         md: 'max-w-lg',
@@ -32,20 +33,20 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
         const dialog = dialogRef.current
         const handleCancel = (e) => {
             e.preventDefault()
-            onClose()
+            if (dismissible) onClose()
         }
         if (dialog) {
             dialog.addEventListener('cancel', handleCancel)
             return () => dialog.removeEventListener('cancel', handleCancel)
         }
-    }, [onClose])
+    }, [onClose, dismissible])
 
     return (
         <dialog
             ref={dialogRef}
             aria-labelledby={titleId}
             onClick={(e) => {
-                if (e.target === dialogRef.current) {
+                if (dismissible && e.target === dialogRef.current) {
                     dialogRef.current.close()
                     onClose()
                 }
@@ -61,7 +62,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                 <div className="flex items-center justify-between px-5 py-3.5
                         border-b border-gray-200">
                     <h2 id={titleId} className="text-base font-semibold text-gray-900">{title}</h2>
-                    <button
+                    {dismissible && <button
                         type="button"
                         onClick={onClose}
                         aria-label="Close"
@@ -72,7 +73,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                 d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                    </button>
+                    </button>}
                 </div>
 
                 {/* Body */}

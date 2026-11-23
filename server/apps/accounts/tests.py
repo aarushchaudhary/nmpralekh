@@ -524,6 +524,172 @@ class LogoutViewTests(APITestCase):
 
 
 @override_settings(RATELIMIT_ENABLE=False)
+class UserReactivateTests(APITestCase):
+    """Reactivating a user needs the master's own password; editing is_active back on is refused."""
+
+    def setUp(self):
+        self.master = User.objects.create_user(username='ramaster', email='ram@t.com', password='p',
+                                               full_name='Master', role='master')
+        self.gone = User.objects.create_user(username='gone', email='gone@t.com', password='p',
+                                             full_name='Gone', role='user', is_active=False)
+        self.client.force_authenticate(user=self.master)
+        self.url = f'/api/users/{self.gone.pk}/reactivate/'
+
+    def test_reactivate_with_password(self):
+        self.assertEqual(self.client.post(self.url, {'password': 'p'}).status_code, status.HTTP_200_OK)
+        self.gone.refresh_from_db()
+        self.assertTrue(self.gone.is_active)
+
+    def test_missing_or_wrong_password_is_refused(self):
+        for body in ({}, {'password': 'wrong'}):
+            with self.subTest(body=body):
+                self.assertEqual(self.client.post(self.url, body).status_code, status.HTTP_403_FORBIDDEN)
+        self.gone.refresh_from_db()
+        self.assertFalse(self.gone.is_active)
+
+    def test_edit_cannot_reactivate(self):
+        resp = self.client.patch(f'/api/users/{self.gone.pk}/', {'is_active': True})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.gone.refresh_from_db()
+        self.assertFalse(self.gone.is_active)
+
+    def test_only_the_master(self):
+        admin = User.objects.create_user(username='raadmin', email='raa@t.com', password='p',
+                                         full_name='Admin', role='admin')
+        self.client.force_authenticate(user=admin)
+        self.assertEqual(self.client.post(self.url, {'password': 'p'}).status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unknown_user(self):
+        self.assertEqual(self.client.post('/api/users/99999/reactivate/', {'password': 'p'}).status_code,
+                         status.HTTP_404_NOT_FOUND)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class ResetPasswordTests(APITestCase):
+    """The person one level above sets a one-time password; the user must change it before anything else."""
+    TEMP = 'Temp-pass-2026'
+
+    def setUp(self):
+        self.campus = Campus.objects.create(name='Reset Campus', code='RST', city='X')
+        self.other_campus = Campus.objects.create(name='Other Campus', code='OTH', city='X')
+        self.school = School.objects.create(campus=self.campus, name='Reset School', code='RSS')
+        self.other_school = School.objects.create(campus=self.campus, name='Other School', code='OS')
+        mk = lambda name, role, campus=None, **kw: User.objects.create_user(
+            username=name, email=f'{name}@t.com', password='Own-pass-2026', full_name=name.title(),
+            role=role, campus=campus, **kw)
+        self.master = mk('rmaster', 'master')
+        self.super_admin = mk('rsuper', 'super_admin', self.campus)
+        self.far_super_admin = mk('rfarsuper', 'super_admin', self.other_campus)
+        self.admin = mk('radmin', 'admin', self.campus)
+        self.delete_auth = mk('rdelauth', 'delete_auth', self.campus)
+        self.accumulator = mk('raccum', 'mis_accumulator', self.campus)
+        self.coordinator = mk('rcoord', 'mis_coordinator', self.campus)
+        self.faculty = mk('rfaculty', 'user', self.campus)
+        self.far_faculty = mk('rfarfaculty', 'user', self.campus)
+        self.chronicle = mk('rchron', 'chronicle_master', is_chronicle_master=True)
+        for user, school in ((self.admin, self.school), (self.coordinator, self.school),
+                             (self.faculty, self.school), (self.far_faculty, self.other_school)):
+            UserSchoolMapping.objects.create(user=user, school=school, assigned_by=self.master)
+
+    def reset(self, actor, target, password=TEMP):
+        self.client.force_authenticate(user=actor)
+        return self.client.post(f'/api/users/{target.pk}/reset-password/', {'temporary_password': password})
+
+    def test_who_can_reset_whom(self):
+        allowed = [
+            (self.admin, self.faculty), (self.admin, self.coordinator),
+            (self.super_admin, self.admin), (self.super_admin, self.delete_auth),
+            (self.super_admin, self.accumulator), (self.super_admin, self.faculty),
+            (self.master, self.super_admin), (self.master, self.chronicle),
+        ]
+        refused = [
+            (self.admin, self.admin), (self.admin, self.far_faculty), (self.admin, self.accumulator),
+            (self.admin, self.delete_auth), (self.super_admin, self.super_admin),
+            (self.far_super_admin, self.faculty), (self.super_admin, self.master),
+            (self.master, self.faculty), (self.master, self.master), (self.faculty, self.coordinator),
+        ]
+        for actor, target in allowed:
+            with self.subTest(actor=actor.username, target=target.username):
+                self.assertEqual(self.reset(actor, target).status_code, status.HTTP_200_OK)
+        for actor, target in refused:
+            with self.subTest(actor=actor.username, target=target.username):
+                self.assertEqual(self.reset(actor, target).status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_weak_temporary_password_is_refused(self):
+        resp = self.reset(self.admin, self.faculty, '12345678')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.faculty.refresh_from_db()
+        self.assertFalse(self.faculty.must_change_password)
+
+    def test_reset_user_is_locked_until_they_change_it(self):
+        device = APIClient()
+        device.post('/api/auth/login/', {'username': 'rfaculty', 'password': 'Own-pass-2026'}, format='json')
+        self.assertEqual(self.reset(self.admin, self.faculty).status_code, status.HTTP_200_OK)
+        self.assertEqual(device.post('/api/auth/refresh/').status_code, status.HTTP_401_UNAUTHORIZED)
+
+        user = APIClient()
+        login = user.post('/api/auth/login/', {'username': 'rfaculty', 'password': self.TEMP}, format='json')
+        self.assertTrue(login.data['user']['must_change_password'])
+        self.assertEqual(user.get('/api/auth/me/').status_code, status.HTTP_200_OK)
+        self.assertEqual(user.get('/api/records/publications/').status_code, status.HTTP_403_FORBIDDEN)
+
+        changed = user.post('/api/auth/change-password/', {'current_password': self.TEMP,
+                                                           'new_password': 'Mine-again-2026'}, format='json')
+        self.assertEqual(changed.status_code, status.HTTP_200_OK)
+        self.assertFalse(user.get('/api/auth/me/').data['must_change_password'])
+        self.assertEqual(user.get('/api/records/publications/').status_code, status.HTTP_200_OK)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+class ChangePasswordTests(APITestCase):
+    """Any signed-in user changes their own password; other devices are signed out."""
+    url = '/api/auth/change-password/'
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='pwuser', email='pw@t.com', password='Old-pass-2026',
+                                             full_name='Pw User', role='user')
+
+    def _device(self):
+        device = APIClient()
+        resp = device.post('/api/auth/login/', {'username': 'pwuser', 'password': 'Old-pass-2026'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        return device
+
+    def test_change_signs_out_other_devices_and_keeps_this_one(self):
+        laptop, phone = self._device(), self._device()
+        resp = laptop.post(self.url, {'current_password': 'Old-pass-2026', 'new_password': 'New-pass-2026'},
+                           format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(phone.post('/api/auth/refresh/').status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(laptop.post('/api/auth/refresh/').status_code, status.HTTP_200_OK)
+
+        login = lambda pw: self.client.post('/api/auth/login/', {'username': 'pwuser', 'password': pw},
+                                            format='json').status_code
+        self.assertEqual(login('Old-pass-2026'), status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(login('New-pass-2026'), status.HTTP_200_OK)
+
+    def test_wrong_current_password_changes_nothing(self):
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.post(self.url, {'current_password': 'nope', 'new_password': 'New-pass-2026'})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('current_password', resp.data)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('Old-pass-2026'))
+
+    def test_weak_or_unchanged_new_password_is_refused(self):
+        self.client.force_authenticate(user=self.user)
+        for new in ('123', '12345678', 'password', 'Old-pass-2026'):
+            with self.subTest(new=new):
+                resp = self.client.post(self.url, {'current_password': 'Old-pass-2026', 'new_password': new})
+                self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn('new_password', resp.data)
+
+    def test_signed_out_user_is_refused(self):
+        resp = self.client.post(self.url, {'current_password': 'Old-pass-2026', 'new_password': 'New-pass-2026'})
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+@override_settings(RATELIMIT_ENABLE=False)
 class MeViewTests(APITestCase):
     def setUp(self):
         self.campus = Campus.objects.create(name="Me Campus", code="ME", city="Me")

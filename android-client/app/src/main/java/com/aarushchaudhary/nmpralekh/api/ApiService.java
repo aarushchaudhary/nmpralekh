@@ -18,6 +18,13 @@ public interface ApiService {
     @POST("api/auth/logout/")
     Call<JsonObject> logout();
 
+    @POST("api/auth/change-password/")
+    Call<JsonObject> changePassword(@Body JsonObject body);
+
+    // the person one level above sets a one-time password (server checks who may)
+    @POST("api/users/{id}/reset-password/")
+    Call<JsonObject> resetPassword(@Path("id") int id, @Body JsonObject body);
+
     @GET("api/auth/me/")
     Call<JsonObject> getMe();
 
@@ -104,10 +111,6 @@ public interface ApiService {
     @GET("api/records/publications/{id}/authors/")
     Call<JsonObject> getPublicationAuthors(@Path("id") int id);
 
-    // replaces the whole co-author list in one transaction
-    @PUT("api/records/publications/{id}/authors/")
-    Call<JsonElement> replacePublicationAuthors(@Path("id") int id, @Body com.google.gson.JsonArray body);
-
     // Patents
     @GET("api/records/patents/")
     Call<JsonObject> getPatents(@QueryMap Map<String, String> params);
@@ -124,10 +127,6 @@ public interface ApiService {
     // Patent applicants
     @GET("api/records/patents/{id}/applicants/")
     Call<JsonObject> getPatentApplicants(@Path("id") int id);
-
-    // replaces the whole co-applicant list in one transaction
-    @PUT("api/records/patents/{id}/applicants/")
-    Call<JsonElement> replacePatentApplicants(@Path("id") int id, @Body com.google.gson.JsonArray body);
 
     // Certifications
     @GET("api/records/certifications/")

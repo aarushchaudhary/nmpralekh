@@ -9,6 +9,7 @@ import FormInput   from '../../components/ui/FormInput'
 import Badge       from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import api         from '../../api/axios'
+import ConfirmPasswordDialog from '../../components/shared/ConfirmPasswordDialog'
 import { apiErrors } from '../../api/errors'
 
 const empty = { name: '', code: '', city: '' }
@@ -66,12 +67,11 @@ export default function Campuses() {
     } finally { setSaving(false) }
   }
 
-  const handleReactivate = async (row) => {
-    setSaving(true)
-    try {
-      await api.post(`/schools/campuses/${row.id}/reactivate/`)
-      fetch()
-    } finally { setSaving(false) }
+  // reactivating needs the master's own password (server-checked)
+  const [reactivating, setReactivating] = useState(null)
+  const reactivate = async password => {
+    await api.post(`/schools/campuses/${reactivating.id}/reactivate/`, { password })
+    fetch()
   }
 
   const columns = [
@@ -100,7 +100,7 @@ export default function Campuses() {
             </Button>
           ) : (
             <Button size="sm" variant="secondary"
-              onClick={() => handleReactivate(row)}>
+              onClick={() => setReactivating(row)}>
               Reactivate
             </Button>
           )}
@@ -149,6 +149,9 @@ export default function Campuses() {
         onConfirm={handleDeactivate} title="Deactivate Campus"
         message={`Deactivate "${selected?.name}"? All schools and users under this campus will lose access.`}
         confirmLabel="Deactivate" loading={saving} />
+      <ConfirmPasswordDialog isOpen={!!reactivating} onClose={() => setReactivating(null)}
+        onConfirm={reactivate} title="Reactivate campus" confirmLabel="Reactivate"
+        message={`Enter your password to reactivate ${reactivating?.name ?? ''}.`} />
     </div>
   )
 }

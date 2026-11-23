@@ -4,6 +4,8 @@ import Table from '../../components/ui/Table'
 import Badge from '../../components/ui/Badge'
 import Panel from '../../components/ui/Panel'
 import api from '../../api/axios'
+import Button from '../../components/ui/Button'
+import ResetPasswordDialog from '../../components/shared/ResetPasswordDialog'
 
 const PAGE_SIZE = 25
 
@@ -12,6 +14,7 @@ export default function SchoolFacultiesPage() {
     const [loading, setLoading] = useState(true)
     const [totalPages, setTotalPages] = useState(1)
     const [currentPage, setCurrentPage] = useState(1)
+    const [resetting, setResetting] = useState(null)
 
     // Filters
     const [search, setSearch] = useState('')
@@ -51,6 +54,10 @@ export default function SchoolFacultiesPage() {
         { key: 'full_name', label: 'Name' },
         { key: 'email', label: 'Email' },
         { key: 'username', label: 'Username' },
+        {
+            key: 'role', label: 'Role', sortable: false,
+            render: row => <Badge label={row.role === 'mis_coordinator' ? 'MIS Coordinator' : 'Faculty'} color="gray" />
+        },
         { key: 'school_code', label: 'School Code' },
         {
             key: 'is_active', label: 'Status', sortable: false,
@@ -59,6 +66,14 @@ export default function SchoolFacultiesPage() {
                     label={row.is_active ? 'Active' : 'Inactive'}
                     color={row.is_active ? 'dark' : 'gray'}
                 />
+            )
+        },
+        {
+            key: 'actions', label: '', sortable: false,
+            render: row => (
+                <Button size="sm" variant="secondary" onClick={() => setResetting(row)}>
+                    Reset password
+                </Button>
             )
         },
     ]
@@ -72,8 +87,8 @@ export default function SchoolFacultiesPage() {
 
             <Panel className="mb-6">
                 <p className="text-sm text-gray-700">
-                    Showing all faculty members who are assigned to the same school(s) as you.
-                    This is a <strong>read-only</strong> view.
+                    Showing the faculty members and MIS coordinators assigned to the same school(s) as you.
+                    Reset password sets a one-time password they must change at next sign-in.
                 </p>
             </Panel>
 
@@ -110,6 +125,8 @@ export default function SchoolFacultiesPage() {
                 currentPage={currentPage}
                 onPageChange={setCurrentPage}
             />
+
+            <ResetPasswordDialog user={resetting} onClose={() => setResetting(null)} />
         </div>
     )
 }

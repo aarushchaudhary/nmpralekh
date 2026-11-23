@@ -28,7 +28,7 @@ from apps.records.serializers import (
 import json
 
 
-def create_audit_request(user, table_name, record, action, new_data=None):
+def create_audit_request(user, table_name, record, action, new_data=None, extra_old=None):
     """
     Helper — snapshots old data and creates a pending audit request.
     Called on every UPDATE and DELETE instead of saving directly.
@@ -67,6 +67,7 @@ def create_audit_request(user, table_name, record, action, new_data=None):
         for field in locked_record._meta.fields:
             value = getattr(locked_record, field.name)
             old_data[field.name] = str(value) if value is not None else None
+        old_data.update(extra_old or {})  # e.g. the co-author list, so reviewers see before and after
 
         audit = AuditRequest.objects.create(
             table_name   = table_name,
@@ -122,15 +123,32 @@ class AuditedDetailMixin(SchoolScopedMixin):
     Detail views never write directly: every UPDATE/DELETE becomes a pending
     audit request. The model's db_table is the audit table_name.
     """
+    # 'authors' / 'applicants': a nested people list that is snapshotted with the
+    # record and swapped in only when the audit is approved
+    people_field = None
+
+    def people_snapshot(self, record):
+        if not self.people_field:
+            return None
+        return {self.people_field: self.get_serializer(record).data[self.people_field]}
+
     def validated_new_data(self, record):
         # Validate the edit now, not at approval time; store raw values for validated keys only
         serializer = self.get_serializer(record, data=self.request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        if self.people_field in serializer.validated_data:
+            # partial=True reaches the nested rows too; each person must be complete
+            rows = type(serializer.fields[self.people_field].child)(
+                data=self.request.data[self.people_field], many=True)
+            if not rows.is_valid():
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({self.people_field: rows.errors})
         return {k: self.request.data[k] for k in serializer.validated_data}
 
     def update(self, request, *args, **kwargs):
         record = self.get_object()
-        audit  = create_audit_request(request.user, record._meta.db_table, record, 'UPDATE', self.validated_new_data(record))
+        audit  = create_audit_request(request.user, record._meta.db_table, record, 'UPDATE',
+                                      self.validated_new_data(record), self.people_snapshot(record))
         return Response({
             'detail': 'Update request submitted and pending approval',
             'audit_id': audit.id
@@ -138,7 +156,8 @@ class AuditedDetailMixin(SchoolScopedMixin):
 
     def destroy(self, request, *args, **kwargs):
         record = self.get_object()
-        audit  = create_audit_request(request.user, record._meta.db_table, record, 'DELETE')
+        audit  = create_audit_request(request.user, record._meta.db_table, record, 'DELETE',
+                                      extra_old=self.people_snapshot(record))
         return Response({
             'detail': 'Delete request submitted and pending approval',
             'audit_id': audit.id
@@ -295,21 +314,9 @@ class FDPDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
 # ─────────────────────────────────────────────
 # FACULTY PUBLICATIONS
 # ─────────────────────────────────────────────
-def replace_people(request, serializer_class, parent, model, parent_field):
-    """PUT the full co-author / co-applicant list. All rows are validated first, then swapped
-    in one transaction, so a failure never leaves half the list saved (clients used to send
-    one request per person)."""
-    rows = serializer_class(data=request.data, many=True)
-    rows.is_valid(raise_exception=True)
-    with transaction.atomic():
-        type(parent).objects.select_for_update().get(pk=parent.pk)  # one replace at a time per record
-        model.objects.filter(**{parent_field: parent}).delete()
-        model.objects.bulk_create([model(**row, **{parent_field: parent}) for row in rows.validated_data])
-    people = model.objects.filter(**{parent_field: parent}).select_related('user')
-    return Response(serializer_class(people, many=True).data)
-
-
-class PublicationAuthorListCreateView(generics.ListCreateAPIView):
+# co-authors / co-applicants are read here; they change only through the
+# audited publication / patent edit (or with the record when it is created)
+class PublicationAuthorListCreateView(generics.ListAPIView):
     serializer_class   = PublicationAuthorSerializer
     permission_classes = [RolePermission(['admin', 'user'])]
 
@@ -333,35 +340,6 @@ class PublicationAuthorListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         pub = self.get_publication()
         return PublicationAuthor.objects.filter(publication=pub).select_related('user')
-
-    def perform_create(self, serializer):
-        pub = self.get_publication()
-        serializer.save(publication=pub)
-
-    def put(self, request, *args, **kwargs):
-        return replace_people(request, self.get_serializer_class(), self.get_publication(),
-                              PublicationAuthor, 'publication')
-
-
-class PublicationAuthorDetailView(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class   = PublicationAuthorSerializer
-    permission_classes = [RolePermission(['admin', 'user'])]
-
-    def get_queryset(self):
-        school_ids     = get_user_school_ids(self.request.user)
-        publication_id = self.kwargs['publication_id']
-        valid_pub_ids  = FacultyPublication.objects.filter(
-            school_id__in=school_ids,
-            is_deleted=False
-        )
-        # faculty can only manage authors on their own publications
-        if self.request.user.role == 'user':
-            valid_pub_ids = valid_pub_ids.filter(created_by=self.request.user)
-        valid_pub_ids = valid_pub_ids.values_list('id', flat=True)
-        return PublicationAuthor.objects.filter(
-            publication_id__in=valid_pub_ids,
-            publication_id=publication_id
-        ).select_related('user')
 
 
 class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
@@ -388,6 +366,7 @@ class PublicationListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin
 
 class PublicationDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = FacultyPublicationSerializer
+    people_field       = 'authors'
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):
@@ -400,7 +379,7 @@ class PublicationDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAP
 # ─────────────────────────────────────────────
 # PATENTS
 # ─────────────────────────────────────────────
-class PatentApplicantListCreateView(generics.ListCreateAPIView):
+class PatentApplicantListCreateView(generics.ListAPIView):
     serializer_class   = PatentApplicantSerializer
     permission_classes = [RolePermission(['admin', 'user'])]
 
@@ -424,35 +403,6 @@ class PatentApplicantListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         patent = self.get_patent()
         return PatentApplicant.objects.filter(patent=patent).select_related('user')
-
-    def perform_create(self, serializer):
-        patent = self.get_patent()
-        serializer.save(patent=patent)
-
-    def put(self, request, *args, **kwargs):
-        return replace_people(request, self.get_serializer_class(), self.get_patent(),
-                              PatentApplicant, 'patent')
-
-
-class PatentApplicantDetailView(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class   = PatentApplicantSerializer
-    permission_classes = [RolePermission(['admin', 'user'])]
-
-    def get_queryset(self):
-        school_ids = get_user_school_ids(self.request.user)
-        patent_id  = self.kwargs['patent_id']
-        valid_patent_ids = Patent.objects.filter(
-            school_id__in=school_ids,
-            is_deleted=False
-        )
-        # faculty can only manage applicants on their own patents
-        if self.request.user.role == 'user':
-            valid_patent_ids = valid_patent_ids.filter(created_by=self.request.user)
-        valid_patent_ids = valid_patent_ids.values_list('id', flat=True)
-        return PatentApplicant.objects.filter(
-            patent_id__in=valid_patent_ids,
-            patent_id=patent_id
-        ).select_related('user')
 
 
 class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, generics.ListCreateAPIView):
@@ -479,6 +429,7 @@ class PatentListCreateView(InvalidateDashboardCacheMixin, SchoolScopedMixin, gen
 
 class PatentDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = PatentSerializer
+    people_field       = 'applicants'
     permission_classes = [RolePermission(['admin', 'user', 'super_admin'])]
 
     def get_queryset(self):

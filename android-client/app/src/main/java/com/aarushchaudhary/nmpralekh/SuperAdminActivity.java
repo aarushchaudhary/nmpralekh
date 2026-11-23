@@ -114,6 +114,10 @@ public class SuperAdminActivity extends BaseAuthActivity
         } else if (id == R.id.nav_received_mis_data) {
             fragment = new ReceivedMISDataFragment();
             title = "Received MIS Data";
+        } else if (id == R.id.nav_change_password) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START);
+            showChangePasswordDialog();
+            return true;
         } else if (id == R.id.nav_logout) {
             performLogout();
             binding.drawerLayout.closeDrawer(GravityCompat.START);

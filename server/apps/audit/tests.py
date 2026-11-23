@@ -267,6 +267,15 @@ class ClubAuditFlowTests(AuditTestMixin, APITestCase):
         resp = self.client.post('/api/records/clubs/', {'name': 'Chess', 'type': 'club', 'school': self.school.pk})
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
+    def test_duplicate_live_name_is_refused_up_front(self):
+        from apps.records.models import Club
+        Club.objects.create(name="Go", type="club", school=self.school, created_by=self.admin_user)
+        self.client.force_authenticate(user=self.admin_user)
+        dup = self.client.post('/api/records/clubs/', {'name': 'Chess', 'type': 'club', 'school': self.school.pk})
+        self.assertEqual(dup.status_code, status.HTTP_400_BAD_REQUEST)
+        rename = self.client.patch(f'/api/records/clubs/{self.club.pk}/', {'name': 'Go'}, format='json')
+        self.assertEqual(rename.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_edit_applies_only_on_approval_and_reject_keeps_it(self):
         audit_id = self._request('patch', {'name': 'Chess Society'})
         self.club.refresh_from_db()

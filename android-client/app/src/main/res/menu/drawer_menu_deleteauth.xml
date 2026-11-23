@@ -23,6 +23,9 @@
     <item>
         <menu>
             <item
+                android:id="@+id/nav_change_password"
+                android:title="Change password" />
+            <item
                 android:id="@+id/nav_logout"
                 android:title="Logout" />
         </menu>

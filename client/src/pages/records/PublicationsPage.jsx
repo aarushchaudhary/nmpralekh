@@ -39,7 +39,6 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selected,          setSelected]          = useState(null)
   const [form,              setForm]              = useState(empty)
-  const [pageError, setPageError] = useState('')
   const [coAuthors,         setCoAuthors]         = useState([])
   const [saving,            setSaving]            = useState(false)
   const [errors,            setErrors]            = useState({})
@@ -96,29 +95,17 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
     setErrors(e); return !Object.keys(e).length
   }
 
-  // one request replaces the whole list on the server, all or nothing
-  const saveCoAuthors = publicationId =>
-    api.put(`/records/publications/${publicationId}/authors/`, coAuthors.filter(a => a.name))
-
   const handleSubmit = async () => {
     if (!validate()) return
-    setPageError('')
     setSaving(true)
+    // co-authors travel with the publication: saved on create, approved with an edit
+    const payload = { ...form, authors: coAuthors.filter(a => a.name) }
     try {
       if (isEdit) {
-        await api.put(`/records/publications/${selected.id}/`, form)
-        await saveCoAuthors(selected.id)
+        await api.put(`/records/publications/${selected.id}/`, payload)
         setShowEditConfirm(false)
       } else {
-        const res = await create(form)
-        try {
-          if (res?.id) await saveCoAuthors(res.id)
-        } catch (err) {
-          // the publication exists now; keeping the "Add" form open would create a duplicate on retry
-          setShowForm(false); fetch()
-          setPageError(`Publication saved, but its co-authors were not: ${apiErrors(err)._form || 'add them by editing the publication.'}`)
-          return
-        }
+        await create(payload)
       }
       setShowForm(false); fetch()
     } catch (err) {
@@ -246,7 +233,6 @@ export default function PublicationsPage({ readOnly = false, selfOnly = false })
         </Panel>
       )}
 
-      {pageError && <div className="mb-4"><FormError message={pageError} /></div>}
       {exportError && <div className="mb-4"><FormError message={exportError} /></div>}
       <Table columns={columns} data={data} error={loadError}
         serverPagination

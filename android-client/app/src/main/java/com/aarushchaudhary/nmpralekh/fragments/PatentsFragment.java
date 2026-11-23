@@ -28,7 +28,6 @@ import java.util.List;
 
 
 
-import retrofit2.Callback;
 import retrofit2.Response;
 
 public class PatentsFragment extends BaseRecordFragment {
@@ -232,6 +231,10 @@ public class PatentsFragment extends BaseRecordFragment {
         data.addProperty("patent_status", ((Spinner) formFields.get("patent_status")).getSelectedItem().toString());
         data.addProperty("details", getTextValue(formFields.get("details")));
         data.addProperty("doi_or_link", getTextValue(formFields.get("doi_link")));
+        // co-applicants travel with the record: saved on create, approved with an edit
+        JsonArray people = new JsonArray();
+        for (JsonObject person : pendingApplicants) people.add(person);
+        data.add("applicants", people);
         return data;
     }
 
@@ -243,83 +246,6 @@ public class PatentsFragment extends BaseRecordFragment {
                !getTextValue(formFields.get("date_of_publication")).isEmpty() &&
                !getTextValue(formFields.get("journal_number")).isEmpty() &&
                !getTextValue(formFields.get("doi_link")).isEmpty();
-    }
-
-    @Override
-    protected void createRecord(JsonObject data) {
-        apiService.createPatent(data).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                if (!isAdded()) return;
-                if (response.isSuccessful() && response.body() != null) {
-                    int patentId = response.body().get("id").getAsInt();
-                    saveApplicants(patentId, () -> {
-                        Toast.makeText(requireContext(), "Patent created successfully", Toast.LENGTH_SHORT).show();
-                        currentPage = 1;
-                        loadData();
-                    });
-                } else {
-                    Toast.makeText(requireContext(), "Failed to create record", Toast.LENGTH_SHORT).show();
-                }
-            }
-            @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
-                if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    @Override
-    protected void updateRecord(JsonObject original, JsonObject updated) {
-        int id = original.get("id").getAsInt();
-        apiService.updatePatent(id, updated).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                if (!isAdded()) return;
-                if (response.isSuccessful()) {
-                    saveApplicants(id, () -> {
-                        Toast.makeText(requireContext(), "Patent updated", Toast.LENGTH_SHORT).show();
-                        loadData();
-                    });
-                } else {
-                    Toast.makeText(requireContext(), "Failed to update record", Toast.LENGTH_SHORT).show();
-                }
-            }
-            @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
-                if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    /** Sends the full coApplicants list in one request; the server saves it all or nothing. */
-    private void saveApplicants(int patentId, Runnable onComplete) {
-        JsonArray body = new JsonArray();
-        for (JsonObject person : pendingApplicants) body.add(person);
-        apiService.replacePatentApplicants(patentId, body).enqueue(new Callback<JsonElement>() {
-            @Override
-            public void onResponse(Call<JsonElement> call, Response<JsonElement> response) {
-                if (!isAdded()) return;
-                if (response.isSuccessful()) {
-                    onComplete.run();
-                } else {
-                    coApplicantsFailed();
-                }
-            }
-            @Override
-            public void onFailure(Call<JsonElement> call, Throwable t) {
-                if (!isAdded()) return;
-                coApplicantsFailed();
-            }
-        });
-    }
-
-    private void coApplicantsFailed() {
-        Toast.makeText(requireContext(), "Patent saved, but its co-applicants were not. Edit it to try again.",
-                Toast.LENGTH_LONG).show();
-        loadData();
     }
 
     private class FacultyAutoCompleteAdapter extends ArrayAdapter<JsonObject> implements Filterable {

@@ -54,6 +54,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff    = models.BooleanField(default=False)
     is_service_admin = models.BooleanField(default=False)
     is_chronicle_master = models.BooleanField(default=False)
+    # set when someone above resets the password; the user may only change it until they do
+    must_change_password = models.BooleanField(default=False)
     created_by  = models.ForeignKey(
                     'self',
                     null=True,

@@ -157,6 +157,9 @@ flowchart TD
 | Create records | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Request update / delete | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Approve / reject changes | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Change own password | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Reset a password for the role below | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Reactivate users, campuses, schools (own password) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Export Excel | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
 | Write and send MIS reports | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
 | AI summarizer | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
@@ -187,6 +190,8 @@ There is only one Service Admin and one Chronicle Master; the database enforces 
 ### Edit and delete approval
 
 Records are never changed or deleted directly. The original stays as it is until a reviewer decides.
+
+This covers every record module and clubs. A publication's co-authors and a patent's co-applicants save with a new record. On an existing record they change only through the approved edit, and the reviewer sees the list before and after. Creating a record never needs approval.
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'actorBkg':'#ECEFF1','actorBorder':'#5A5A5A','actorTextColor':'#1F1F1F','actorLineColor':'#8A8A8A','signalColor':'#2A2A2A','signalTextColor':'#1F1F1F','sequenceNumberColor':'#FFFFFF','labelBoxBkgColor':'#FFFFFF','labelBoxBorderColor':'#5A5A5A','labelTextColor':'#1F1F1F','loopTextColor':'#1F1F1F','noteBkgColor':'#FFF59D','noteBorderColor':'#F9A825','noteTextColor':'#1F1F1F'}}}%%
@@ -248,6 +253,11 @@ flowchart LR
 
 Each report records when it was sent to each recipient. A retried or double-clicked request cannot ask the same coordinator twice for the same dates.
 
+- A Chronicle Master request shows on the accumulator's dashboard until they send a report covering that period.
+- "Fulfill request" (coordinator) and "Finalize MIS" (accumulator) open the create form with the request's dates already filled in.
+- Reports are named **School - Campus - From to To**; an accumulator's report has no school.
+- Every report list shows 10 per page, filtered on the server by search text and dates. Clicking a report's number or name opens it in a popup.
+
 ### "Export all" in the background
 
 Large exports run in Celery so they never block the web server.
@@ -305,6 +315,54 @@ sequenceDiagram
     A-->>C: refresh token blacklisted, cookies cleared
     end
 ```
+
+### Passwords and reactivation
+
+- **Change your own password:** "Change password" in the sidebar (web) or the drawer (Android). It needs the current password and passes the password rules. Your other devices are signed out; this one stays signed in.
+- **Forgotten password:** the person one level above types a one-time password for you:
+
+| Who resets | Whose password |
+|---|---|
+| Admin | Faculty and MIS coordinators in their schools (School Faculties page) |
+| Super Admin | Everyone below them in their campus: admins, Delete Auth, MIS accumulators, coordinators, faculty (Campus Users page) |
+| Master | Super admins (Users page), the Chronicle Master and the Service user (Special Users page) |
+
+Nobody resets their own password this way. A reset signs the user out everywhere. Until they choose a new password, the server refuses every request except `me` and change-password, and both clients show a dialog that can't be dismissed.
+
+- **Reactivating** a user, campus or school asks the master to type their own password again.
+
+### Resetting the master's password
+
+No one in the portal is above the master, so a forgotten master password is reset on the server. From `server/`, with the venv active:
+
+```bash
+python manage.py changepassword <master-username>
+```
+
+Django then asks for the new password twice, in the terminal:
+
+```
+Changing password for user '<master-username>'
+Password:
+Password (again):
+Password changed successfully for user '<master-username>'
+```
+
+- Typing doesn't show on screen.
+- The new password must pass the same rules as the app (`AUTH_PASSWORD_VALIDATORS` in `config/settings.py`). A weak password, or two entries that differ, gets another try, up to 3.
+- Always give the username: without it, Django looks for a user named after your Linux login.
+
+Changing the password doesn't sign out devices that are already logged in. If the reset is because the account may be compromised, also cut off its sessions:
+
+```bash
+python manage.py shell -c "
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+for t in OutstandingToken.objects.filter(user__username='<master-username>'):
+    BlacklistedToken.objects.get_or_create(token=t)
+"
+```
+
+Each signed-in device is then refused at its next token refresh. Any access token it already holds still works for up to 30 minutes.
 
 ### Scheduled jobs
 
@@ -806,12 +864,15 @@ POST   /api/auth/login/                       sets httpOnly cookies (10 / min pe
 POST   /api/auth/refresh/                     rotates tokens (30 / min per IP)
 POST   /api/auth/logout/                      blacklists the refresh token, clears cookies
 GET    /api/auth/me/
+POST   /api/auth/change-password/             {current_password, new_password}; signs out other devices (10 / min)
 
 GET    POST            /api/users/            master
-GET    PUT PATCH DELETE /api/users/<id>/      master (delete = deactivate)
-GET    POST PATCH      /api/users/master/service-user/
-GET    POST PATCH      /api/users/master/chronicle-master/
-GET    /api/users/school-faculties/           admin
+GET    PUT PATCH DELETE /api/users/<id>/      master (delete = deactivate; is_active can't be set back to true here)
+POST   /api/users/<id>/reactivate/            master, {password} = the master's own (10 / min)
+POST   /api/users/<id>/reset-password/        the person one level above, {temporary_password}
+GET    POST PATCH      /api/users/master/service-user/       PATCH = one-time password
+GET    POST PATCH      /api/users/master/chronicle-master/   PATCH = one-time password
+GET    /api/users/school-faculties/           admin (faculty and MIS coordinators)
 GET    /api/users/campus-users/               super admin
 GET    /api/users/accumulator-coordinators/   MIS accumulator
 GET    /api/users/chronicle/accumulators/     chronicle master
@@ -824,12 +885,12 @@ GET    /api/users/chronicle/accumulators/     chronicle master
 ```
 GET    POST             /api/schools/campuses/
 GET    PUT PATCH DELETE /api/schools/campuses/<id>/
-POST   /api/schools/campuses/<id>/reactivate/
+POST   /api/schools/campuses/<id>/reactivate/     {password} = the master's own
 GET    /api/schools/campuses/<id>/schools/
 GET    /api/schools/campuses/<id>/users/
 GET    POST             /api/schools/
 GET    PUT PATCH DELETE /api/schools/<id>/
-POST   /api/schools/<id>/reactivate/
+POST   /api/schools/<id>/reactivate/              {password} = the master's own
 GET    POST             /api/schools/assign/
 GET    DELETE           /api/schools/assign/<id>/
 GET    /api/schools/my-schools/
@@ -845,10 +906,8 @@ GET    POST             /api/records/<module>/
 GET    PUT PATCH DELETE /api/records/<module>/<id>/      update / delete → 202, goes to audit
        <module> = school-activities | student-activities | fdp | publications
                   | patents | certifications | placements | clubs
-GET    POST PUT         /api/records/publications/<id>/authors/          PUT = replace the whole list (one transaction)
-GET    PUT PATCH DELETE /api/records/publications/<id>/authors/<id>/
-GET    POST PUT         /api/records/patents/<id>/applicants/            PUT = replace the whole list (one transaction)
-GET    PUT PATCH DELETE /api/records/patents/<id>/applicants/<id>/
+GET    /api/records/publications/<id>/authors/          read-only; send `authors` with the publication
+GET    /api/records/patents/<id>/applicants/            read-only; send `applicants` with the patent
 GET    /api/records/dashboard-counts/                    cached 60 s
 GET    /api/records/faculty-users/
 GET    PUT  /api/records/backup-config/                  master
@@ -890,8 +949,8 @@ GET    /api/export/status/<task_id>/
 
 GET    POST          /api/export/data-requests/
 GET    PUT PATCH     /api/export/data-requests/<id>/
-GET    POST          /api/export/reports/
-GET    /api/export/reports/received/
+GET    POST          /api/export/reports/              list: ?search= &date_from= &date_to= (period overlap)
+GET    /api/export/reports/received/                    same filters; each report has a generated `title`
 POST   /api/export/reports/<id>/send-admin/ | send-accumulator/ | send-superadmin/ | send-chronicle/
 ```
 </details>
@@ -951,7 +1010,7 @@ Rules the database enforces itself:
 
 ## Testing and CI
 
-### Server: 436 tests
+### Server: 455 tests
 
 ```bash
 cd server && source venv/bin/activate
@@ -963,10 +1022,10 @@ Tests run on real PostgreSQL (port 5432 directly, never through pgBouncer) and o
 
 | App | Covers |
 |---|---|
-| accounts | user model, all permission classes, login / refresh / logout, rate limits during a Redis outage, single Service Admin and Chronicle Master |
+| accounts | user model, all permission classes, login / refresh / logout, rate limits during a Redis outage, single Service Admin and Chronicle Master, change / reset password and the reset lock, reactivation |
 | schools | campus and school CRUD, scoping per role, mapping rules |
-| records | all modules, audit-gated updates (202), soft delete, date rules, dashboard counts |
-| audit | approve and reject, history, permissions |
+| records | all modules, audit-gated updates (202), soft delete, date rules, dashboard counts, co-authors through approval |
+| audit | approve and reject, history, permissions, clubs through approval |
 | export | exports, background "Export all" (owner-only download), MIS requests and reports, integrity rules |
 | service | error fingerprinting and de-duplication, affected-user counts, tickets, bug reports |
 
@@ -1047,8 +1106,10 @@ git add . && GRAPHIFY_SKIP_HOOK=1 git commit -m "<message>" && graphify update .
 | Brute force | login 10 / min per IP; 1 / s per user fallback if Redis is down; Nginx 30 req/s |
 | API throttles | 60 / min anonymous, 300 / min signed in; exports 5–10 / min per user |
 | Data isolation | every query scoped to the user's schools and campus |
-| Changes | updates and deletes need reviewer approval; records are soft-deleted |
-| Passwords | Django PBKDF2-SHA256 |
+| Changes | updates and deletes need reviewer approval, including clubs and co-authors; records are soft-deleted |
+| Passwords | Django PBKDF2-SHA256; changing one signs out other devices |
+| Password resets | only the person one level above, never your own; the user is locked to change-password until they pick a new one |
+| Reactivation | the master re-enters their own password (10 / min) |
 | CORS / CSRF | only the configured origins |
 | SQL injection | Django ORM parameterised queries only |
 | Admin panel | `/admin/` reachable from localhost only (Nginx) |

@@ -12,6 +12,8 @@ public class SessionManager {
     private static final String KEY_ROLE = "role";
     private static final String KEY_USER_ID = "user_id";
     private static final String KEY_IS_LOGGED_IN = "is_logged_in";
+    // set after someone above reset the password: the app asks for a new one before anything else
+    private static final String KEY_MUST_CHANGE_PASSWORD = "must_change_password";
 
     private final SharedPreferences prefs;
 
@@ -25,6 +27,8 @@ public class SessionManager {
         if (user.has("username")) editor.putString(KEY_USERNAME, user.get("username").getAsString());
         if (user.has("role")) editor.putString(KEY_ROLE, user.get("role").getAsString());
         if (user.has("id")) editor.putInt(KEY_USER_ID, user.get("id").getAsInt());
+        editor.putBoolean(KEY_MUST_CHANGE_PASSWORD,
+                user.has("must_change_password") && user.get("must_change_password").getAsBoolean());
         editor.putBoolean(KEY_IS_LOGGED_IN, true);
         editor.apply();
     }
@@ -34,6 +38,8 @@ public class SessionManager {
     public String getRole() { return prefs.getString(KEY_ROLE, ""); }
     public int getUserId() { return prefs.getInt(KEY_USER_ID, -1); }
     public boolean isLoggedIn() { return prefs.getBoolean(KEY_IS_LOGGED_IN, false); }
+    public boolean mustChangePassword() { return prefs.getBoolean(KEY_MUST_CHANGE_PASSWORD, false); }
+    public void passwordChanged() { prefs.edit().putBoolean(KEY_MUST_CHANGE_PASSWORD, false).apply(); }
 
     public void clear() {
         prefs.edit().clear().apply();

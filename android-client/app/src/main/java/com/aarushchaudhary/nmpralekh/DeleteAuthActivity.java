@@ -93,6 +93,10 @@ public class DeleteAuthActivity extends BaseAuthActivity
         } else if (id == R.id.nav_history) {
             fragment = new DeleteAuthHistoryFragment();
             title = "History";
+        } else if (id == R.id.nav_change_password) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START);
+            showChangePasswordDialog();
+            return true;
         } else if (id == R.id.nav_logout) {
             performLogout();
             binding.drawerLayout.closeDrawer(GravityCompat.START);

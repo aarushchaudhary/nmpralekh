@@ -335,14 +335,23 @@ class CampusReactivateViewTests(APITestCase):
 
     def test_reactivate(self):
         self.client.force_authenticate(user=self.master)
-        resp = self.client.post(f'/api/schools/campuses/{self.campus.pk}/reactivate/')
+        resp = self.client.post(f'/api/schools/campuses/{self.campus.pk}/reactivate/', {'password': 'p'})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.campus.refresh_from_db()
         self.assertTrue(self.campus.is_active)
 
+    def test_reactivate_needs_the_masters_password(self):
+        self.client.force_authenticate(user=self.master)
+        for body in ({}, {'password': 'wrong'}):
+            with self.subTest(body=body):
+                resp = self.client.post(f'/api/schools/campuses/{self.campus.pk}/reactivate/', body)
+                self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.campus.refresh_from_db()
+        self.assertFalse(self.campus.is_active)
+
     def test_reactivate_nonexistent(self):
         self.client.force_authenticate(user=self.master)
-        resp = self.client.post('/api/schools/campuses/99999/reactivate/')
+        resp = self.client.post('/api/schools/campuses/99999/reactivate/', {'password': 'p'})
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
 
@@ -437,10 +446,19 @@ class SchoolReactivateViewTests(APITestCase):
 
     def test_reactivate(self):
         self.client.force_authenticate(user=self.master)
-        resp = self.client.post(f'/api/schools/{self.school.pk}/reactivate/')
+        resp = self.client.post(f'/api/schools/{self.school.pk}/reactivate/', {'password': 'p'})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.school.refresh_from_db()
         self.assertTrue(self.school.is_active)
+
+    def test_reactivate_needs_the_masters_password(self):
+        self.client.force_authenticate(user=self.master)
+        for body in ({}, {'password': 'wrong'}):
+            with self.subTest(body=body):
+                resp = self.client.post(f'/api/schools/{self.school.pk}/reactivate/', body)
+                self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.school.refresh_from_db()
+        self.assertFalse(self.school.is_active)
 
 
 @override_settings(RATELIMIT_ENABLE=False)

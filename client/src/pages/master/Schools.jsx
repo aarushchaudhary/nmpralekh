@@ -8,6 +8,7 @@ import Modal from '../../components/ui/Modal'
 import FormInput from '../../components/ui/FormInput'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import ConfirmPasswordDialog from '../../components/shared/ConfirmPasswordDialog'
 import api from '../../api/axios'
 import { apiErrors } from '../../api/errors'
 
@@ -92,14 +93,11 @@ export default function Schools() {
         }
     }
 
-    const handleReactivate = async (row) => {
-        setSaving(true)
-        try {
-            await api.post(`/schools/${row.id}/reactivate/`)
-            fetch()
-        } finally {
-            setSaving(false)
-        }
+    // reactivating needs the master's own password (server-checked)
+    const [reactivating, setReactivating] = useState(null)
+    const reactivate = async password => {
+      await api.post(`/schools/${reactivating.id}/reactivate/`, { password })
+      fetch()
     }
 
     const columns = [
@@ -128,7 +126,7 @@ export default function Schools() {
                             Deactivate
                         </Button>
                     ) : (
-                        <Button size="sm" variant="secondary" onClick={() => handleReactivate(row)}>
+                        <Button size="sm" variant="secondary" onClick={() => setReactivating(row)}>
                             Reactivate
                         </Button>
                     )}
@@ -207,6 +205,9 @@ export default function Schools() {
                 confirmLabel="Deactivate"
                 loading={saving}
             />
+            <ConfirmPasswordDialog isOpen={!!reactivating} onClose={() => setReactivating(null)}
+                onConfirm={reactivate} title="Reactivate school" confirmLabel="Reactivate"
+                message={`Enter your password to reactivate ${reactivating?.name ?? ''}.`} />
         </div>
     )
 }

@@ -1,4 +1,6 @@
+from django.db import transaction
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 from apps.records.models import (
     Club,
     SchoolActivity, SchoolActivityCollaboration,
@@ -9,11 +11,22 @@ from apps.records.models import (
 )
 
 
+def replace_people(parent, model, parent_field, rows):
+    """Swap a record's whole co-author / co-applicant list for validated rows.
+    Callers run it inside a transaction so a failure never leaves half a list."""
+    model.objects.filter(**{parent_field: parent}).delete()
+    model.objects.bulk_create([model(**row, **{parent_field: parent}) for row in rows])
+
+
 class ClubSerializer(serializers.ModelSerializer):
     school_name = serializers.CharField(source='school.name', read_only=True)
 
     class Meta:
         model  = Club
+        # the database rule only covers live clubs (a deleted club's name can be reused),
+        # and DRF doesn't derive a check from it: check here so a duplicate is a 400, not a 500
+        validators = [UniqueTogetherValidator(queryset=Club.objects.filter(is_deleted=False),
+                                              fields=['name', 'school', 'type'])]
         fields = [
             'id', 'name', 'type', 'school', 'school_name',
             'is_active', 'pending_audit', 'created_by', 'created_at', 'updated_at'
@@ -139,7 +152,8 @@ class PublicationAuthorSerializer(serializers.ModelSerializer):
 
 class FacultyPublicationSerializer(serializers.ModelSerializer):
     school_name = serializers.CharField(source='school.name', read_only=True)
-    authors     = PublicationAuthorSerializer(many=True, read_only=True)
+    # writable on create; on an existing publication it rides in the audited edit
+    authors     = PublicationAuthorSerializer(many=True, required=False)
     created_by_is_active = serializers.BooleanField(source='created_by.is_active', read_only=True)
     created_by_name = serializers.CharField(
                           source='created_by.full_name', read_only=True
@@ -159,8 +173,12 @@ class FacultyPublicationSerializer(serializers.ModelSerializer):
         read_only_fields = ['pending_audit', 'created_by', 'created_at', 'updated_at']
 
     def create(self, validated_data):
+        authors = validated_data.pop('authors', [])
         validated_data['created_by'] = self.context['request'].user
-        return super().create(validated_data)
+        with transaction.atomic():
+            publication = super().create(validated_data)
+            replace_people(publication, PublicationAuthor, 'publication', authors)
+        return publication
 
 
 class PatentApplicantSerializer(serializers.ModelSerializer):
@@ -173,7 +191,8 @@ class PatentApplicantSerializer(serializers.ModelSerializer):
 
 class PatentSerializer(serializers.ModelSerializer):
     school_name = serializers.CharField(source='school.name', read_only=True)
-    applicants  = PatentApplicantSerializer(many=True, read_only=True)
+    # writable on create; on an existing patent it rides in the audited edit
+    applicants  = PatentApplicantSerializer(many=True, required=False)
     created_by_is_active = serializers.BooleanField(source='created_by.is_active', read_only=True)
     created_by_name = serializers.CharField(
                           source='created_by.full_name', read_only=True
@@ -193,8 +212,12 @@ class PatentSerializer(serializers.ModelSerializer):
         read_only_fields = ['pending_audit', 'created_by', 'created_at', 'updated_at']
 
     def create(self, validated_data):
+        applicants = validated_data.pop('applicants', [])
         validated_data['created_by'] = self.context['request'].user
-        return super().create(validated_data)
+        with transaction.atomic():
+            patent = super().create(validated_data)
+            replace_people(patent, PatentApplicant, 'patent', applicants)
+        return patent
 
 
 class CertificationSerializer(serializers.ModelSerializer):

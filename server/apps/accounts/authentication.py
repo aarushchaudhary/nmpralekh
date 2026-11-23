@@ -5,8 +5,23 @@ from django.middleware.csrf import CsrfViewMiddleware
 _csrf_middleware = CsrfViewMiddleware(lambda req: None)
 
 
+# while a reset (one-time) password is in place, the user may only see who they are
+# and change it; login, refresh and logout don't authenticate, so they keep working
+PASSWORD_CHANGE_ALLOWED = {'me', 'change_password'}
+
+
 class CookieJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
+        result = self._authenticate_token(request)
+        if result and result[0].must_change_password:
+            match = getattr(request._request, 'resolver_match', None)
+            if not match or match.url_name not in PASSWORD_CHANGE_ALLOWED:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('Change your temporary password before continuing.',
+                                       code='password_change_required')
+        return result
+
+    def _authenticate_token(self, request):
         # try cookie first
         raw_token = request.COOKIES.get('access_token')
         if raw_token is None:

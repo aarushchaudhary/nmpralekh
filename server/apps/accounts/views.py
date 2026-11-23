@@ -7,6 +7,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import authenticate
 
 from apps.accounts.models import User
@@ -15,7 +18,7 @@ from apps.accounts.serializers import (
     UserCreateSerializer, UserUpdateSerializer, LoginSerializer,
     ChronicleAccumulatorSerializer
 )
-from apps.accounts.permissions import RolePermission
+from apps.accounts.permissions import RolePermission, confirm_own_password, can_reset_password
 from apps.accounts.throttles import redis_available, local_one_per_second
 from config.pagination import StandardPagination
 from django_filters.rest_framework import DjangoFilterBackend
@@ -23,6 +26,50 @@ from rest_framework.filters import SearchFilter
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from django.views.decorators.csrf import ensure_csrf_cookie
+
+def set_auth_cookies(response, refresh):
+    # SameSite=None cookies MUST have Secure=True per browser spec.
+    # Browsers silently drop SameSite=None cookies that lack the Secure flag,
+    # causing instant logout. The Vite dev server runs HTTPS so this is safe.
+    response.set_cookie(
+        'access_token',
+        str(refresh.access_token),
+        max_age  = 60 * 30,          # 30 minutes — matches ACCESS_TOKEN_LIFETIME
+        httponly = True,
+        secure   = True,
+        samesite = 'None',
+    )
+    response.set_cookie(
+        'refresh_token',
+        str(refresh),
+        max_age  = 60 * 60 * 6,      # 6 hours — matches REFRESH_TOKEN_LIFETIME
+        httponly = True,
+        secure   = True,
+        samesite = 'None',
+    )
+
+
+def sign_out_everywhere(user):
+    """Blacklist every refresh token the user holds: each device is refused at its next refresh."""
+    tokens = OutstandingToken.objects.filter(user=user, blacklistedtoken__isnull=True)
+    BlacklistedToken.objects.bulk_create([BlacklistedToken(token=t) for t in tokens], ignore_conflicts=True)
+
+
+def set_temporary_password(target, password):
+    """One-time password from the person above: checked against the password rules,
+    the user must replace it at next sign-in, and every device they're on is signed out.
+    Returns an error Response, or None on success."""
+    try:
+        validate_password(password, target)
+    except DjangoValidationError as e:
+        return Response({'temporary_password': list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+    with transaction.atomic():
+        target.set_password(password)
+        target.must_change_password = True
+        target.save(update_fields=['password', 'must_change_password'])
+        sign_out_everywhere(target)
+    return None
+
 
 def _too_fast():
     return Response(
@@ -65,28 +112,45 @@ class LoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        refresh  = RefreshToken.for_user(user)
         response = Response({'user': UserSerializer(user).data})
+        set_auth_cookies(response, RefreshToken.for_user(user))
+        return response
 
-        # SameSite=None cookies MUST have Secure=True per browser spec.
-        # Browsers silently drop SameSite=None cookies that lack the Secure flag,
-        # causing instant logout. The Vite dev server runs HTTPS so this is safe.
-        response.set_cookie(
-            'access_token',
-            str(refresh.access_token),
-            max_age  = 60 * 30,          # 30 minutes — matches ACCESS_TOKEN_LIFETIME
-            httponly = True,
-            secure   = True,
-            samesite = 'None',
-        )
-        response.set_cookie(
-            'refresh_token',
-            str(refresh),
-            max_age  = 60 * 60 * 6,      # 6 hours — matches REFRESH_TOKEN_LIFETIME
-            httponly = True,
-            secure   = True,
-            samesite = 'None',
-        )
+
+class ChangePasswordView(APIView):
+    """Any signed-in user changes their own password. Other devices are signed out;
+    this one gets fresh tokens so it stays signed in."""
+    permission_classes = [IsAuthenticated]
+    serializer_class = serializers.Serializer
+
+    # the current-password check must not become a way to guess it
+    @method_decorator(ratelimit(key='user', rate='10/m', method='POST', block=True))
+    def post(self, request):
+        user = request.user
+        if settings.RATELIMIT_ENABLE and not redis_available() and not local_one_per_second(f'pwchange:{user.pk}'):
+            return _too_fast()
+
+        current = request.data.get('current_password') or ''
+        new = request.data.get('new_password') or ''
+        if not user.check_password(current):
+            return Response({'current_password': ['Your current password is incorrect.']},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if new == current:
+            return Response({'new_password': ['Choose a password different from your current one.']},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            validate_password(new, user)
+        except DjangoValidationError as e:
+            return Response({'new_password': list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            user.set_password(new)
+            user.must_change_password = False
+            user.save(update_fields=['password', 'must_change_password'])
+            sign_out_everywhere(user)
+
+        response = Response({'detail': 'Password changed.'})
+        set_auth_cookies(response, RefreshToken.for_user(user))
         return response
 
 
@@ -222,8 +286,39 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response({'detail': 'User deactivated successfully'})
 
 
+class UserReactivateView(APIView):
+    """POST /api/users/<id>/reactivate/ — the master re-enters their own password."""
+    permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
+    serializer_class = serializers.Serializer
+
+    @method_decorator(ratelimit(key='user', rate='10/m', method='POST', block=True))
+    def post(self, request, pk):
+        confirm_own_password(request)
+        updated = User.objects.filter(pk=pk).update(is_active=True)
+        if not updated:
+            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': 'User reactivated'})
+
+
+class ResetPasswordView(APIView):
+    """POST /api/users/<id>/reset-password/ {temporary_password} — see can_reset_password for who may."""
+    permission_classes = [RolePermission(['master', 'super_admin', 'admin'], exclude_service_admin=True)]
+    serializer_class = serializers.Serializer
+
+    def post(self, request, pk):
+        target = User.objects.filter(pk=pk).first()
+        if target is None:
+            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        if not can_reset_password(request.user, target):
+            return Response({'detail': "You can't reset this user's password."}, status=status.HTTP_403_FORBIDDEN)
+        error = set_temporary_password(target, request.data.get('temporary_password') or '')
+        if error:
+            return error
+        return Response({'detail': f'Password reset. {target.full_name} must choose a new one at next sign-in.'})
+
+
 class SchoolFacultiesView(generics.ListAPIView):
-    """Admin sees all faculty users assigned to their school(s)"""
+    """Admin sees the faculty and MIS coordinators assigned to their school(s) — the people they can reset"""
     serializer_class   = UserVisibilitySerializer
     permission_classes = [RolePermission(['admin'])]
     pagination_class   = StandardPagination
@@ -245,7 +340,7 @@ class SchoolFacultiesView(generics.ListAPIView):
 
         qs = User.objects.filter(
             id__in=faculty_user_ids,
-            role='user',
+            role__in=('user', 'mis_coordinator'),
             is_active=True
         ).order_by('full_name').prefetch_related(
             Prefetch(
@@ -389,17 +484,14 @@ class ServiceUserManagementView(APIView):
         return Response({"detail": "Service user created successfully."}, status=status.HTTP_201_CREATED)
 
     def patch(self, request):
-        password = request.data.get("password", "").strip()
-        if not password:
-            return Response({"detail": "Password is required."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            user = User.objects.get(is_service_admin=True)
-            user.set_password(password)
-            user.save()
-            return Response({"detail": "Password updated successfully."})
-        except User.DoesNotExist:
+        # same rule as every other reset: a one-time password they must change at next sign-in
+        user = User.objects.filter(is_service_admin=True).first()
+        if user is None:
             return Response({"detail": "Service user does not exist."}, status=status.HTTP_404_NOT_FOUND)
+        error = set_temporary_password(user, request.data.get("password", "").strip())
+        if error:
+            return error
+        return Response({"detail": "Password reset. They must choose a new one at next sign-in."})
 
 class ChronicleMasterManagementView(APIView):
     permission_classes = [RolePermission(['master'], exclude_service_admin=True)]
@@ -436,14 +528,11 @@ class ChronicleMasterManagementView(APIView):
         return Response({"detail": "Chronicle Master created successfully."}, status=status.HTTP_201_CREATED)
 
     def patch(self, request):
-        password = request.data.get("password", "").strip()
-        if not password:
-            return Response({"detail": "Password is required."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            user = User.objects.get(is_chronicle_master=True)
-            user.set_password(password)
-            user.save()
-            return Response({"detail": "Password updated successfully."})
-        except User.DoesNotExist:
+        # same rule as every other reset: a one-time password they must change at next sign-in
+        user = User.objects.filter(is_chronicle_master=True).first()
+        if user is None:
             return Response({"detail": "Chronicle Master does not exist."}, status=status.HTTP_404_NOT_FOUND)
+        error = set_temporary_password(user, request.data.get("password", "").strip())
+        if error:
+            return error
+        return Response({"detail": "Password reset. They must choose a new one at next sign-in."})

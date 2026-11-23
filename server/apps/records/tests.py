@@ -1495,8 +1495,10 @@ class DetailQueryCountTests(RecordTestMixin, APITestCase):
                 self.assertEqual(queries, few[url])
 
 
-class CoPeopleReplaceTests(RecordTestMixin, APITestCase):
-    """PUT on .../authors/ and .../applicants/ replaces the whole list in one transaction."""
+@override_settings(RATELIMIT_ENABLE=False)
+class CoPeopleApprovalTests(RecordTestMixin, APITestCase):
+    """Co-authors / co-applicants save with a new record, but on an existing one
+    they change only when Delete Auth approves the edit."""
 
     def setUp(self):
         from django.core.cache import cache
@@ -1511,65 +1513,77 @@ class CoPeopleReplaceTests(RecordTestMixin, APITestCase):
                                          created_by=self.faculty)
         PublicationAuthor.objects.create(publication=self.pub, name='Keep', author_type='faculty', order=1)
         PublicationAuthor.objects.create(publication=self.pub, name='Drop', author_type='faculty', order=2)
-        self.url = f'/api/records/publications/{self.pub.id}/authors/'
+        self.delete_auth = User.objects.create_user(username='coda', email='coda@t.com', password='p',
+                                                    full_name='DA', role='delete_auth', campus=self.campus)
+        self.url = f'/api/records/publications/{self.pub.id}/'
         self.client.force_authenticate(user=self.faculty)
 
     def names(self):
         return sorted(PublicationAuthor.objects.filter(publication=self.pub).values_list('name', flat=True))
 
-    def test_replace_adds_and_removes_in_one_request(self):
-        resp = self.client.put(self.url, [
-            {'name': 'Keep', 'author_type': 'faculty', 'order': 1},
-            {'name': 'New', 'author_type': 'student', 'order': 2, 'user': self.admin_user.id},
-        ], format='json')
-        self.assertEqual(resp.status_code, 200)
+    def review(self, audit_id, verdict):
+        self.client.force_authenticate(user=self.delete_auth)
+        resp = self.client.post(f'/api/audit/{audit_id}/{verdict}/')
+        self.client.force_authenticate(user=self.faculty)
+        return resp
+
+    def test_create_saves_co_authors_at_once(self):
+        resp = self.client.post('/api/records/publications/', {
+            'school': self.school.id, 'author_name': 'a', 'title_of_paper': 'New',
+            'journal_or_conference_name': 'j', 'date': '2026-02-01', 'doi_or_link': 'x',
+            'authors': [{'name': 'Co', 'author_type': 'student', 'order': 1, 'user': self.admin_user.id}],
+        }, format='json')
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual([(a['name'], a['user_full_name']) for a in resp.data['authors']], [('Co', 'Admin')])
+
+    def test_edit_changes_co_authors_only_on_approval(self):
+        loaded = self.client.get(self.url).data['authors']  # clients send back what they loaded
+        keep = [a for a in loaded if a['name'] == 'Keep']
+        resp = self.client.patch(self.url, {'authors': keep + [{'name': 'New', 'author_type': 'faculty'}]},
+                                 format='json')
+        self.assertEqual(resp.status_code, 202)
+        self.assertEqual(self.names(), ['Drop', 'Keep'])
+
+        from apps.audit.models import AuditRequest
+        audit = AuditRequest.objects.get(pk=resp.data['audit_id'])
+        self.assertEqual(sorted(a['name'] for a in audit.old_data['authors']), ['Drop', 'Keep'])
+
+        self.assertEqual(self.review(audit.id, 'approve').status_code, 200)
         self.assertEqual(self.names(), ['Keep', 'New'])
-        self.assertEqual({p['name']: p['user_full_name'] for p in resp.data if p['user']}, {'New': 'Admin'})
 
-    def test_clients_can_send_back_what_they_loaded(self):
-        # web and Android PUT the loaded objects (with id, user_full_name) plus new ones
-        loaded = self.client.get(self.url).data
-        loaded = loaded.get('results', loaded) if isinstance(loaded, dict) else loaded
-        resp = self.client.put(self.url, list(loaded) + [{'name': 'Added', 'author_type': 'faculty',
-                                                          'user': None}], format='json')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(self.names(), ['Added', 'Drop', 'Keep'])
+    def test_rejected_edit_keeps_co_authors(self):
+        resp = self.client.patch(self.url, {'authors': []}, format='json')
+        self.review(resp.data['audit_id'], 'reject')
+        self.assertEqual(self.names(), ['Drop', 'Keep'])
 
-    def test_one_bad_row_changes_nothing(self):
-        resp = self.client.put(self.url, [
-            {'name': 'Fine', 'author_type': 'faculty'},
-            {'author_type': 'faculty'},  # no name
-        ], format='json')
+    def test_bad_row_is_refused_before_any_request(self):
+        resp = self.client.patch(self.url, {'authors': [{'author_type': 'faculty'}]}, format='json')  # no name
         self.assertEqual(resp.status_code, 400)
+        self.pub.refresh_from_db()
+        self.assertIsNone(self.pub.pending_audit)
+
+    def test_edit_without_co_authors_leaves_them(self):
+        resp = self.client.patch(self.url, {'title_of_paper': 'Renamed'}, format='json')
+        self.review(resp.data['audit_id'], 'approve')
         self.assertEqual(self.names(), ['Drop', 'Keep'])
 
-    def test_empty_list_removes_everyone(self):
-        resp = self.client.put(self.url, [], format='json')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(self.names(), [])
-
-    def test_faculty_cannot_replace_on_someone_elses_publication(self):
-        other = User.objects.create_user(username='other', email='o@t.com', password='p', full_name='O',
-                                         role='user', campus=self.campus)
-        UserSchoolMapping.objects.create(user=other, school=self.school, assigned_by=self.master)
-        self.client.force_authenticate(user=other)
-        resp = self.client.put(self.url, [], format='json')
-        self.assertEqual(resp.status_code, 404)
-        self.assertEqual(self.names(), ['Drop', 'Keep'])
-
-    def test_patent_applicants_replace(self):
+    def test_patent_applicants_change_on_approval(self):
         PatentApplicant.objects.create(patent=self.pat, name='Old', applicant_type='faculty')
-        resp = self.client.put(f'/api/records/patents/{self.pat.id}/applicants/', [
+        resp = self.client.patch(f'/api/records/patents/{self.pat.id}/', {'applicants': [
             {'name': 'A', 'applicant_type': 'faculty'}, {'name': 'B', 'applicant_type': 'student'},
-        ], format='json')
-        self.assertEqual(resp.status_code, 200)
+        ]}, format='json')
+        self.assertEqual(resp.status_code, 202)
+        self.review(resp.data['audit_id'], 'approve')
         self.assertEqual(sorted(PatentApplicant.objects.filter(patent=self.pat).values_list('name', flat=True)),
                          ['A', 'B'])
 
-    def test_replace_cost_does_not_grow_with_people(self):
-        few = [{'name': f'P{i}', 'author_type': 'faculty'} for i in range(2)]
-        many = [{'name': f'P{i}', 'author_type': 'faculty'} for i in range(10)]
-        self.client.put(self.url, few, format='json')  # warm caches
-        _, q_few = count_queries(self.client, 'put', self.url, few)
-        _, q_many = count_queries(self.client, 'put', self.url, many)
-        self.assertEqual(q_many, q_few)
+    def test_people_endpoints_are_read_only(self):
+        writes = [
+            ('put', f'/api/records/publications/{self.pub.id}/authors/', []),
+            ('post', f'/api/records/publications/{self.pub.id}/authors/', {'name': 'X', 'author_type': 'faculty'}),
+            ('put', f'/api/records/patents/{self.pat.id}/applicants/', []),
+        ]
+        for method, url, data in writes:
+            with self.subTest(method=method, url=url):
+                self.assertEqual(getattr(self.client, method)(url, data, format='json').status_code, 405)
+        self.assertEqual(self.names(), ['Drop', 'Keep'])

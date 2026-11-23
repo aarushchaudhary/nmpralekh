@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useId } from 'react'
 import api from '../../api/axios'
+import { apiErrors } from '../../api/errors'
 import PageHeader from '../../components/ui/PageHeader'
 import Panel from '../../components/ui/Panel'
 import Button from '../../components/ui/Button'
@@ -49,11 +50,12 @@ function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
         e.preventDefault()
         setMessage({ type: '', text: '' })
         try {
-            await api.patch(apiEndpoint, { password })
-            setMessage({ type: 'success', text: 'Password updated successfully.' })
+            const res = await api.patch(apiEndpoint, { password })
+            setMessage({ type: 'success', text: res.data.detail })
             setPassword('')
         } catch (error) {
-            setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to update password.' })
+            const errs = apiErrors(error)
+            setMessage({ type: 'error', text: errs.temporary_password || errs._form || 'Failed to reset password.' })
         }
     }
 
@@ -70,7 +72,7 @@ function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
     return (
         <Panel
             className="h-full"
-            title={exists ? `Update Password for ${title}` : `Create ${title}`}
+            title={exists ? `Reset Password for ${title}` : `Create ${title}`}
             description={exists ? 'The account identity is locked. You can only reset the password.' : lockMessage}
         >
             {message.text && (
@@ -133,7 +135,7 @@ function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
                 <form onSubmit={handleUpdate} className="space-y-4">
                     
                     <div>
-                        <label htmlFor={`${uid}-new-password`} className="block text-sm font-medium text-gray-800 mb-1">New Password</label>
+                        <label htmlFor={`${uid}-new-password`} className="block text-sm font-medium text-gray-800 mb-1">One-time Password</label>
                         <input id={`${uid}-new-password`}
                             type="password" 
                             required
@@ -147,7 +149,7 @@ function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
                     
                     <div className="pt-2">
                         <Button type="submit" className="w-full sm:w-auto">
-                            Update Password
+                            Reset Password
                         </Button>
                     </div>
                 </form>

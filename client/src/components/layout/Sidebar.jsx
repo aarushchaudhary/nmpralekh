@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import ChangePasswordDialog from '../shared/ChangePasswordDialog'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const roleNavLinks = {
@@ -106,6 +107,7 @@ export const roleNavLinks = {
 export default function Sidebar({ isOpen, onClose }) {
     const { user, logout } = useAuth()
     const navigate = useNavigate()
+    const [changingPassword, setChangingPassword] = useState(false)
     
     let roleKey = user?.role
     if (user?.is_service_admin) {
@@ -185,6 +187,11 @@ export default function Sidebar({ isOpen, onClose }) {
                     <div className="min-w-0">
                         <p className="text-sm font-medium text-white truncate">{user?.full_name}</p>
                         <p className="text-xs text-gray-400 capitalize truncate">{user?.role?.replace(/_/g, ' ')}</p>
+                        <button onClick={() => setChangingPassword(true)}
+                            className="mt-1 text-xs text-gray-300 underline-offset-2 hover:text-white hover:underline rounded
+                                       focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                            Change password
+                        </button>
                     </div>
                     <button onClick={handleLogout}
                         className="flex-shrink-0 px-2.5 h-8 text-xs font-medium text-gray-200 rounded-md border border-white/20
@@ -194,6 +201,9 @@ export default function Sidebar({ isOpen, onClose }) {
                     </button>
                 </div>
             </aside>
+
+            {/* outside <aside>: a closed mobile sidebar is invisible, and would hide the dialog with it */}
+            <ChangePasswordDialog isOpen={changingPassword} onClose={() => setChangingPassword(false)} />
         </>
     )
 }

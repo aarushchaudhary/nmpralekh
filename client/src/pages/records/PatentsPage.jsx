@@ -44,7 +44,6 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selected,          setSelected]          = useState(null)
   const [form,              setForm]              = useState(empty)
-  const [pageError, setPageError] = useState('')
   const [coApplicants,      setCoApplicants]      = useState([])
   const [saving,            setSaving]            = useState(false)
   const [errors,            setErrors]            = useState({})
@@ -92,29 +91,17 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
     setErrors(e); return !Object.keys(e).length
   }
 
-  // one request replaces the whole list on the server, all or nothing
-  const saveCoApplicants = patentId =>
-    api.put(`/records/patents/${patentId}/applicants/`, coApplicants.filter(a => a.name))
-
   const handleSubmit = async () => {
     if (!validate()) return
-    setPageError('')
     setSaving(true)
+    // co-applicants travel with the patent: saved on create, approved with an edit
+    const payload = { ...form, applicants: coApplicants.filter(a => a.name) }
     try {
       if (isEdit) {
-        await api.put(`/records/patents/${selected.id}/`, form)
-        await saveCoApplicants(selected.id)
+        await api.put(`/records/patents/${selected.id}/`, payload)
         setShowEditConfirm(false)
       } else {
-        const res = await create(form)
-        try {
-          if (res?.id) await saveCoApplicants(res.id)
-        } catch (err) {
-          // the patent exists now; keeping the "Add" form open would create a duplicate on retry
-          setShowForm(false); fetch()
-          setPageError(`Patent saved, but its co-applicants were not: ${apiErrors(err)._form || 'add them by editing the patent.'}`)
-          return
-        }
+        await create(payload)
       }
       setShowForm(false); fetch()
     } catch (err) {
@@ -235,7 +222,6 @@ export default function PatentsPage({ readOnly = false, selfOnly = false }) {
         </Panel>
       )}
 
-      {pageError && <div className="mb-4"><FormError message={pageError} /></div>}
       {exportError && <div className="mb-4"><FormError message={exportError} /></div>}
       <Table columns={columns} data={data} error={loadError}
         serverPagination

@@ -12,8 +12,9 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'full_name',
             'role', 'is_active', 'campus', 'campus_name',
             'created_at', 'last_login', 'is_service_admin',
-            'is_chronicle_master'
+            'is_chronicle_master', 'must_change_password'
         ]
+        read_only_fields = ['must_change_password']
 
 
 class UserVisibilitySerializer(serializers.ModelSerializer):
@@ -77,6 +78,12 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model  = User
         fields = ['full_name', 'role', 'is_active', 'email', 'campus']
+
+    def validate_is_active(self, value):
+        # reactivating goes through POST /api/users/<id>/reactivate/, which asks for the master's password
+        if value and self.instance and not self.instance.is_active:
+            raise serializers.ValidationError('Use Reactivate to bring back a deactivated user.')
+        return value
 
     def validate_campus(self, campus):
         # school assignments must stay in the user's campus (same rule as UserSchoolMappingCreateSerializer)

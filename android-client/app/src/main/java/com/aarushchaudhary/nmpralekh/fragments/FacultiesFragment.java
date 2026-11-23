@@ -2,7 +2,12 @@ package com.aarushchaudhary.nmpralekh.fragments;
 import java.util.Map;
 import retrofit2.Call;
 
+import android.os.Bundle;
+import android.view.View;
 import android.widget.LinearLayout;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.aarushchaudhary.nmpralekh.adapters.RecordAdapter;
 import com.google.gson.JsonObject;
 
@@ -10,6 +15,12 @@ public class FacultiesFragment extends BaseRecordFragment {
 
     public static FacultiesFragment newInstance() {
         return new FacultiesFragment();
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        adapter.setOnItemClick(this::showResetPasswordDialog);
     }
 
     @Override
@@ -24,7 +35,7 @@ public class FacultiesFragment extends BaseRecordFragment {
 
     @Override
     protected String getPageSubtitle() {
-        return "View school faculties";
+        return "Faculty and MIS coordinators in your schools. Tap one to reset their password.";
     }
 
     @Override
@@ -42,7 +53,8 @@ public class FacultiesFragment extends BaseRecordFragment {
 
             @Override
             public String getSubtitle(JsonObject record) {
-                return jsonStr(record, "email") + " · " + jsonStr(record, "username");
+                String role = "mis_coordinator".equals(jsonStr(record, "role")) ? "MIS Coordinator" : "Faculty";
+                return role + " · " + jsonStr(record, "email") + " · " + jsonStr(record, "username");
             }
 
             @Override
