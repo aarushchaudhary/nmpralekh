@@ -45,12 +45,13 @@ class MISReportSerializer(serializers.ModelSerializer):
     sent_to_chronicle_master = serializers.BooleanField(read_only=True)
     created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
     created_by_school_name = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
 
     class Meta:
         model = MISReport
         fields = [
-            'id', 'created_by', 'created_by_name', 'created_by_school_name', 
-            'name', 'data_content', 'date_from', 'date_to',
+            'id', 'created_by', 'created_by_name', 'created_by_school_name',
+            'title', 'name', 'data_content', 'date_from', 'date_to',
             'sent_to_admin', 'sent_to_admin_at',
             'sent_to_accumulator', 'sent_to_accumulator_at',
             'sent_to_super_admin', 'sent_to_super_admin_at',
@@ -72,6 +73,15 @@ class MISReportSerializer(serializers.ModelSerializer):
         mappings = obj.created_by.school_mappings.all()
         names = [m.school.name for m in mappings if m.school]
         return ', '.join(names) if names else 'Unknown School'
+
+    def get_title(self, obj):
+        # SCHOOL - CAMPUS - FROM to TO; an accumulator's report spans the campus, so it has no school
+        author = obj.created_by
+        schools = [] if author.role == 'mis_accumulator' else \
+            [m.school.name for m in author.school_mappings.all() if m.school]
+        parts = [', '.join(schools), author.campus.name if author.campus else '',
+                 f'{obj.date_from} to {obj.date_to}']
+        return ' - '.join(p for p in parts if p)
 
     def validate(self, data):
         return check_date_order(self, data)

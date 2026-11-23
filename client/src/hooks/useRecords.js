@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../api/axios'
 
-export default function useRecords(endpoint) {
+// filters: query params sent with every page; change them together with goToPage(1)
+export default function useRecords(endpoint, { pageSize = 25, filters } = {}) {
   const [data,        setData]        = useState([])
   const [loading,     setLoading]     = useState(true)
   const [error,       setError]       = useState(null)
   const [totalCount,  setTotalCount]  = useState(0)
   const [totalPages,  setTotalPages]  = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 25
+  // a string so a new-but-equal filters object each render doesn't refetch
+  const filterKey = JSON.stringify(filters ?? {})
 
   // Keep a ref so fetch() can always read the latest page without being
   // recreated on every page change (which would cause mutation callbacks
@@ -22,7 +24,7 @@ export default function useRecords(endpoint) {
     setError(null)
     try {
       const res = await api.get(endpoint, {
-        params: { ...params, page: activePage, page_size: pageSize }
+        params: { ...JSON.parse(filterKey), ...params, page: activePage, page_size: pageSize }
       })
       if (res.data?.results !== undefined) {
         // paginated response
@@ -40,7 +42,7 @@ export default function useRecords(endpoint) {
     } finally {
       setLoading(false)
     }
-  }, [endpoint]) // endpoint is the only true dependency now
+  }, [endpoint, filterKey, pageSize])
 
   // Initial load, and re-fetch whenever the page changes (driven by goToPage).
   // One effect: two separate ones both fired on mount and loaded the page twice.

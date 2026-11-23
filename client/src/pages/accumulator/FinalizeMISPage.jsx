@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import api from '../../api/axios'
 import PageHeader from '../../components/ui/PageHeader'
 import FormError from '../../components/ui/FormError'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
-import Panel from '../../components/ui/Panel'
-import EmptyState from '../../components/ui/EmptyState'
+import Table from '../../components/ui/Table'
+import useRecords from '../../hooks/useRecords'
+import { MISReportModal, ReportFilters } from '../../components/shared/MISReports'
+import { reportColumns } from '../../components/shared/misReportColumns'
 import { PlusIcon, XMarkIcon } from '@heroicons/react/20/solid'
 import { useAuth } from '../../context/AuthContext'
 
@@ -18,9 +21,13 @@ export default function FinalizeMISPage() {
     const { user } = useAuth()
     
     // Accumulator's own created reports
-    const [myReports, setMyReports] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [filters, setFilters] = useState({})
+    const [openReport, setOpenReport] = useState(null)
+    const { data: myReports, loading, error: loadError, totalPages, currentPage, goToPage, fetch, create } =
+        useRecords('/export/reports/', { pageSize: 10, filters })
+    // set by "Finalize MIS" on a Chronicle Master request on the dashboard
+    const { state: prefill } = useLocation()
+    const [isModalOpen, setIsModalOpen] = useState(!!prefill)
     const dialogRef = useRef(null)
 
     // hand-built dialog: move focus in on open, close on Escape
@@ -31,7 +38,7 @@ export default function FinalizeMISPage() {
         document.addEventListener('keydown', onKey)
         return () => document.removeEventListener('keydown', onKey)
     }, [isModalOpen])
-    const [formData, setFormData] = useState({ name: '', date_from: '', date_to: '', data_content: '' })
+    const [formData, setFormData] = useState({ date_from: prefill?.date_from ?? '', date_to: prefill?.date_to ?? '', data_content: '' })
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [pageError, setPageError] = useState('')
@@ -46,14 +53,6 @@ export default function FinalizeMISPage() {
     const [activeDateTo, setActiveDateTo] = useState('')
     const [selectedReportIds, setSelectedReportIds] = useState(new Set())
 
-    const fetchMyReports = () => {
-        setLoading(true)
-        api.get('/export/reports/')
-            .then(res => setMyReports(res.data?.results ?? res.data))
-            .catch(err => console.error(err))
-            .finally(() => setLoading(false))
-    }
-
     const fetchReceivedReports = () => {
         api.get('/export/reports/received/')
             .then(res => setReceivedReports(res.data?.results ?? res.data))
@@ -61,14 +60,13 @@ export default function FinalizeMISPage() {
     }
 
     useEffect(() => {
-        fetchMyReports()
         fetchReceivedReports()
     }, [])
 
     const handleCreateReport = async (e) => {
         e.preventDefault()
         setError('')
-        if (!formData.name || !formData.date_from || !formData.date_to || !formData.data_content) {
+        if (!formData.date_from || !formData.date_to || !formData.data_content) {
             setError("All fields are required.")
             return
         }
@@ -79,10 +77,9 @@ export default function FinalizeMISPage() {
 
         setSubmitting(true)
         try {
-            await api.post('/export/reports/', formData)
+            await create(formData)
             setIsModalOpen(false)
-            setFormData({ name: '', date_from: '', date_to: '', data_content: '' })
-            fetchMyReports()
+            setFormData({ date_from: '', date_to: '', data_content: '' })
         } catch (err) {
             setError(err.response?.data?.detail || "Failed to create report")
         } finally {
@@ -93,7 +90,7 @@ export default function FinalizeMISPage() {
         try {
             await api.post(`/export/reports/${id}/send-superadmin/`)
             setPageError('')
-            fetchMyReports()
+            fetch()
         } catch (err) {
             setPageError(err.response?.data?.detail || "Failed to send to Super Admin")
         }
@@ -103,7 +100,7 @@ export default function FinalizeMISPage() {
         try {
             await api.post(`/export/reports/${id}/send-chronicle/`)
             setPageError('')
-            fetchMyReports()
+            fetch()
         } catch (err) {
             setPageError(err.response?.data?.detail || "Failed to send to Chronicle Master")
         }
@@ -119,7 +116,7 @@ export default function FinalizeMISPage() {
         let match = true
         if (activeSchool) {
             const searchTerm = activeSchool.toLowerCase()
-            const matchesName = report.name?.toLowerCase().includes(searchTerm)
+            const matchesName = report.title?.toLowerCase().includes(searchTerm)
             const matchesSchool = report.created_by_school_name?.toLowerCase().includes(searchTerm)
             const matchesCoordinator = report.created_by_name?.toLowerCase().includes(searchTerm)
             if (!matchesName && !matchesSchool && !matchesCoordinator) {
@@ -176,31 +173,31 @@ export default function FinalizeMISPage() {
         setSelectedReportIds(new Set())
     }
 
-    const [mySearchQuery, setMySearchQuery] = useState('')
-    const [mySearchDateFrom, setMySearchDateFrom] = useState('')
-    const [mySearchDateTo, setMySearchDateTo] = useState('')
-
-    const filteredMyReports = myReports.filter(report => {
-        let match = true
-        if (mySearchQuery) {
-            const matchesName = report.name?.toLowerCase().includes(mySearchQuery.toLowerCase())
-            if (!matchesName) {
-                match = false
-            }
-        }
-        
-        if (mySearchDateFrom && mySearchDateTo) {
-            if (mySearchDateFrom > report.date_to || report.date_from > mySearchDateTo) {
-                match = false
-            }
-        } else if (mySearchDateFrom) {
-            if (report.date_to < mySearchDateFrom) match = false
-        } else if (mySearchDateTo) {
-            if (report.date_from > mySearchDateTo) match = false
-        }
-
-        return match
-    })
+    const columns = [
+        ...reportColumns(setOpenReport),
+        { key: 'created_at', label: 'Created', render: r => new Date(r.created_at).toLocaleDateString() },
+        {
+            key: 'actions', label: 'Actions',
+            render: r => (
+                <div className="flex flex-wrap items-center gap-2">
+                    {r.sent_to_super_admin ? (
+                        <Badge label="Sent to Super Admin" color="dark" />
+                    ) : (
+                        <Button variant="secondary" size="sm" onClick={() => handleSendSuperAdmin(r.id)}>
+                            Send to Super Admin
+                        </Button>
+                    )}
+                    {r.sent_to_chronicle_master ? (
+                        <Badge label="Sent to Chronicle Master" color="dark" />
+                    ) : (
+                        <Button variant="secondary" size="sm" onClick={() => handleSendChronicle(r.id)}>
+                            Send to Chronicle Master
+                        </Button>
+                    )}
+                </div>
+            ),
+        },
+    ]
 
     return (
         <div className="max-w-6xl mx-auto">
@@ -217,83 +214,12 @@ export default function FinalizeMISPage() {
 
             <div className="space-y-4">
                 <FormError message={pageError} />
-
-                <div className="flex flex-wrap gap-3 items-end">
-                    <div className="w-full sm:flex-1 sm:max-w-md">
-                        <label htmlFor="finalize-mis-1" className="block text-xs font-medium text-gray-600 mb-1">Search Finalized Reports</label>
-                        <input id="finalize-mis-1"
-                            type="text"
-                            placeholder="Search by Title..."
-                            value={mySearchQuery}
-                            onChange={(e) => setMySearchQuery(e.target.value)}
-                            className={inputClass}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="finalize-mis-2" className="block text-xs font-medium text-gray-600 mb-1">From Date</label>
-                        <input id="finalize-mis-2"
-                            type="date"
-                            value={mySearchDateFrom}
-                            onChange={(e) => setMySearchDateFrom(e.target.value)}
-                            className={inputClass}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="finalize-mis-3" className="block text-xs font-medium text-gray-600 mb-1">To Date</label>
-                        <input id="finalize-mis-3"
-                            type="date"
-                            value={mySearchDateTo}
-                            onChange={(e) => setMySearchDateTo(e.target.value)}
-                            className={inputClass}
-                        />
-                    </div>
-                </div>
-
-                {loading ? (
-                    <div className="text-center py-12 text-sm text-gray-500">Loading...</div>
-                ) : filteredMyReports.length === 0 ? (
-                    <EmptyState message="No reports found." />
-                ) : (
-                    <div className="space-y-4">
-                        {filteredMyReports.map(report => (
-                            <Panel key={report.id}>
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
-                                    <div className="min-w-0">
-                                        <h2 className="text-base font-semibold text-gray-900 mb-1">
-                                            {report.name || 'Finalized MIS Report'}
-                                        </h2>
-                                        <div className="text-sm text-gray-600 flex flex-wrap gap-x-4 gap-y-1 tabular-nums">
-                                            <span>Period: <strong className="font-medium text-gray-800">{report.date_from}</strong> to <strong className="font-medium text-gray-800">{report.date_to}</strong></span>
-                                            <span>Created: {new Date(report.created_at).toLocaleDateString()}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0">
-                                        <Badge label="Saved in System" color="dark" />
-                                        {report.sent_to_super_admin ? (
-                                            <Badge label="Sent to Super Admin" color="dark" />
-                                        ) : (
-                                            <Button variant="secondary" size="sm" onClick={() => handleSendSuperAdmin(report.id)}>
-                                                Send to Super Admin
-                                            </Button>
-                                        )}
-                                        {report.sent_to_chronicle_master ? (
-                                            <Badge label="Sent to Chronicle Master" color="dark" />
-                                        ) : (
-                                            <Button variant="secondary" size="sm" onClick={() => handleSendChronicle(report.id)}>
-                                                Send to Chronicle Master
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-md p-4 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap border border-gray-200" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                    {report.data_content}
-                                </div>
-                            </Panel>
-                        ))}
-                    </div>
-                )}
+                <ReportFilters searchLabel="Search finalized reports" onApply={f => { setFilters(f); goToPage(1) }} />
+                <Table columns={columns} data={myReports} loading={loading} error={loadError}
+                    serverPagination totalPages={totalPages} currentPage={currentPage} onPageChange={goToPage} />
             </div>
+
+            <MISReportModal report={openReport} onClose={() => setOpenReport(null)} />
 
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -369,7 +295,7 @@ export default function FinalizeMISPage() {
                                                             className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary-600"
                                                         />
                                                         <div className="min-w-0">
-                                                            <div className="font-medium text-sm text-gray-900">{report.name || 'Unnamed Report'}</div>
+                                                            <div className="font-medium text-sm text-gray-900">{report.title}</div>
                                                             <div className="text-xs text-gray-500 tabular-nums">{report.created_by_school_name} | {new Date(report.created_at).toLocaleString()} | {report.date_from} to {report.date_to}</div>
                                                         </div>
                                                     </div>
@@ -398,17 +324,7 @@ export default function FinalizeMISPage() {
                                 {error && <div className="mb-4"><FormError message={error} /></div>}
 
                                 <form id="create-report-form" onSubmit={handleCreateReport} className="space-y-4 flex flex-col flex-grow">
-                                    <div>
-                                        <label htmlFor="finalize-mis-4" className="block text-xs font-medium text-gray-600 mb-1">Final Report Title</label>
-                                        <input id="finalize-mis-4"
-                                            type="text"
-                                            required
-                                            placeholder="e.g. Q1 Final Combined Report"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                            className={inputClass}
-                                        />
-                                    </div>
+                                    <p className="text-xs text-gray-500">The report is named Campus - From to To.</p>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label htmlFor="finalize-mis-5" className="block text-xs font-medium text-gray-600 mb-1">Final From Date</label>

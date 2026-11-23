@@ -46,7 +46,7 @@ export default function DashboardHome() {
                                     </p>
                                 </div>
                                 <div className="flex-shrink-0">
-                                    <Link to="/coordinator/send-mis-data" className={linkButton}>
+                                    <Link to="/coordinator/send-mis-data" state={{ date_from: req.date_from, date_to: req.date_to }} className={linkButton}>
                                         Fulfill request
                                     </Link>
                                 </div>

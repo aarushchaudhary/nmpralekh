@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 import DashboardHome from './DashboardHome'
-import ReceivedDataPage from './ReceivedDataPage'
+import ReceivedMISDataPage from '../admin/ReceivedMISDataPage'
 import FinalizeMISPage from './FinalizeMISPage'
 import ExportPage from './ExportPage'
 
@@ -12,7 +12,7 @@ export default function AccumulatorDashboard() {
     <Layout>
       <Routes>
         <Route index element={<DashboardHome />} />
-        <Route path="received-data" element={<ReceivedDataPage />} />
+        <Route path="received-data" element={<ReceivedMISDataPage />} />
         <Route path="finalize" element={<FinalizeMISPage />} />
         <Route path="export" element={<ExportPage />} />
         <Route path="ai-summarizer" element={<AISummarizerPage />} />

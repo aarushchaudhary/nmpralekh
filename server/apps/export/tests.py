@@ -676,6 +676,35 @@ class AccumulatorDashboardTests(ExportTestMixin, APITestCase):
         self.assertIsNone(rows[waiting.id]['latest_report_date'])
         self.assertEqual(rows[waiting.id]['pending_requests'], 3)
 
+    def test_open_chronicle_requests_listed_until_answered(self):
+        from django.utils import timezone
+        from apps.export.models import ChronicleDataRequest
+        cr = ChronicleDataRequest.objects.create(created_by=self.chronicle_master,
+                                                 date_from=date(2026, 3, 1), date_to=date(2026, 3, 31))
+        data, _ = self._get()  # shows even with no coordinators on the campus
+        self.assertEqual([r['id'] for r in data['chronicle_requests']], [cr.id])
+        MISReport.objects.create(created_by=self.accumulator, name='m', data_content='x',
+                                 date_from=date(2026, 3, 1), date_to=date(2026, 3, 31),
+                                 sent_to_chronicle_master_at=timezone.now())
+        data, _ = self._get()
+        self.assertEqual(data['chronicle_requests'], [])
+
+    def test_report_title_and_list_filters(self):
+        coord = self._add_coordinator(1, submitted=0, pending=0)
+        mk = lambda d1, d2: MISReport.objects.create(created_by=coord, data_content='x',
+                                                    date_from=d1, date_to=d2)
+        jan, mar = mk(date(2026, 1, 1), date(2026, 1, 31)), mk(date(2026, 3, 1), date(2026, 3, 31))
+        self.client.force_authenticate(user=coord)
+        rows = self.client.get('/api/export/reports/', {'page_size': 1}).data
+        self.assertEqual((rows['count'], len(rows['results'])), (2, 1))
+        self.assertEqual(rows['results'][0]['title'], 'Exp School - Export Campus - 2026-03-01 to 2026-03-31')
+        ids = lambda **p: [r['id'] for r in self.client.get('/api/export/reports/', p).data['results']]
+        self.assertEqual(ids(date_from='2026-02-01'), [mar.id])
+        self.assertEqual(ids(date_to='2026-02-01'), [jan.id])
+        self.assertEqual(ids(search='exp school'), [mar.id, jan.id])
+        self.assertEqual(ids(search='nowhere'), [])
+        self.assertEqual(len(ids(date_from='2026-02-31')), 2)  # impossible date is ignored, not a 500
+
     def test_query_count_does_not_grow_with_coordinators(self):
         for i in range(2):
             self._add_coordinator(i, submitted=1, pending=1)

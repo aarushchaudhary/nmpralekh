@@ -7,7 +7,8 @@ from celery.result import AsyncResult
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from collections import defaultdict
-from django.db.models import Count, Max
+from django.db.models import Count, Exists, Max, OuterRef, Q
+from django.utils.dateparse import parse_date
 from django.core.cache import cache
 from django.http import HttpResponse, FileResponse
 from django.utils.decorators import method_decorator
@@ -846,6 +847,31 @@ def _with_author(qs):
     return qs.select_related('created_by__campus').prefetch_related('created_by__school_mappings__school')
 
 
+def _date_param(params, key):
+    try:
+        return parse_date(params.get(key) or '')
+    except ValueError:  # well-formed but impossible, e.g. 2026-02-31
+        return None
+
+
+def _filter_reports(qs, params):
+    """?search= matches the title's school/campus, the author or the old free-text name;
+    ?date_from=/?date_to= keep reports whose period overlaps."""
+    search = params.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(name__icontains=search) | Q(created_by__full_name__icontains=search)
+            | Q(created_by__campus__name__icontains=search)
+            | Q(created_by__school_mappings__school__name__icontains=search)
+        ).distinct()
+    date_from, date_to = _date_param(params, 'date_from'), _date_param(params, 'date_to')
+    if date_from:
+        qs = qs.filter(date_to__gte=date_from)
+    if date_to:
+        qs = qs.filter(date_from__lte=date_to)
+    return qs
+
+
 class MISReportListCreateView(generics.ListCreateAPIView):
     serializer_class = MISReportSerializer
     pagination_class = StandardPagination
@@ -858,7 +884,8 @@ class MISReportListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         if not self.request.user.is_authenticated:
             return MISReport.objects.none()
-        return _with_author(MISReport.objects.filter(created_by=self.request.user))
+        return _with_author(_filter_reports(MISReport.objects.filter(created_by=self.request.user),
+                                            self.request.query_params))
 
 class MISReportSendAdminView(APIView):
     permission_classes = [RolePermission(['mis_coordinator'])]
@@ -935,7 +962,7 @@ class ReceivedMISReportsView(generics.ListAPIView):
         return [IsAuthenticated()]
 
     def get_queryset(self):
-        return _with_author(self._received_reports())
+        return _with_author(_filter_reports(self._received_reports(), self.request.query_params))
 
     def _received_reports(self):
         user = self.request.user
@@ -1209,11 +1236,21 @@ class AccumulatorDashboardView(APIView):
         submitted = sum(1 for c in result if c['has_submitted'])
         pending = len(result) - submitted
 
+        # Chronicle requests go to every accumulator; open until a report overlapping the period
+        # is sent to the chronicle master (same rule as ChronicleDashboardView)
+        answered = MISReport.objects.filter(
+            created_by=user, sent_to_chronicle_master_at__isnull=False,
+            date_from__lte=OuterRef('date_to'), date_to__gte=OuterRef('date_from'),
+        )
+        chronicle_requests = ChronicleDataRequest.objects.exclude(Exists(answered)).values(
+            'id', 'date_from', 'date_to', 'message', 'created_at')
+
         return Response({
             'coordinators': result,
             'total': len(result),
             'submitted': submitted,
             'pending': pending,
+            'chronicle_requests': list(chronicle_requests),
         })
 
 
