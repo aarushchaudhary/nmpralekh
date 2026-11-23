@@ -100,7 +100,10 @@ export default function ClubsPage() {
         },
         {
             key: 'actions', label: '', sortable: false,
-            render: row => (
+            // edits and deletes wait for delete-auth approval
+            render: row => row.pending_audit ? (
+                <Badge label="Pending approval" color="outline" />
+            ) : (
                 <div className="flex gap-2">
                     <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
                         Edit
@@ -146,11 +149,12 @@ export default function ClubsPage() {
                             Active
                         </label>
                     </div>
+                    {isEdit && <p className="text-xs text-gray-500">Changes are sent for approval before they apply.</p>}
                     <FormError message={errors._form} />
                     <div className="flex justify-end gap-3 pt-2">
                         <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
                         <Button loading={saving} onClick={handleSubmit}>
-                            {isEdit ? 'Save Changes' : 'Create Club'}
+                            {isEdit ? 'Request Changes' : 'Create Club'}
                         </Button>
                     </div>
                 </div>
@@ -158,8 +162,8 @@ export default function ClubsPage() {
 
             <ConfirmDialog isOpen={!!deleting} onClose={() => setDeleting(null)}
                 onConfirm={handleDelete} title="Delete club"
-                message={`Delete "${deleting?.name}"? This cannot be undone.`}
-                confirmLabel="Delete" loading={saving} error={deleteError} />
+                message={`Delete "${deleting?.name}"? The request will be sent for approval before the club is removed.`}
+                confirmLabel="Request delete" loading={saving} error={deleteError} />
         </div>
     )
 }

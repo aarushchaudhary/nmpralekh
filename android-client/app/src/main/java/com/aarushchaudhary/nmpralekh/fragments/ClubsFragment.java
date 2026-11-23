@@ -130,7 +130,7 @@ public class ClubsFragment extends BaseRecordFragment {
             public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
                 if (!isAdded()) return;
                 if (response.isSuccessful()) {
-                    Toast.makeText(requireContext(), "Club updated", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Update sent for approval", Toast.LENGTH_SHORT).show();
                     loadData();
                 } else {
                     Toast.makeText(requireContext(), "Failed to update", Toast.LENGTH_SHORT).show();
@@ -152,7 +152,7 @@ public class ClubsFragment extends BaseRecordFragment {
             public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
                 if (!isAdded()) return;
                 if (response.isSuccessful()) {
-                    Toast.makeText(requireContext(), "Club deleted", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Delete sent for approval", Toast.LENGTH_SHORT).show();
                     loadData();
                 } else {
                     Toast.makeText(requireContext(), "Failed to delete", Toast.LENGTH_SHORT).show();

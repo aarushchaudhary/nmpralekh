@@ -15,6 +15,7 @@ import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.ViewHolder> {
 
@@ -51,10 +52,16 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.ViewHolder
     private final RecordBinder binder;
     private final OnRecordActionListener listener;
     private boolean isReadOnly = false;
+    private Consumer<JsonObject> onItemClick;  // null: rows aren't tappable
 
     public RecordAdapter(RecordBinder binder, OnRecordActionListener listener) {
         this.binder = binder;
         this.listener = listener;
+    }
+
+    public void setOnItemClick(Consumer<JsonObject> onItemClick) {
+        this.onItemClick = onItemClick;
+        notifyDataSetChanged();
     }
 
     public void setReadOnly(boolean readOnly) {
@@ -81,6 +88,12 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.ViewHolder
 
         holder.tvTitle.setText(binder.getTitle(record));
         holder.tvSubtitle.setText(binder.getSubtitle(record));
+        if (onItemClick != null) {
+            holder.itemView.setOnClickListener(v -> onItemClick.accept(record));
+        } else {
+            holder.itemView.setOnClickListener(null);
+            holder.itemView.setClickable(false);
+        }
 
         // Badge
         String badge = binder.getBadgeText(record);

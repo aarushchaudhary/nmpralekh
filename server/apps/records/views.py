@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
 from apps.accounts.permissions import RolePermission
+from apps.schools.models import School
 from apps.schools.utils import get_user_school_ids, scope_to_faculty
 from apps.records.cache_utils import get_dashboard_counts, invalidate_dashboard_cache
 from config.pagination import StandardPagination
@@ -169,7 +170,7 @@ class ClubListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
     def get_queryset(self):
         school_ids = get_user_school_ids(self.request.user)
         qs = Club.objects.filter(
-            school_id__in=school_ids
+            school_id__in=school_ids, is_deleted=False
         ).select_related('school', 'created_by')
         # optional query params for filtering
         school = self.request.query_params.get('school')
@@ -195,18 +196,18 @@ class ClubListCreateView(SchoolScopedMixin, generics.ListCreateAPIView):
         serializer.save()
 
 
-class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
+class ClubDetailView(AuditedDetailMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class   = ClubSerializer
     permission_classes = [RolePermission(['admin'])]
 
     def get_queryset(self):
-        school_ids = get_user_school_ids(self.request.user)
-        return Club.objects.filter(school_id__in=school_ids).select_related('school', 'created_by')
+        return self.get_base_queryset(Club)
 
-    def perform_update(self, serializer):
-        if 'school' in serializer.validated_data:
-            check_school(self.request.user, serializer.validated_data['school'])
-        serializer.save()
+    def validated_new_data(self, record):
+        new_data = super().validated_new_data(record)
+        if 'school' in new_data:  # moving a club needs the target school to be one of yours too
+            check_school(self.request.user, School.objects.get(pk=new_data['school']))
+        return new_data
 
 
 # ─────────────────────────────────────────────

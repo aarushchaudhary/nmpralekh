@@ -18,11 +18,19 @@ class Club(models.Model):
                                     related_name='clubs_created')
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
+    # edits and deletes go through delete-auth approval like the other records
+    is_deleted    = models.BooleanField(default=False)
+    pending_audit = models.ForeignKey('audit.AuditRequest', null=True, blank=True,
+                                      on_delete=models.SET_NULL, related_name='clubs_pending')
 
     class Meta:
         db_table = 'clubs'
         ordering = ['name']
-        unique_together = ('name', 'school', 'type')
+        constraints = [
+            # a deleted club's name can be reused
+            models.UniqueConstraint(fields=['name', 'school', 'type'], condition=models.Q(is_deleted=False),
+                                    name='club_unique_live_name'),
+        ]
         indexes = [
             models.Index(fields=['school', 'type', 'is_active']),
         ]

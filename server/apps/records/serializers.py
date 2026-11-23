@@ -16,9 +16,9 @@ class ClubSerializer(serializers.ModelSerializer):
         model  = Club
         fields = [
             'id', 'name', 'type', 'school', 'school_name',
-            'is_active', 'created_by', 'created_at', 'updated_at'
+            'is_active', 'pending_audit', 'created_by', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['pending_audit', 'created_by', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user

@@ -12,7 +12,7 @@ from apps.accounts.throttles import FixedWindowThrottle
 from apps.schools.utils import get_user_school_ids
 from apps.records.cache_utils import invalidate_dashboard_cache
 from apps.records.models import (
-    SchoolActivity, StudentActivity, FacultyFDPWorkshopGL,
+    Club, SchoolActivity, StudentActivity, FacultyFDPWorkshopGL,
     FacultyPublication, Patent, Certification, PlacementActivity,
 )
 from config.pagination import StandardPagination
@@ -50,12 +50,13 @@ class AuditRequestDetailView(generics.RetrieveAPIView):
 # audit.table_name is the model's db_table (see records.views.AuditedDetailMixin)
 AUDITED_MODELS = {
     m._meta.db_table: m for m in (
-        SchoolActivity, StudentActivity, FacultyFDPWorkshopGL,
+        Club, SchoolActivity, StudentActivity, FacultyFDPWorkshopGL,
         FacultyPublication, Patent, Certification, PlacementActivity,
     )
 }
 
 ALLOWED_FIELDS = {
+    'clubs': ['name', 'type', 'school', 'is_active'],
     'school_activities': ['name', 'date', 'details', 'is_school_wide'],
     'student_activities': ['name', 'date', 'details', 'club', 'club_name',
                            'conducted_by', 'activity_type'],

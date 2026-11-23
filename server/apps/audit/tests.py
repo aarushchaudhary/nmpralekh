@@ -238,6 +238,49 @@ class AuditRequestListViewTests(AuditTestMixin, APITestCase):
 
 
 @override_settings(RATELIMIT_ENABLE=False)
+@override_settings(RATELIMIT_ENABLE=False)
+class ClubAuditFlowTests(AuditTestMixin, APITestCase):
+    """Club edits and deletes wait for delete-auth approval like the other records."""
+
+    def setUp(self):
+        from apps.records.models import Club
+        self._setup_base()
+        self.club = Club.objects.create(name="Chess", type="club", school=self.school, created_by=self.admin_user)
+
+    def _request(self, method, data=None):
+        self.client.force_authenticate(user=self.admin_user)
+        resp = getattr(self.client, method)(f'/api/records/clubs/{self.club.pk}/', data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
+        self.client.force_authenticate(user=self.delete_auth)
+        pending = self.client.get('/api/audit/').data['results']
+        self.assertEqual([(a['id'], a['table_name']) for a in pending], [(resp.data['audit_id'], 'clubs')])
+        return resp.data['audit_id']
+
+    def test_delete_waits_for_approval_then_name_is_reusable(self):
+        audit_id = self._request('delete')
+        self.club.refresh_from_db()
+        self.assertFalse(self.club.is_deleted)
+        self.assertEqual(self.client.post(f'/api/audit/{audit_id}/approve/').status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(user=self.admin_user)
+        self.assertEqual(self.client.get('/api/records/clubs/').data['results'], [])
+        resp = self.client.post('/api/records/clubs/', {'name': 'Chess', 'type': 'club', 'school': self.school.pk})
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+    def test_edit_applies_only_on_approval_and_reject_keeps_it(self):
+        audit_id = self._request('patch', {'name': 'Chess Society'})
+        self.club.refresh_from_db()
+        self.assertEqual(self.club.name, 'Chess')
+        self.client.post(f'/api/audit/{audit_id}/approve/')
+        self.club.refresh_from_db()
+        self.assertEqual((self.club.name, self.club.pending_audit), ('Chess Society', None))
+
+        audit_id = self._request('delete')
+        self.client.post(f'/api/audit/{audit_id}/reject/')
+        self.club.refresh_from_db()
+        self.assertEqual((self.club.is_deleted, self.club.pending_audit), (False, None))
+
+
 class AuditApproveViewTests(AuditTestMixin, APITestCase):
     def setUp(self):
         self._setup_base()

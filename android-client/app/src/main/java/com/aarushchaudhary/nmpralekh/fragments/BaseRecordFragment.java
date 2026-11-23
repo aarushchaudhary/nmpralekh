@@ -90,6 +90,10 @@ public abstract class BaseRecordFragment extends Fragment {
         return inflater.inflate(R.layout.fragment_record_list, container, false);
     }
 
+    protected int getPageSize() {
+        return 25;
+    }
+
     protected boolean isReadOnly() {
         // super admins and MIS coordinators can view school records but never change them
         String role = sessionManager != null ? sessionManager.getRole() : "";
@@ -186,7 +190,7 @@ public abstract class BaseRecordFragment extends Fragment {
 
         Map<String, String> params = new HashMap<>();
         params.put("page", String.valueOf(currentPage));
-        params.put("page_size", "25");
+        params.put("page_size", String.valueOf(getPageSize()));
 
         // Use the right API call based on endpoint
         Call<JsonObject> call = getApiCall(params);
