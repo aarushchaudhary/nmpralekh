@@ -301,11 +301,17 @@ class UserReactivateView(APIView):
 
 
 class ResetPasswordView(APIView):
-    """POST /api/users/<id>/reset-password/ {temporary_password} — see can_reset_password for who may."""
+    """POST /api/users/<id>/reset-password/ {password, temporary_password}: "password" is the
+    caller's own (re-entered); see can_reset_password for who may reset whom."""
     permission_classes = [RolePermission(['master', 'super_admin', 'admin'], exclude_service_admin=True)]
     serializer_class = serializers.Serializer
 
+    # the own-password check must not become a way to guess it
+    @method_decorator(ratelimit(key='user', rate='10/m', method='POST', block=True))
     def post(self, request, pk):
+        # the person resetting re-enters their own password, so an unattended signed-in screen
+        # can't be used to take over someone's account
+        confirm_own_password(request)
         target = User.objects.filter(pk=pk).first()
         if target is None:
             return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -483,12 +489,15 @@ class ServiceUserManagementView(APIView):
             return Response({"detail": "A service user already exists, or that username or email is taken."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "Service user created successfully."}, status=status.HTTP_201_CREATED)
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='PATCH', block=True))
     def patch(self, request):
-        # same rule as every other reset: a one-time password they must change at next sign-in
+        # same rule as every other reset: the master re-enters their own password ("password"),
+        # then sets a one-time password ("temporary_password") they must change at next sign-in
+        confirm_own_password(request)
         user = User.objects.filter(is_service_admin=True).first()
         if user is None:
             return Response({"detail": "Service user does not exist."}, status=status.HTTP_404_NOT_FOUND)
-        error = set_temporary_password(user, request.data.get("password", "").strip())
+        error = set_temporary_password(user, str(request.data.get("temporary_password") or "").strip())
         if error:
             return error
         return Response({"detail": "Password reset. They must choose a new one at next sign-in."})
@@ -527,12 +536,15 @@ class ChronicleMasterManagementView(APIView):
             return Response({"detail": "A Chronicle Master already exists, or that username or email is taken."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "Chronicle Master created successfully."}, status=status.HTTP_201_CREATED)
 
+    @method_decorator(ratelimit(key='user', rate='10/m', method='PATCH', block=True))
     def patch(self, request):
-        # same rule as every other reset: a one-time password they must change at next sign-in
+        # same rule as every other reset: the master re-enters their own password ("password"),
+        # then sets a one-time password ("temporary_password") they must change at next sign-in
+        confirm_own_password(request)
         user = User.objects.filter(is_chronicle_master=True).first()
         if user is None:
             return Response({"detail": "Chronicle Master does not exist."}, status=status.HTTP_404_NOT_FOUND)
-        error = set_temporary_password(user, request.data.get("password", "").strip())
+        error = set_temporary_password(user, str(request.data.get("temporary_password") or "").strip())
         if error:
             return error
         return Response({"detail": "Password reset. They must choose a new one at next sign-in."})

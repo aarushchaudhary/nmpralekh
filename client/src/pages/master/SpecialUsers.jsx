@@ -19,6 +19,8 @@ function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
     const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    // reset only: the master's own password, re-entered before setting someone's one-time password
+    const [ownPassword, setOwnPassword] = useState('')
 
     const fetchStatus = useCallback(async () => {
         try {
@@ -50,9 +52,10 @@ function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
         e.preventDefault()
         setMessage({ type: '', text: '' })
         try {
-            const res = await api.patch(apiEndpoint, { password })
+            const res = await api.patch(apiEndpoint, { temporary_password: password, password: ownPassword })
             setMessage({ type: 'success', text: res.data.detail })
             setPassword('')
+            setOwnPassword('')
         } catch (error) {
             const errs = apiErrors(error)
             setMessage({ type: 'error', text: errs.temporary_password || errs._form || 'Failed to reset password.' })
@@ -143,6 +146,19 @@ function SpecialUserCard({ title, apiEndpoint, lockMessage }) {
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)} 
                             placeholder="Enter new strong password"
+                            className={inputClass}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor={`${uid}-own-password`} className="block text-sm font-medium text-gray-800 mb-1">Your password</label>
+                        <input id={`${uid}-own-password`}
+                            type="password"
+                            required
+                            autoComplete="current-password"
+                            value={ownPassword}
+                            onChange={(e) => setOwnPassword(e.target.value)}
+                            placeholder="Re-enter your own password to confirm"
                             className={inputClass}
                         />
                     </div>

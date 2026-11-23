@@ -175,7 +175,7 @@ public abstract class BaseAuthActivity extends AppCompatActivity {
             }
             return out.toString();
         } catch (Exception e) {
-            return "Could not change the password (error " + response.code() + ").";
+            return "Something went wrong (error " + response.code() + "). Please try again.";
         }
     }
 }

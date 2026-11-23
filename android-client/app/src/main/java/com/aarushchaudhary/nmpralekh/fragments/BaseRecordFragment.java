@@ -379,6 +379,9 @@ public abstract class BaseRecordFragment extends Fragment {
                 requireContext(), form, "One-time password");
         TextInputEditText confirm = com.aarushchaudhary.nmpralekh.BaseAuthActivity.addPasswordField(
                 requireContext(), form, "Confirm one-time password");
+        // the person resetting re-enters their own password, so an unattended phone can't be used to take over an account
+        TextInputEditText ownPassword = com.aarushchaudhary.nmpralekh.BaseAuthActivity.addPasswordField(
+                requireContext(), form, "Your password");
         TextView error = new TextView(requireContext());
         error.setTextColor(requireContext().getColor(R.color.red_700));
         error.setPadding(0, pad / 2, 0, 0);
@@ -400,6 +403,7 @@ public abstract class BaseRecordFragment extends Fragment {
             }
             JsonObject body = new JsonObject();
             body.addProperty("temporary_password", temporary);
+            body.addProperty("password", String.valueOf(ownPassword.getText()));
             v.setEnabled(false);
             apiService.resetPassword(jsonInt(user, "id"), body).enqueue(new Callback<JsonObject>() {
                 @Override
@@ -587,14 +591,14 @@ public abstract class BaseRecordFragment extends Fragment {
     }
 
     // Helper to safely get string from JsonObject
-    protected String jsonStr(JsonObject obj, String key) {
+    protected static String jsonStr(JsonObject obj, String key) {
         if (obj != null && obj.has(key) && !obj.get(key).isJsonNull()) {
             return obj.get(key).getAsString();
         }
         return "";
     }
 
-    protected int jsonInt(JsonObject obj, String key) {
+    protected static int jsonInt(JsonObject obj, String key) {
         if (obj != null && obj.has(key) && !obj.get(key).isJsonNull()) {
             return obj.get(key).getAsInt();
         }

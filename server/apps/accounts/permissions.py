@@ -21,8 +21,9 @@ def RolePermission(allowed_roles, read_only_roles=None, exclude_service_admin=Fa
 
 
 def confirm_own_password(request):
-    """Risky actions (reactivating, resetting someone's password) ask the signed-in user
-    to type their own password again. Raises 403 when it is missing or wrong.
+    """Risky actions (reactivating a user, campus or school; resetting someone's password)
+    ask the signed-in user to type their own password again, sent as "password".
+    Raises 403 when it is missing or wrong.
     Views calling this are rate-limited per user, so it can't be used to guess the password."""
     from django.conf import settings
     from rest_framework.exceptions import PermissionDenied, Throttled

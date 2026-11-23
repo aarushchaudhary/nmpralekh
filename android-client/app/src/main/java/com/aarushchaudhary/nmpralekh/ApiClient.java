@@ -93,10 +93,25 @@ public class ApiClient {
 
         currentBaseUrl = baseUrl;
 
+        boolean debuggable = (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        OkHttpClient client = buildHttpClient(debuggable);
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(baseUrl)
+                .addConverterFactory(GsonConverterFactory.create())
+                .client(client)
+                .build();
+
+        apiService = retrofit.create(ApiService.class);
+        return apiService;
+    }
+
+    /** The HTTP client: login cookies, the CSRF header, and refresh-once-and-retry on a 401.
+     *  Needs no Context, so the unit tests build it against a fake server. */
+    static OkHttpClient buildHttpClient(boolean debuggable) {
         // Bodies carry passwords and tokens: never log them. Debug builds log the
         // request line and status only; release builds log nothing.
         HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        boolean debuggable = (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         logging.setLevel(debuggable ? HttpLoggingInterceptor.Level.BASIC : HttpLoggingInterceptor.Level.NONE);
 
         CookieJar cookieJar = new CookieJar() {
@@ -149,15 +164,7 @@ public class ApiClient {
                 .authenticator((route, response) -> refreshAndRetry(response))
                 .build();
         httpClient = client;
-
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(baseUrl)
-                .addConverterFactory(GsonConverterFactory.create())
-                .client(client)
-                .build();
-
-        apiService = retrofit.create(ApiService.class);
-        return apiService;
+        return client;
     }
 
     private static String cookieValue(String host, String name) {

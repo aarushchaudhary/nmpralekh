@@ -1039,8 +1039,10 @@ npm run lint && npm test && npm run build
 ### Android
 
 ```bash
-cd android-client && ./gradlew assembleDebug
+cd android-client && ./gradlew testDebugUnitTest assembleDebug
 ```
+
+The unit tests run on the JVM, with no emulator. `ApiClientTest` drives the real HTTP client against a fake server (OkHttp MockWebServer) that rotates refresh tokens like Django does. It checks the refresh-once-and-retry on a 401, that parallel requests refresh only once, the CSRF header, and signing out. `ErrorMessageTest` and `JsonHelpersTest` cover how server errors and record JSON are read.
 
 ### Continuous integration
 
@@ -1049,8 +1051,8 @@ cd android-client && ./gradlew assembleDebug
 ```mermaid
 flowchart LR
     push["push / PR to main"] --> c["Client<br/>npm ci · lint · test · build<br/>Node 24"]
-    push --> s["Server<br/>check · 436 tests<br/>Python 3.12, Postgres 16, Redis 7"]
-    push --> a["Android<br/>assembleDebug<br/>JDK 21"]
+    push --> s["Server<br/>check · all tests<br/>Python 3.12, Postgres 16, Redis 7"]
+    push --> a["Android<br/>unit tests · assembleDebug<br/>JDK 21"]
 
     classDef p fill:#2A2A2A,stroke:#000,color:#fff,stroke-width:2px
     classDef cc fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,stroke-width:2px

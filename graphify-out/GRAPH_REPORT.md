@@ -1,23 +1,23 @@
 # Graph Report - nmpralekh  (2026-11-23)
 
 ## Corpus Check
-- 232 files · ~102,252 words
+- 235 files · ~103,450 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 51 file(s) not represented in the graph (top: .xml 33, (none) 6, .properties 3)
 
 ## Summary
-- 2737 nodes · 7796 edges · 136 communities (47 shown, 89 thin omitted)
+- 2785 nodes · 7911 edges · 140 communities (51 shown, 89 thin omitted)
 - Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 799 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `38ccb0c7`
+- Built from commit: `b31c2cbb`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Android API Service Layer
-- Club
+- ApiClientTest.java
 - export/views.py
 - Android Record Fragments
 - FanOutWriteTests
@@ -35,50 +35,50 @@
 - AdminActivity.java
 - append_safe_row
 - RolePermission
-- ErrorTicketStatusView
-- android.view.View
-- AuditRequest
+- SchoolActivitiesFragment
+- BaseRecordFragment.java
+- AuditRequestListViewTests
 - APITestCase
 - SchoolModelTests
 - RecordBinder
-- TestCase
+- .post
 - Django Audit Views
 - BackgroundExportAllTests
 - SessionManager
 - Override
-- BugReport
+- DeleteAuthDashboardFragment.java
+- service/views.py
 - .jsonStr
 - AuditAdapter
-- DetailQueryCountTests
+- PublicationAuthorTests
 - Override
 - Django User Model Tests
 - Django App Config Registry
-- .onResponse
+- APIView
 - BaseRecordFragment
 - CertificationsFragment
 - ClubListPaginationTests
 - package.json
 - ErrorOccurrence
 - Override
-- ClubModelTests
-- django_conf
+- throttles.py
 - AuditRequestIndexTests
 - Override
 - CertificationListPaginationTests
-- PublicationAuthorTests
-- django_db_models_deletion
+- AuditRequestModelTests
+- ChronicleMasterManagementView
 - CoApplicantVisibilityTests
 - AccountIntegrityTests
-- CoAuthorVisibilityTests
+- confirm_own_password
 - FDPListPaginationTests
 - SchoolActivityAPITests
-- TestCase
+- records/views.py
 - BackupConfigurationView
 - ApiClient.java
 - Android Campus Users Fragment
 - Android Faculties Fragment
 - ReceivedMISDataFragment
-- ErrorTicketListViewTests
+- AuditListPaginationTests
 - SchoolActivityListPaginationTests
 - UserSchoolMappingViewTests
 - Django Error Fingerprint
@@ -86,24 +86,34 @@
 - TrustBoundaryTests
 - ReportErrorSerializer
 - ExportTestMixin
-- BugReportCreateSerializer
+- BugReportModelTests
 - ServiceUserManagementViewTests
 - Django Settings Configuration
-- SchoolActivityCollaborationTests
+- AuditApproveViewTests
+- TestCase
 - DashboardCountsCacheTests
+- AuditHistoryPaginationTests
+- ClubModelTests
+- ClubAuditFlowTests
 - PlacementListPaginationTests
-- User
+- accounts/views.py
 - Module Cluster 83
-- SchoolActivitiesFragment
+- PublicationListPaginationTests
+- CoAuthorVisibilityTests
 - LoginDuringRedisOutageTests
+- AuditHistoryViewTests
+- PatentApplicantTests
+- ViewHolder
+- FDPWorkshopGLModelTests
+- PublicationAuthorIndexTests
 - ReportErrorViewTests
 - FDPFragment
-- MISReportSerializer
+- SchoolActivityModelTests
+- .test_query_count_does_not_grow_with_children
 - CoPeopleApprovalTests
-- MISDataRequestSerializer
-- ClubAPITests
-- GeneratedExportModelTests
+- ExportTestMixin
 - ._setup_base
+- GeneratedExportModelTests
 - IntegrityRuleTests
 - ChangePasswordTests
 - UserReactivateTests
@@ -122,19 +132,14 @@
 - APITestCase
 - ChronicleDashboardTests
 - SchoolListCreateViewTests
-- PublicationAuthorIndexTests
 - CampusDetailViewTests
 - CampusReactivateViewTests
 - SchoolDetailViewTests
-- SchoolFacultyViewTests
 - override_settings
 - APITestCase
 - MySchoolsViewTests
 - SchoolReactivateViewTests
-- export/migrations/0001_initial.py
-- 0003_misreport.py
-- records/migrations/0001_initial.py
-- 0009_club_audit.py
+- export/tasks.py
 
 ## God Nodes (most connected - your core abstractions)
 1. `Button()` - 82 edges
@@ -168,31 +173,31 @@
 - **Core Django REST Framework and Async Stack** — server_requirements_django, server_requirements_drf, server_requirements_celery [EXTRACTED 1.00]
 - **Three-Tier Backend Serving and Connection Pipeline** — readme_nginx_reverse_proxy, readme_gunicorn_wsgi_config, readme_pgbouncer_pooling [EXTRACTED 1.00]
 
-## Communities (136 total, 89 thin omitted)
+## Communities (140 total, 89 thin omitted)
 
 ### Community 0 - "Android API Service Layer"
 Cohesion: 0.05
 Nodes (12): locust.sh script, AdminUser, BaseMISUser, ChronicleMasterUser, DeleteAuthUser, FacultyUser, MasterUser, MISAccumulatorUser (+4 more)
 
-### Community 1 - "Club"
-Cohesion: 0.09
-Nodes (14): Club, Meta, ClubSerializer, Meta, PublicationAuthorSerializer, Meta, StudentActivitySerializer, Meta (+6 more)
+### Community 1 - "ApiClientTest.java"
+Cohesion: 0.08
+Nodes (3): ApiClientTest, Dispatcher, ErrorMessageTest
 
 ### Community 2 - "export/views.py"
 Cohesion: 0.04
-Nodes (37): ChronicleDataRequest, Meta, GeneratedExport, Meta, MISDataRequest, Meta, MISReport, Meta (+29 more)
+Nodes (35): ChronicleDataRequest, Meta, MISDataRequest, Meta, MISReport, Meta, check_date_order(), ChronicleDataRequestSerializer (+27 more)
 
 ### Community 4 - "FanOutWriteTests"
 Cohesion: 0.33
 Nodes (3): FanOutWriteTests, add_campuses(), _queries()
 
 ### Community 5 - "FDPFragment"
-Cohesion: 0.09
-Nodes (7): AdminActivity, BaseAuthActivity, DeleteAuthActivity, FacultyActivity, HomeDashboardFragment, OnModuleClickListener, SuperAdminActivity
+Cohesion: 0.08
+Nodes (7): AdminActivity, BaseAuthActivity, retrofit2.Callback<com.google.gson.JsonObject>, FacultyActivity, HomeDashboardFragment, OnModuleClickListener, SuperAdminActivity
 
 ### Community 6 - "records/views.py"
-Cohesion: 0.04
-Nodes (66): _append_styled_headers(), build_campus_workbook(), ensure_export_dir(), export_all_for_user(), export_single_campus(), generate_manual_export(), generate_nightly_exports(), _gather_coordinator_data() (+58 more)
+Cohesion: 0.05
+Nodes (24): ExportHistoryView, FacultyFDPWorkshopGLSerializer, Meta, AuditedDetailMixin, CertificationDetailView, CertificationListCreateView, check_school(), ClubDetailView (+16 more)
 
 ### Community 7 - "PageHeader"
 Cohesion: 0.05
@@ -200,15 +205,19 @@ Nodes (155): api, apiErrors(), App(), RoleRedirect(), BugReportButton(), ErrorBo
 
 ### Community 9 - "records/tests.py"
 Cohesion: 0.05
-Nodes (35): ChronicleAccumulatorSerializer, Meta, UserSerializer, Meta, UserSerializerTests, AuditTestMixin, Campus, Meta (+27 more)
+Nodes (33): AuditRejectViewTests, AuditRowLockTests, AuditTestMixin, TriggerManualExportView, Campus, Meta, School, Meta (+25 more)
+
+### Community 10 - "ErrorTicket"
+Cohesion: 0.18
+Nodes (3): ErrorTicket, Meta, ErrorTicketModelTests
 
 ### Community 11 - "Django Audit Models"
-Cohesion: 0.08
-Nodes (7): BugReportCreateViewTests, BugReportDetailViewTests, BugReportListViewTests, ErrorTicketDetailViewTests, ErrorTicketStatusViewTests, ServiceDashboardStatsViewTests, ServiceTestMixin
+Cohesion: 0.07
+Nodes (8): BugReportCreateViewTests, BugReportDetailViewTests, BugReportListViewTests, ErrorTicketDetailViewTests, ErrorTicketListViewTests, ErrorTicketStatusViewTests, ServiceDashboardStatsViewTests, ServiceTestMixin
 
 ### Community 12 - "django_db"
-Cohesion: 0.05
-Nodes (19): Migration, Migration, Migration, Migration, Migration, Migration, Migration, Migration (+11 more)
+Cohesion: 0.04
+Nodes (36): Migration, Migration, Migration, Migration, Migration, Migration, Migration, Migration (+28 more)
 
 ### Community 13 - "Override"
 Cohesion: 0.23
@@ -216,27 +225,23 @@ Nodes (4): Callback<JsonObject>, AuditAdapter.OnAuditActionListener, Callback<Js
 
 ### Community 14 - "get_user_school_ids"
 Cohesion: 0.09
-Nodes (10): FixedWindowThrottle, _apply_people(), AuditApproveView, AuditRejectView, _lock_pending_audit(), _not_found(), DashboardCountsView, PublicationAuthorListCreateView (+2 more)
+Nodes (7): SchoolFacultiesView, DashboardCountsView, PatentApplicantListCreateView, PublicationAuthorListCreateView, GetUserSchoolIdsTests, get_user_school_ids(), SchoolFacultyView
 
 ### Community 15 - "service/views.py"
 Cohesion: 0.12
-Nodes (9): ErrorTicket, Meta, ErrorTicketDetailSerializer, Meta, ErrorTicketListSerializer, Meta, ErrorTicketSerializerTests, ErrorTicketDetailView (+1 more)
+Nodes (7): ErrorTicketDetailSerializer, Meta, ErrorTicketListSerializer, Meta, ErrorTicketSerializerTests, ErrorTicketDetailView, ErrorTicketListView
 
 ### Community 17 - "append_safe_row"
 Cohesion: 0.08
 Nodes (15): append_safe_row(), ExportHelperFunctionTests, AccumulatorExportView, append_styled_headers(), build_apply_filters(), apply_filters(), ChronicleExportView, CoordinatorExportView (+7 more)
 
 ### Community 18 - "RolePermission"
-Cohesion: 0.08
-Nodes (16): RolePermission(), IsAdminOrUserOrSuperAdminOrCoordinatorTests, IsAdminOrUserPermissionTests, IsAdminPermissionTests, IsChronicleMasterPermissionTests, IsDeleteAuthPermissionTests, IsMasterOrSuperAdminPermissionTests, IsMasterPermissionTests (+8 more)
+Cohesion: 0.09
+Nodes (15): RolePermission(), IsAdminOrUserOrSuperAdminOrCoordinatorTests, IsAdminOrUserPermissionTests, IsAdminPermissionTests, IsChronicleMasterPermissionTests, IsDeleteAuthPermissionTests, IsMasterOrSuperAdminPermissionTests, IsMasterPermissionTests (+7 more)
 
-### Community 19 - "ErrorTicketStatusView"
-Cohesion: 0.18
-Nodes (5): TicketStatusUpdateSerializer, ApiStatusView, extract_urls(), ErrorTicketStatusView, ServiceDashboardStatsView
-
-### Community 21 - "AuditRequest"
-Cohesion: 0.03
-Nodes (17): AuditRequest, Meta, AuditRequestSerializer, Meta, AuditApproveViewTests, AuditHistoryPaginationTests, AuditHistoryViewTests, AuditListPaginationTests (+9 more)
+### Community 20 - "BaseRecordFragment.java"
+Cohesion: 0.15
+Nodes (3): DeleteAuthHistoryFragment, Callback<JsonObject>, DeleteAuthPendingFragment
 
 ### Community 22 - "APITestCase"
 Cohesion: 0.07
@@ -246,9 +251,9 @@ Nodes (11): BackupConfigAPITests, CertificationAPITests, DashboardCountsAPITests
 Cohesion: 0.07
 Nodes (3): CampusModelTests, SchoolModelTests, UserSchoolMappingModelTests
 
-### Community 25 - "TestCase"
-Cohesion: 0.09
-Nodes (4): CertificationModelTests, FDPWorkshopGLModelTests, SchoolActivityModelTests, StudentActivityCollaborationTests
+### Community 25 - ".post"
+Cohesion: 0.44
+Nodes (5): local_one_per_second(), redis_available(), LoginView, set_auth_cookies(), _too_fast()
 
 ### Community 26 - "Django Audit Views"
 Cohesion: 0.09
@@ -258,21 +263,21 @@ Nodes (26): Client HTML Document Entry, DOM Root Mount Node, Native Android Clie
 Cohesion: 0.20
 Nodes (5): Callback<JsonObject>, Callback<JsonObject>, AuditAdapter.OnAuditActionListener, Callback<JsonObject>, Callback<JsonObject>
 
-### Community 31 - "BugReport"
+### Community 30 - "DeleteAuthDashboardFragment.java"
+Cohesion: 0.23
+Nodes (3): DeleteAuthActivity, DeleteAuthDashboardFragment, OnViewAllClickListener
+
+### Community 31 - "service/views.py"
 Cohesion: 0.09
-Nodes (7): BugReport, Meta, BugReportListSerializer, Meta, BugReportModelTests, BugReportDetailView, BugReportListView
+Nodes (13): BugReport, Meta, BugReportAdminUpdateSerializer, Meta, BugReportListSerializer, Meta, TicketStatusUpdateSerializer, ApiStatusView (+5 more)
 
 ### Community 32 - ".jsonStr"
-Cohesion: 0.14
-Nodes (4): StudentActivitiesFragment, AdapterView.OnItemSelectedListener, RecordAdapter.RecordBinder, Callback<JsonObject>
+Cohesion: 0.12
+Nodes (5): StudentActivitiesFragment, AdapterView.OnItemSelectedListener, RecordAdapter.RecordBinder, Callback<JsonObject>, JsonHelpersTest
 
 ### Community 33 - "AuditAdapter"
-Cohesion: 0.12
-Nodes (6): AuditAdapter, AuditViewHolder, OnAuditActionListener, ViewHolder, DeleteAuthDashboardFragment, OnViewAllClickListener
-
-### Community 34 - "DetailQueryCountTests"
-Cohesion: 0.12
-Nodes (11): SchoolActivityCollaboration, Meta, StudentActivityCollaboration, Meta, SchoolActivityCollaborationSerializer, Meta, StudentActivityCollaborationSerializer, Meta (+3 more)
+Cohesion: 0.20
+Nodes (3): AuditAdapter, AuditViewHolder, OnAuditActionListener
 
 ### Community 35 - "Override"
 Cohesion: 0.12
@@ -282,9 +287,13 @@ Nodes (5): FacultyAutoCompleteAdapter, Filter, PublicationsFragment, RecordAdapt
 Cohesion: 0.11
 Nodes (6): AccountsConfig, AuditConfig, ExportConfig, RecordsConfig, SchoolsConfig, ServiceConfig
 
+### Community 38 - "APIView"
+Cohesion: 0.27
+Nodes (4): ChangePasswordView, LogoutView, MeView, RefreshTokenView
+
 ### Community 39 - "BaseRecordFragment"
-Cohesion: 0.08
-Nodes (8): BaseRecordFragment, Callback<JsonObject>, Callback<JsonObject>, Callback<JsonObject>, Callback<List<JsonObject>>, RecordAdapter.OnRecordActionListener, Callback<JsonObject>, Callback<JsonObject>
+Cohesion: 0.09
+Nodes (7): BaseRecordFragment, Callback<JsonObject>, Callback<JsonObject>, Callback<JsonObject>, Callback<List<JsonObject>>, RecordAdapter.OnRecordActionListener, Callback<JsonObject>
 
 ### Community 40 - "CertificationsFragment"
 Cohesion: 0.09
@@ -299,36 +308,40 @@ Cohesion: 0.22
 Nodes (5): ErrorOccurrence, Meta, ErrorOccurrenceSerializer, Meta, ErrorOccurrenceSerializerTests
 
 ### Community 44 - "Override"
-Cohesion: 0.24
+Cohesion: 0.22
 Nodes (3): Callback<JsonObject>, Callback<JsonElement>, Callback<List<JsonObject>>
 
-### Community 46 - "django_conf"
+### Community 45 - "throttles.py"
 Cohesion: 0.13
-Nodes (7): Migration, Migration, Migration, Migration, Migration, Migration, Migration
+Nodes (7): FixedWindowThrottle, _get_redis(), _incr_fixed_window(), _apply_people(), AuditApproveView, AuditRejectView, _not_found()
 
 ### Community 48 - "Override"
 Cohesion: 0.12
 Nodes (5): FacultyAutoCompleteAdapter, Filter, PatentsFragment, RecordAdapter.RecordBinder, android.text.TextWatcher
 
-### Community 52 - "django_db_models_deletion"
-Cohesion: 0.13
-Nodes (7): Migration, Migration, Migration, Migration, Migration, Migration, Migration
+### Community 52 - "ChronicleMasterManagementView"
+Cohesion: 0.18
+Nodes (4): ChronicleMasterManagementView, ResetPasswordView, set_temporary_password(), sign_out_everywhere()
 
-### Community 58 - "TestCase"
-Cohesion: 0.07
-Nodes (6): BackupConfigurationModelTests, PatentApplicantIndexTests, PatentApplicantTests, PlacementActivityModelTests, PublicationModelTests, StudentActivityModelTests
+### Community 55 - "confirm_own_password"
+Cohesion: 0.18
+Nodes (3): confirm_own_password(), ServiceUserManagementView, UserReactivateView
+
+### Community 58 - "records/views.py"
+Cohesion: 0.04
+Nodes (71): User, Meta, AuditRequest, Meta, AuditRequestSerializer, Meta, AuditRequestSerializerTests, AuditHistoryView (+63 more)
 
 ### Community 59 - "BackupConfigurationView"
 Cohesion: 0.27
 Nodes (4): BackupConfigurationSerializer, Meta, BackupConfigurationView, TriggerManualBackupView
 
 ### Community 60 - "ApiClient.java"
-Cohesion: 0.08
+Cohesion: 0.10
 Nodes (3): ApiClient, CookieJar, TokenUsed
 
-### Community 62 - "Android Faculties Fragment"
+### Community 61 - "Android Campus Users Fragment"
 Cohesion: 0.12
-Nodes (7): BadgeStyle, DARK, GRAY, OUTLINE, RED, FacultiesFragment, RecordAdapter.RecordBinder
+Nodes (7): BadgeStyle, DARK, GRAY, OUTLINE, RED, CampusUsersFragment, RecordAdapter.RecordBinder
 
 ### Community 68 - "Override"
 Cohesion: 0.14
@@ -339,44 +352,52 @@ Cohesion: 0.31
 Nodes (3): ReportErrorSerializer, ReportErrorSerializerTests, ReportErrorView
 
 ### Community 71 - "ExportTestMixin"
-Cohesion: 0.14
-Nodes (5): CoordinatorExportViewTests, ExportHistoryViewTests, ExportSchoolActivitiesViewTests, ExportTestMixin, MISDataRequestViewTests
+Cohesion: 0.12
+Nodes (4): CoordinatorExportViewTests, ExportHistoryViewTests, ExportSchoolActivitiesViewTests, MISDataRequestViewTests
 
-### Community 72 - "BugReportCreateSerializer"
-Cohesion: 0.25
-Nodes (4): BugReportCreateSerializer, Meta, BugReportCreateSerializerTests, BugReportCreateView
+### Community 72 - "BugReportModelTests"
+Cohesion: 0.12
+Nodes (5): BugReportCreateSerializer, Meta, BugReportCreateSerializerTests, BugReportModelTests, BugReportCreateView
 
-### Community 82 - "User"
-Cohesion: 0.03
-Nodes (42): User, Meta, can_reset_password(), confirm_own_password(), LoginSerializer, UserCreateSerializer, Meta, UserUpdateSerializer (+34 more)
+### Community 76 - "TestCase"
+Cohesion: 0.07
+Nodes (6): BackupConfigurationModelTests, PatentApplicantIndexTests, PlacementActivityModelTests, PublicationModelTests, SchoolActivityCollaborationTests, StudentActivityModelTests
 
-### Community 96 - "MISReportSerializer"
-Cohesion: 0.18
-Nodes (4): check_date_order(), MISReportSerializer, Meta, MISReportSerializerTests
+### Community 82 - "accounts/views.py"
+Cohesion: 0.04
+Nodes (23): UserManager, can_reset_password(), ChronicleAccumulatorSerializer, Meta, LoginSerializer, UserCreateSerializer, Meta, UserSerializer (+15 more)
 
-### Community 99 - "MISDataRequestSerializer"
-Cohesion: 0.17
-Nodes (4): MISDataRequestSerializer, Meta, MISDataRequestModelTests, MISDataRequestSerializerTests
+### Community 99 - "ExportTestMixin"
+Cohesion: 0.11
+Nodes (7): MISReportSerializer, Meta, ExportTestMixin, MISDataRequestModelTests, MISDataRequestSerializerTests, MISReportModelTests, MISReportSerializerTests
+
+### Community 101 - "._setup_base"
+Cohesion: 0.11
+Nodes (3): CertificationModelTests, ClubAPITests, StudentActivityCollaborationTests
+
+### Community 163 - "export/tasks.py"
+Cohesion: 0.08
+Nodes (12): GeneratedExport, Meta, _append_styled_headers(), build_campus_workbook(), ensure_export_dir(), export_all_for_user(), export_single_campus(), generate_manual_export() (+4 more)
 
 ## Knowledge Gaps
 - **22 isolated node(s):** `DARK`, `OUTLINE`, `RED`, `GRAY`, `@types/react` (+17 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 923 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 933 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **89 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Campus` connect `records/tests.py` to `export/views.py`, `CampusListCreateViewTests`, `FanOutWriteTests`, `APITestCase`, `records/views.py`, `Django Audit Models`, `get_user_school_ids`, `RolePermission`, `ChronicleDashboardTests`, `AuditRequest`, `APITestCase`, `SchoolModelTests`, `SchoolListCreateViewTests`, `CampusDetailViewTests`, `CampusReactivateViewTests`, `SchoolDetailViewTests`, `SchoolFacultyViewTests`, `override_settings`, `APITestCase`, `MySchoolsViewTests`, `Django User Model Tests`, `ErrorOccurrence`, `AccountIntegrityTests`, `UserSchoolMappingViewTests`, `ExportTestMixin`, `User`, `NewExportEndpointsTests`, `ResetPasswordTests`, `override_settings`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
+- **Why does `Campus` connect `records/tests.py` to `export/views.py`, `CampusListCreateViewTests`, `FanOutWriteTests`, `APITestCase`, `Django Audit Models`, `get_user_school_ids`, `RolePermission`, `ChronicleDashboardTests`, `APITestCase`, `SchoolModelTests`, `SchoolListCreateViewTests`, `CampusDetailViewTests`, `CampusReactivateViewTests`, `SchoolDetailViewTests`, `override_settings`, `APITestCase`, `MySchoolsViewTests`, `export/tasks.py`, `Django User Model Tests`, `ErrorOccurrence`, `AccountIntegrityTests`, `records/views.py`, `AuditListPaginationTests`, `UserSchoolMappingViewTests`, `accounts/views.py`, `ExportTestMixin`, `NewExportEndpointsTests`, `ResetPasswordTests`, `override_settings`?**
+  _High betweenness centrality (0.069) - this node is a cross-community bridge._
 - **What connects `DARK`, `OUTLINE`, `RED` to the rest of the system?**
   _22 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Android API Service Layer` be split into smaller, more focused modules?**
   _Cohesion score 0.05304982817869416 - nodes in this community are weakly interconnected._
-- **Why does `School` connect `records/tests.py` to `Club`, `export/views.py`, `APITestCase`, `records/views.py`, `get_user_school_ids`, `AuditRequest`, `APITestCase`, `SchoolModelTests`, `SchoolListCreateViewTests`, `SchoolDetailViewTests`, `SchoolFacultyViewTests`, `override_settings`, `MySchoolsViewTests`, `DetailQueryCountTests`, `SchoolReactivateViewTests`, `AccountIntegrityTests`, `UserSchoolMappingViewTests`, `ExportTestMixin`, `DashboardCountsCacheTests`, `User`, `ResetPasswordTests`?**
-  _High betweenness centrality (0.041) - this node is a cross-community bridge._
-- **Should `Club` be split into smaller, more focused modules?**
-  _Cohesion score 0.08669354838709678 - nodes in this community are weakly interconnected._
-- **Why does `User` connect `User` to `Club`, `export/views.py`, `CoPeopleApprovalTests`, `DetailQueryCountTests`, `records/views.py`, `records/tests.py`, `ErrorOccurrence`, `django_db`, `service/views.py`, `PublicationAuthorTests`, `AuditRequest`, `CoApplicantVisibilityTests`, `CoAuthorVisibilityTests`, `APITestCase`, `SchoolActivityAPITests`, `BugReport`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+- **Why does `User` connect `records/views.py` to `CoPeopleApprovalTests`, `export/views.py`, `export/tasks.py`, `PublicationAuthorTests`, `APIView`, `records/views.py`, `records/tests.py`, `ErrorTicket`, `ErrorOccurrence`, `get_user_school_ids`, `accounts/views.py`, `ChronicleMasterManagementView`, `CoApplicantVisibilityTests`, `CoAuthorVisibilityTests`, `confirm_own_password`, `APITestCase`, `SchoolActivityAPITests`, `service/views.py`?**
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
+- **Should `ApiClientTest.java` be split into smaller, more focused modules?**
+  _Cohesion score 0.08456659619450317 - nodes in this community are weakly interconnected._
+- **Why does `School` connect `records/tests.py` to `export/views.py`, `records/views.py`, `get_user_school_ids`, `APITestCase`, `SchoolModelTests`, `SchoolListCreateViewTests`, `SchoolDetailViewTests`, `override_settings`, `MySchoolsViewTests`, `SchoolReactivateViewTests`, `export/tasks.py`, `AuditRequestModelTests`, `AccountIntegrityTests`, `records/views.py`, `AuditListPaginationTests`, `UserSchoolMappingViewTests`, `DashboardCountsCacheTests`, `accounts/views.py`, `ExportTestMixin`, `ResetPasswordTests`, `override_settings`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
 - **Should `export/views.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.04104938271604938 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04095152062631737 - nodes in this community are weakly interconnected._

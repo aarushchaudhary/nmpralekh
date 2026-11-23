@@ -591,9 +591,19 @@ class ResetPasswordTests(APITestCase):
                              (self.faculty, self.school), (self.far_faculty, self.other_school)):
             UserSchoolMapping.objects.create(user=user, school=school, assigned_by=self.master)
 
-    def reset(self, actor, target, password=TEMP):
+    def reset(self, actor, target, password=TEMP, own='Own-pass-2026'):
         self.client.force_authenticate(user=actor)
-        return self.client.post(f'/api/users/{target.pk}/reset-password/', {'temporary_password': password})
+        return self.client.post(f'/api/users/{target.pk}/reset-password/',
+                                {'password': own, 'temporary_password': password})
+
+    def test_reset_needs_your_own_password(self):
+        for own in ('wrong-pass', ''):
+            with self.subTest(own=own):
+                resp = self.reset(self.admin, self.faculty, own=own)
+                self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+                self.faculty.refresh_from_db()
+                self.assertFalse(self.faculty.must_change_password)
+                self.assertTrue(self.faculty.check_password('Own-pass-2026'))
 
     def test_who_can_reset_whom(self):
         allowed = [
@@ -837,12 +847,25 @@ class ServiceUserManagementViewTests(APITestCase):
             username="existsvc", email="esvc@t.com", password="old",
             full_name="Service Admin", role="service_admin", is_service_admin=True,
         )
-        resp = self.client.patch(self.url, {'password': 'newpass123'})
+        resp = self.client.patch(self.url, {'password': 'p', 'temporary_password': 'newpass123'})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        svc = User.objects.get(username='existsvc')
+        self.assertTrue(svc.check_password('newpass123'))
+        self.assertTrue(svc.must_change_password)
+
+    def test_patch_service_user_needs_masters_password(self):
+        self.client.force_authenticate(user=self.master)
+        User.objects.create_user(
+            username="existsvc", email="esvc@t.com", password="old",
+            full_name="Service Admin", role="service_admin", is_service_admin=True,
+        )
+        resp = self.client.patch(self.url, {'password': 'wrong', 'temporary_password': 'newpass123'})
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(User.objects.get(username='existsvc').check_password('old'))
 
     def test_patch_nonexistent_service_user(self):
         self.client.force_authenticate(user=self.master)
-        resp = self.client.patch(self.url, {'password': 'newpass123'})
+        resp = self.client.patch(self.url, {'password': 'p', 'temporary_password': 'newpass123'})
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
 
@@ -874,6 +897,22 @@ class ChronicleMasterManagementViewTests(APITestCase):
         self.client.post(self.url, {'username': 'c1', 'email': 'c1@t.com', 'password': 'pass1234'})
         resp = self.client.post(self.url, {'username': 'c2', 'email': 'c2@t.com', 'password': 'pass1234'})
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patch_chronicle_master_password(self):
+        self.client.force_authenticate(user=self.master)
+        User.objects.create_user(
+            username="existcm", email="ecm@t.com", password="old",
+            full_name="Chronicle Master", role="chronicle_master", is_chronicle_master=True,
+        )
+        wrong = self.client.patch(self.url, {'password': 'wrong', 'temporary_password': 'newpass123'})
+        self.assertEqual(wrong.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(User.objects.get(username='existcm').check_password('old'))
+
+        resp = self.client.patch(self.url, {'password': 'p', 'temporary_password': 'newpass123'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        cm = User.objects.get(username='existcm')
+        self.assertTrue(cm.check_password('newpass123'))
+        self.assertTrue(cm.must_change_password)
 
 
 @override_settings(RATELIMIT_ENABLE=False)

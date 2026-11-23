@@ -112,7 +112,7 @@ jobs:
 
   # ── Android client ─────────────────────────────────────────────────
   android-client:
-    name: Android – Assemble Debug
+    name: Android – Test & Assemble Debug
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -130,6 +130,16 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: android-client/app/build/reports/tests/
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug

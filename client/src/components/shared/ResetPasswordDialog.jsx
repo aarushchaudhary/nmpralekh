@@ -6,10 +6,11 @@ import FormInput from '../ui/FormInput'
 import FormError from '../ui/FormError'
 import Button from '../ui/Button'
 
-const empty = { temporary_password: '', confirm: '' }
+const empty = { temporary_password: '', confirm: '', password: '' }
 
 // The person one level above types a one-time password for `user` (the server checks who may).
 // The user must choose their own at next sign-in, and is signed out everywhere now.
+// The person resetting re-enters their own password, so an unattended screen can't be used to take over an account.
 export default function ResetPasswordDialog({ user, onClose }) {
     const [form, setForm] = useState(empty)
     const [errors, setErrors] = useState({})
@@ -27,7 +28,7 @@ export default function ResetPasswordDialog({ user, onClose }) {
         setSaving(true)
         try {
             const res = await api.post(`/users/${user.id}/reset-password/`,
-                { temporary_password: form.temporary_password })
+                { temporary_password: form.temporary_password, password: form.password })
             setErrors({}); setDone(res.data.detail)
         } catch (err) {
             setErrors(apiErrors(err))
@@ -51,11 +52,13 @@ export default function ResetPasswordDialog({ user, onClose }) {
                         onChange={set('temporary_password')} required error={errors.temporary_password} />
                     <FormInput label="Confirm one-time password" type="password" value={form.confirm}
                         onChange={set('confirm')} required error={errors.confirm} />
+                    <FormInput label="Your password" type="password" value={form.password}
+                        onChange={set('password')} required error={errors.password} />
                     <FormError message={errors._form} />
                     <div className="flex justify-end gap-3 pt-2">
                         <Button variant="secondary" onClick={close}>Cancel</Button>
                         <Button type="submit" loading={saving}
-                            disabled={!form.temporary_password || !form.confirm}>
+                            disabled={!form.temporary_password || !form.confirm || !form.password}>
                             Reset password
                         </Button>
                     </div>
