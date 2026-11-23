@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e71c4a62`
+- Built from commit: `e9ac3943`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -72,7 +72,7 @@
 - UserSchoolMappingViewTests
 - CoAuthorVisibilityTests
 - SchoolActivityAPITests
-- accounts/views.py
+- django_db_models_deletion
 - BackupConfiguration
 - ApiClient.java
 - Android Campus Users Fragment
@@ -90,19 +90,20 @@
 - ServiceUserManagementViewTests
 - Django Settings Configuration
 - AccumulatorDashboardTests
-- django_db_models_deletion
+- records/views.py
 - DashboardCountsCacheTests
 - ._setup_base
 - ChronicleDataRequest
 - records/serializers.py
 - PlacementListPaginationTests
-- LoginSerializer
+- accounts/views.py
 - Module Cluster 83
 - GeneratedExportModelTests
 - .performLogout
+- FacultyFDPWorkshopGL
 - LoginDuringRedisOutageTests
-- records/views.py
-- LogoutViewTests
+- LoginSerializer
+- MISDataRequest
 - SchoolScopedMixin
 - IntegrityRuleTests
 - throttles.py
@@ -113,51 +114,50 @@
 - NewExportEndpointsTests
 - ErrorOccurrenceModelTests
 - MISReportSerializer
-- FixedWindowThrottle
+- Certification
 - ClubAPITests
 - CampusListCreateViewTests
-- UserDetailViewTests
-- UserListCreateViewTests
+- PlacementActivity
+- RecordTestMixin
 - AuditHistoryViewTests
 - ChronicleDashboardTests
 - SchoolListCreateViewTests
-- override_settings
-- ChronicleMasterManagementViewTests
-- APITestCase
+- User
+- UserVisibilitySerializer
 - SchoolActivity
-- FDPListPaginationTests
+- FixedWindowThrottle
 - PatentListPaginationTests
-- StudentActivityListPaginationTests
+- UserSerializer
 - CampusDetailViewTests
 - SchoolDetailViewTests
 - SchoolFacultyViewTests
-- SchoolFacultiesViewTests
-- ServiceUserManagementView
+- UserUpdateSerializer
+- ._setup_base
 - CampusReactivateViewTests
 - MySchoolsViewTests
-- 0009_mis_report_sent_from_time.py
-- FacultyFDPWorkshopGL
+- UserDetailViewTests
+- UserListCreateViewTests
 - MISDataRequestSerializer
-- MISDataRequest
-- Certification
-- PlacementActivity
-- RecordTestMixin
+- PublicationListPaginationTests
+- override_settings
+- ChronicleMasterManagementViewTests
+- LogoutViewTests
 - UserCreateSerializer
 - ._setup_base
 - Module Cluster 132
-- User
-- UserVisibilitySerializer
-- UserSerializer
-- UserUpdateSerializer
-- ._setup_base
-- _job_file_for
-- PublicationListPaginationTests
+- APITestCase
+- FDPListPaginationTests
 - PatentApplicantIndexTests
+- StudentActivityListPaginationTests
+- SchoolFacultiesViewTests
+- _job_file_for
+- ServiceUserManagementView
 - ExportHistoryView
 - FacultyUserSearchView
 - CampusUsersView
 - CampusUsersView
 - SchoolFacultiesView
+- 0009_mis_report_sent_from_time.py
 - AccumulatorDashboardView
 - 0003_add_mis_coordinator_role.py
 - 0006_alter_user_role.py
@@ -351,6 +351,10 @@ Nodes (8): FacultyAutoCompleteAdapter, Filter, PatentsFragment, Callback<JsonObj
 Cohesion: 0.16
 Nodes (4): StudentActivity, Meta, ListQueryCountTests, StudentActivityModelTests
 
+### Community 58 - "django_db_models_deletion"
+Cohesion: 0.13
+Nodes (7): Migration, Migration, Migration, Migration, Migration, Migration, Migration
+
 ### Community 59 - "BackupConfiguration"
 Cohesion: 0.27
 Nodes (4): BackupConfigurationSerializer, Meta, BackupConfigurationView, TriggerManualBackupView
@@ -387,9 +391,9 @@ Nodes (5): CoordinatorExportViewTests, ExportHistoryViewTests, ExportSchoolActiv
 Cohesion: 0.12
 Nodes (5): BugReportCreateSerializer, Meta, BugReportCreateSerializerTests, BugReportModelTests, BugReportCreateView
 
-### Community 76 - "django_db_models_deletion"
-Cohesion: 0.13
-Nodes (7): Migration, Migration, Migration, Migration, Migration, Migration, Migration
+### Community 76 - "records/views.py"
+Cohesion: 0.21
+Nodes (5): PatentApplicant, Meta, PatentApplicantSerializer, Meta, PatentApplicantDetailView
 
 ### Community 79 - "ChronicleDataRequest"
 Cohesion: 0.14
@@ -399,13 +403,17 @@ Nodes (6): ChronicleDataRequest, Meta, ChronicleDataRequestSerializer, Meta, Chr
 Cohesion: 0.16
 Nodes (10): SchoolActivityCollaboration, Meta, StudentActivityCollaboration, Meta, PatentSerializer, Meta, SchoolActivityCollaborationSerializer, Meta (+2 more)
 
-### Community 82 - "LoginSerializer"
+### Community 86 - "FacultyFDPWorkshopGL"
+Cohesion: 0.22
+Nodes (6): FacultyFDPWorkshopGL, Meta, FacultyFDPWorkshopGLSerializer, Meta, FDPDetailView, FDPListCreateView
+
+### Community 88 - "LoginSerializer"
 Cohesion: 0.33
 Nodes (5): LoginSerializer, LoginSerializerTests, local_one_per_second(), LoginView, _too_fast()
 
-### Community 88 - "records/views.py"
-Cohesion: 0.21
-Nodes (5): PatentApplicant, Meta, PatentApplicantSerializer, Meta, PatentApplicantDetailView
+### Community 89 - "MISDataRequest"
+Cohesion: 0.24
+Nodes (4): MISDataRequest, Meta, AccumulatorBulkRequestView, MISDataRequestDetailView
 
 ### Community 90 - "SchoolScopedMixin"
 Cohesion: 0.19
@@ -427,63 +435,55 @@ Nodes (4): AuditApproveView, AuditRejectView, _lock_pending_audit(), _not_found(
 Cohesion: 0.18
 Nodes (4): check_date_order(), MISReportSerializer, Meta, MISReportSerializerTests
 
+### Community 100 - "Certification"
+Cohesion: 0.24
+Nodes (6): Certification, Meta, CertificationSerializer, Meta, CertificationDetailView, CertificationListCreateView
+
+### Community 103 - "PlacementActivity"
+Cohesion: 0.24
+Nodes (6): PlacementActivity, Meta, PlacementActivitySerializer, Meta, PlacementDetailView, PlacementListCreateView
+
+### Community 104 - "RecordTestMixin"
+Cohesion: 0.20
+Nodes (3): DashboardCountsAPITests, PublicationAPITests, RecordTestMixin
+
 ### Community 105 - "AuditHistoryViewTests"
 Cohesion: 0.15
 Nodes (3): AuditHistoryViewTests, AuditRejectViewTests, AuditRequestListViewTests
+
+### Community 109 - "User"
+Cohesion: 0.25
+Nodes (3): User, Meta, ChronicleAccumulatorsView
+
+### Community 110 - "UserVisibilitySerializer"
+Cohesion: 0.32
+Nodes (3): UserVisibilitySerializer, Meta, UserVisibilitySerializerTests
 
 ### Community 111 - "SchoolActivity"
 Cohesion: 0.22
 Nodes (6): _gather_coordinator_data(), SchoolActivity, Meta, SchoolActivitySerializer, Meta, SchoolActivityDetailView
 
-### Community 124 - "FacultyFDPWorkshopGL"
-Cohesion: 0.22
-Nodes (6): FacultyFDPWorkshopGL, Meta, FacultyFDPWorkshopGLSerializer, Meta, FDPDetailView, FDPListCreateView
+### Community 114 - "UserSerializer"
+Cohesion: 0.38
+Nodes (3): UserSerializer, Meta, UserSerializerTests
+
+### Community 119 - "UserUpdateSerializer"
+Cohesion: 0.29
+Nodes (3): UserUpdateSerializer, Meta, UserDetailView
 
 ### Community 125 - "MISDataRequestSerializer"
 Cohesion: 0.17
 Nodes (4): MISDataRequestSerializer, Meta, MISDataRequestModelTests, MISDataRequestSerializerTests
 
-### Community 126 - "MISDataRequest"
-Cohesion: 0.24
-Nodes (4): MISDataRequest, Meta, AccumulatorBulkRequestView, MISDataRequestDetailView
-
-### Community 127 - "Certification"
-Cohesion: 0.24
-Nodes (6): Certification, Meta, CertificationSerializer, Meta, CertificationDetailView, CertificationListCreateView
-
-### Community 128 - "PlacementActivity"
-Cohesion: 0.24
-Nodes (6): PlacementActivity, Meta, PlacementActivitySerializer, Meta, PlacementDetailView, PlacementListCreateView
-
-### Community 129 - "RecordTestMixin"
-Cohesion: 0.20
-Nodes (3): DashboardCountsAPITests, PublicationAPITests, RecordTestMixin
-
 ### Community 130 - "UserCreateSerializer"
 Cohesion: 0.25
 Nodes (4): UserCreateSerializer, Meta, UserCreateSerializerTests, UserListCreateView
-
-### Community 133 - "User"
-Cohesion: 0.25
-Nodes (3): User, Meta, ChronicleAccumulatorsView
-
-### Community 139 - "UserVisibilitySerializer"
-Cohesion: 0.32
-Nodes (3): UserVisibilitySerializer, Meta, UserVisibilitySerializerTests
-
-### Community 147 - "UserSerializer"
-Cohesion: 0.38
-Nodes (3): UserSerializer, Meta, UserSerializerTests
-
-### Community 148 - "UserUpdateSerializer"
-Cohesion: 0.29
-Nodes (3): UserUpdateSerializer, Meta, UserDetailView
 
 ### Community 150 - "_job_file_for"
 Cohesion: 0.33
 Nodes (3): ExportJobDownloadView, ExportJobView, _job_file_for()
 
-### Community 153 - "ExportHistoryView"
+### Community 152 - "ExportHistoryView"
 Cohesion: 0.33
 Nodes (3): ExportHistorySerializer, Meta, ExportHistoryView
 
@@ -495,17 +495,17 @@ Nodes (3): ExportHistorySerializer, Meta, ExportHistoryView
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `User` connect `User` to `PlacementActivity`, `PublicationAuthor`, `UserCreateSerializer`, `export/views.py`, `RecordTestMixin`, `export/tasks.py`, `records/tests.py`, `ErrorTicket`, `UserVisibilitySerializer`, `get_user_school_ids`, `UserSerializer`, `UserUpdateSerializer`, `accounts/urls.py`, `FacultyUserSearchView`, `CampusUsersView`, `CampusUsersView`, `SchoolFacultiesView`, `AccumulatorDashboardView`, `service/views.py`, `ErrorOccurrence`, `StudentActivity`, `CoApplicantVisibilityTests`, `CoAuthorVisibilityTests`, `SchoolActivityAPITests`, `accounts/views.py`, `Patent`, `ChronicleDataRequest`, `records/views.py`, `SchoolActivity`, `ServiceUserManagementView`, `FacultyFDPWorkshopGL`, `MISDataRequest`, `Certification`?**
+- **Why does `Campus` connect `records/tests.py` to `export/views.py`, `FanOutWriteTests`, `APITestCase`, `export/tasks.py`, `Django Audit Models`, `get_user_school_ids`, `RolePermission`, `SchoolFacultiesViewTests`, `SchoolModelTests`, `Django User Model Tests`, `ErrorOccurrence`, `AuditListPaginationTests`, `AccountIntegrityTests`, `UserSchoolMappingViewTests`, `APITestCase`, `APITestCase`, `MISDataRequest`, `NewExportEndpointsTests`, `CampusListCreateViewTests`, `RecordTestMixin`, `ChronicleDashboardTests`, `SchoolListCreateViewTests`, `UserVisibilitySerializer`, `UserSerializer`, `CampusDetailViewTests`, `SchoolDetailViewTests`, `SchoolFacultyViewTests`, `CampusReactivateViewTests`, `MySchoolsViewTests`, `override_settings`?**
   _High betweenness centrality (0.051) - this node is a cross-community bridge._
 - **What connects `DARK`, `OUTLINE`, `RED` to the rest of the system?**
   _22 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Android API Service Layer` be split into smaller, more focused modules?**
   _Cohesion score 0.05304982817869416 - nodes in this community are weakly interconnected._
-- **Why does `Campus` connect `records/tests.py` to `RecordTestMixin`, `export/views.py`, `FanOutWriteTests`, `export/tasks.py`, `UserVisibilitySerializer`, `Django Audit Models`, `get_user_school_ids`, `RolePermission`, `UserSerializer`, `SchoolModelTests`, `Django User Model Tests`, `ErrorOccurrence`, `AuditListPaginationTests`, `AccountIntegrityTests`, `UserSchoolMappingViewTests`, `APITestCase`, `APITestCase`, `NewExportEndpointsTests`, `CampusListCreateViewTests`, `ChronicleDashboardTests`, `SchoolListCreateViewTests`, `override_settings`, `APITestCase`, `CampusDetailViewTests`, `SchoolDetailViewTests`, `SchoolFacultyViewTests`, `SchoolFacultiesViewTests`, `CampusReactivateViewTests`, `MySchoolsViewTests`, `MISDataRequest`?**
+- **Why does `User` connect `User` to `PublicationAuthor`, `UserCreateSerializer`, `export/views.py`, `export/tasks.py`, `records/tests.py`, `ErrorTicket`, `get_user_school_ids`, `accounts/urls.py`, `ServiceUserManagementView`, `FacultyUserSearchView`, `CampusUsersView`, `CampusUsersView`, `SchoolFacultiesView`, `AccumulatorDashboardView`, `service/views.py`, `ErrorOccurrence`, `StudentActivity`, `CoApplicantVisibilityTests`, `CoAuthorVisibilityTests`, `SchoolActivityAPITests`, `Patent`, `records/views.py`, `ChronicleDataRequest`, `accounts/views.py`, `FacultyFDPWorkshopGL`, `MISDataRequest`, `Certification`, `PlacementActivity`, `RecordTestMixin`, `UserVisibilitySerializer`, `SchoolActivity`, `UserSerializer`, `UserUpdateSerializer`?**
   _High betweenness centrality (0.049) - this node is a cross-community bridge._
 - **Should `PublicationAuthor` be split into smaller, more focused modules?**
   _Cohesion score 0.05731707317073171 - nodes in this community are weakly interconnected._
-- **Why does `School` connect `records/tests.py` to `PlacementActivity`, `PublicationAuthor`, `export/views.py`, `RecordTestMixin`, `export/tasks.py`, `UserVisibilitySerializer`, `AuditRequestModelTests`, `get_user_school_ids`, `SchoolModelTests`, `AuditListPaginationTests`, `StudentActivity`, `AccountIntegrityTests`, `UserSchoolMappingViewTests`, `Patent`, `APITestCase`, `APITestCase`, `DashboardCountsCacheTests`, `records/serializers.py`, `SchoolListCreateViewTests`, `SchoolActivity`, `SchoolDetailViewTests`, `SchoolFacultyViewTests`, `SchoolFacultiesViewTests`, `MySchoolsViewTests`, `FacultyFDPWorkshopGL`, `Certification`?**
+- **Why does `School` connect `records/tests.py` to `PublicationAuthor`, `export/views.py`, `export/tasks.py`, `AuditRequestModelTests`, `get_user_school_ids`, `SchoolFacultiesViewTests`, `SchoolModelTests`, `AuditListPaginationTests`, `StudentActivity`, `AccountIntegrityTests`, `UserSchoolMappingViewTests`, `Patent`, `APITestCase`, `APITestCase`, `DashboardCountsCacheTests`, `records/serializers.py`, `FacultyFDPWorkshopGL`, `Certification`, `PlacementActivity`, `RecordTestMixin`, `SchoolListCreateViewTests`, `UserVisibilitySerializer`, `SchoolActivity`, `SchoolDetailViewTests`, `SchoolFacultyViewTests`, `MySchoolsViewTests`?**
   _High betweenness centrality (0.031) - this node is a cross-community bridge._
 - **Should `export/views.py` be split into smaller, more focused modules?**
   _Cohesion score 0.11956521739130435 - nodes in this community are weakly interconnected._
